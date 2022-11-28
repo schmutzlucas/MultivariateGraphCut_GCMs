@@ -75,3 +75,4 @@ reference_matrix_nrm <- NormalizeVariables(reference_matrix, variables, 'StdSc')
 
 
 MinBias_result <- MinBiasOptimization(reference_list, models_list)
+
