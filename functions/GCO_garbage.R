@@ -1,0 +1,150 @@
+#' @title
+#' Normalizes an n dimensions array
+#'
+#' @description
+#' Normalizes an array with the chosen method
+#'
+#' @param data should be an array
+#' @param method allows the user the chose the normalization method.
+#' Currently: Standard Score or Min Max
+#'
+#' @examples
+#' Normalize(precipitation, StdSc)
+#' Normalize(temperature, MinMax)
+#'
+#' @return
+#' Returns an array of the same size of the one used as argument normalized
+#' with the chose method
+#'
+GraphCutOptimization <- function(
+  ref_datacost,
+  models_datacost,
+  models_smoothcost,
+  weight_data,
+  weight_smooth
+){
+
+  n_labs      <- length(ref_datacost[1, 1, , 1])
+  n_variables <- length(ref_datacost[1, 1, 1 , ])
+  width       <- ncol(ref_datacost)
+  height      <- nrow(ref_datacost)
+
+  # Instanciation of the GraphCut environment
+
+  gco <- new(GCoptimizationGridGraph, width, height, n_labs)
+
+  # Preparing the DataCost and SmoothCost functions of the GraphCut in C++
+
+  cat("Creating DataCost function...  ")
+
+  ptrDataCost <- cppXPtr(
+    code = 'float dataFn(int p, int l, Rcpp::List extraData)
+{
+  int numPix          = extraData["numPix"];
+  float weight        = extraData["weight"];
+  NumericVector data  = extraData["data"];
+
+  return(weight * data[p + numPix * l]);
+}',
+    includes = c("#include <math.h>", "#include <Rcpp.h>"),
+    rebuild = FALSE, showOutput = FALSE, verbose = FALSE
+  )
+
+  cat("Creating SmoothCost function...  ")
+
+  ptrSmoothCost <- cppXPtr(
+    code = 'float smoothFn(int p1, int p2, int l1, int l2, Rcpp::List extraData)
+{
+  int numPix                = extraData["numPix"];
+  int nbModels              = extraData["n_labs"];
+  float weight              = extraData["weight"];
+  NumericVector data        = extraData["data"];
+  unsigned nbVariable       = extraData["n_variables"]
+
+  float cost = 0;
+
+  for (unsigned k = 0; k < nbVariable; k++) {
+      cost += data[k + (p1 + numPix * l1)] - data[k + (p1 + numPix * l2)] +
+              data[k + (p2 + numPix * l1)] - data[k + (p2 + numPix * l2)] ;
+  }
+
+
+
+
+  for (unsigned k=0; k<nbVariable: k++) {
+     cost += std::abs(data[k + (p1 + numPix * l1) * nbVariable] -
+             data[k + (p1 + numPix * l2) * nbVariable]) +
+             std::abs(data[k + (p2 + numPix * l1) * nbVariable] -
+             data[k + (p2 + numPix * l2) * nbVariable]) ;
+  }
+  for (unsigned k=0; k<nbVariable: k++) {
+   cost += std::abs(data[k + (p1 + numPix * nbModels * l1)] -
+           data[k + (p1 + numPix * nbModels * l2) ]) +
+           std::abs(data[k + (p2 + numPix * nbModels * l1)] -
+           data[k + (p2 + numPix * nbModels * l2)]) ;
+  }
+  return(weight * cost);
+}',
+    includes = c("#include <math.h>", "#include <Rcpp.h>"),
+    rebuild = FALSE, showOutput = FALSE, verbose = FALSE
+  )
+
+  ## changes here
+  # Preparing the data to perform GraphCut
+  # TODO modify here for mv case
+  bias <- array(0, c(height, width, n_labs))
+  for (i in 1:nbModels) {
+    ## Modified bias for bivariate
+    bias[,,i] <- abs(models_datacost[,, i] - ref_datacost[[1]]) + abs(models_datacost[,, i+nbModels] - ref_datacost[[2]])
+  }
+
+  # Permuting longitude and latitude since the indexing isn't the same in R and in C++
+  # TODO c() call was redundant
+  bias_cpp <- aperm(bias, c(2, 1, 3))
+  smooth_cpp <- aperm(models_smoothcost, c(2, 1, 3))
+
+  gco$setDataCost(ptrDataCost, list(numPix = width * height,
+                                    data = bias_cpp,
+                                    weight = weight_data))
+
+  gco$setSmoothCost(ptrSmoothCost, list(numPix = width * height,
+                                        data = smooth_cpp,
+                                        weight = weight_smooth,
+                                        n_variables = n_variables))
+
+  # Creating the initialization matrix based on the best model from the previous list
+  mae_list <- numeric(n_labs)
+  for(i in seq_along(mae_list)){
+    mae_list[[i]] <- mean(abs(bias[,,i]))
+  }
+  best_label <- which.min(mae_list)-1 # in C++ label indices start at 0
+  for(z in 0:(length(ref_datacost)-1)){
+    gco$setLabel(z, best_label)
+  }
+
+  # Optimizing the MRF energy with alpha-beta swap
+  # (-1 refers to the optimization until convergence)
+  cat("Starting GraphCut optimization...  ")
+  begin <- Sys.time()
+  gco$swap(-1)
+  time_spent <- Sys.time()-begin
+  cat("GraphCut optimization done :  ")
+  print(time_spent)
+
+
+  data_cost <- gco$giveDataEnergy()
+  smooth_cost <- gco$giveSmoothEnergy()
+  data_smooth_list <- list("Data cost" = data_cost, "Smooth cost" = smooth_cost)
+
+  label_attribution <- matrix(0,nrow = height,ncol = width)
+  for(j in 1:height){
+    for(i in 1:width){
+      label_attribution[j,i] <- gco$whatLabel((i - 1) + width * (j - 1)) ### Permuting from the C++ indexing to the R indexing
+    }
+  }
+
+  gc_result <- vector("list",length=2)
+  gc_result <- list("label_attribution" = label_attribution, "Data and smooth cost" = data_smooth_list)
+
+  return(gc_result)
+}
