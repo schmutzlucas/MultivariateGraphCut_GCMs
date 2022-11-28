@@ -2,3 +2,5 @@
 /.idea
 /Litterature
 /venv
+.gitignore
+*.iml
