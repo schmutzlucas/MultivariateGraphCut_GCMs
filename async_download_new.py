@@ -1,50 +1,57 @@
 import cdsapi
 import asyncio
 
-
-def background(f):
-    def wrapped(*args):
-        return asyncio.get_event_loop().run_in_executor(None, f, *args)
-    return wrapped
+c = cdsapi.Client()
 
 
-@background
-def cds_api_call(experiment,
-                 model,
-                 year, month,
-                 variable,
-                 name):
+#
+# def background(f):
+#     def wrapped(*args):
+#         return asyncio.get_event_loop().run_in_executor(None, f, *args)
+#
+#     return wrapped
+#
+#
+# @background
+async def cds_api_call(experiment,
+                       model,
+                       year, month,
+                       variable,
+                       name):
     c.retrieve(
         'projections-cmip6',
         {
+            'format': 'zip',
             'temporal_resolution': 'monthly',
+            'year': year,
+            'month': month,
             'experiment': experiment,
             'variable': variable,
             'model': model,
-            'format': 'zip',
-            'year': year,
-            'month': month,
+
         },
         name)
 
 
-model_list = ['access_esm1_5']
+# Variables
+month = list(range(1, 13))
+year = list(range(1950, 2015))
 
-variable_list = [
-    'tas'
-]
+model_list = ['ACCESS-CM2']
+
+variable_list = ['tas', 'pr']
 # variable_list = ['pr', 'tas', 'huss']
 
-scenario_list = [
-    'historical',
-    'ssp5_8_5'
-]
+experiment = ['historical', 'ssp5_8_5']
 
-for n in scenario_list:
+month = list(range(1, 13))
+year = list(range(1950, 2015))
+
+for n in experiment:
     for i in model_list:
         for j in variable_list:
             name = j + '_Amon_' + i + '_' + n + '.zip'
             try:
-                cds_api_call(n, i, j, name)
+                cds_api_call(n, i, year, month, j, name)
             finally:
                 pass
