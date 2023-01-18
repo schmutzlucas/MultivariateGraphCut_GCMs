@@ -21,7 +21,8 @@ async def cds_api_call(experiment,
             'model': model,
 
         },
-        name)
+        name
+    )
 
 
 # Variables
@@ -31,21 +32,39 @@ year_int = list(range(1950, 2015))
 year = list(map(str, year_int))
 print(year)
 
-model_list = ['GFDL-ESM4',
-              'GISS-E2-1-G',
-              'FIO-ESM-2-0',
-              'FGOALS-f3-L',
-              'MPI-ESM1-2-HR',
-              'CAMS-CSM1-0',
-              'ACCESS-CM2',
-              'AWI-CM-1-1-MR',
-              'NM-CM5-0',
-              'MPI-ESM1-2-LR',
-              'MIROC6',
-              'ACCESS-ESM1-5']
+model_list = [  'AWI-CM-1-1-MR',
+                'BCC-CSM2-MR',
+                'CAMS-CSM1-0',
+                'CanESM5',
+                'CESM2-WACCM',
+                'CESM2',
+                'CIESM',
+                'CMCC-CM2-SR5',
+                'EC-Earth3-Veg',
+                'EC-Earth3',
+                'FGOALS-f3-L',
+                'FGOALS-g3',
+                'FIO-ESM-2-0',
+                'GFDL-CM4',
+                'GFDL-ESM4',
+                'INM-CM4-8',
+                'INM-CM5-0',
+                'IPSL-CM6A-LR',
+                'KACE-1-0-G',
+                'KIOST-ESM',
+                'MIROC6',
+                'MPI-ESM1-2-HR',
+                'MPI-ESM1-2-LR',
+                'MRI-ESM2-0',
+                'NESM3',
+                'NorESM2-LM',
+                'NorESM2-MM']
 
-variable_list = ['tas', 'pr', 'tasmax', 'tasmin', 'huss']
-# variable_list = ['pr', 'tas', 'huss']
+# for daily data
+# variable_list = ['tas', 'pr', 'tasmax', 'tasmin', 'huss','uas', 'vas']
+
+# for monthly data
+variable_list = ['pr', 'tas', 'huss', 'uas', 'vas']
 
 experiment = ['historical']
 
@@ -56,7 +75,7 @@ async def main():
     for n in experiment:
         for i in model_list:
             for j in variable_list:
-                name = j + '_Amon_' + i + '_' + n + '.zip'
+                name = 'download/' + j + '_Amon_' + i + '_' + n + '.zip'
                 z += 1
                 try:
                     tasks.append(cds_api_call(n, i, year, month, j, name))
