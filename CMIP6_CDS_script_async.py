@@ -1,14 +1,18 @@
-import cdsapi
-import asyncio
+from concurrent.futures import ThreadPoolExecutor
 
-c = cdsapi.Client()
+import cdsapi
+
+c = cdsapi.Client(debug=True, wait_until_complete=False)
+
+
+# create a thread pool with 10 worker threads
 
 
 def cds_api_call(experiment,
-                       model,
-                       year, month,
-                       variable,
-                       name):
+                 model,
+                 year, month,
+                 variable,
+                 name):
     c.retrieve(
         'projections-cmip6',
         {
@@ -23,7 +27,6 @@ def cds_api_call(experiment,
         },
         name
     )
-
 
 
 # model_list = ['ACCESS-CM2',
@@ -96,26 +99,27 @@ experiment = ['historical', 'ssp5_8_5']
 
 
 def main():
-    z = 0
-    for n in experiment:
-        if n == 'historical':
-            month_int = list(range(1, 13))
-            month = list(map(str, month_int))
-            year_int = list(range(1950, 2015))
-            year = list(map(str, year_int))
-        elif n == 'ssp5_8_5':
-            month_int = list(range(1, 13))
-            month = list(map(str, month_int))
-            year_int = list(range(2016, 2101))
-            year = list(map(str, year_int))
-        for i in model_list:
-            for j in variable_list:
-                name = 'download/' + j + '_Amon_' + i + '_' + n + '.zip'
-                z += 1
-                try:
-                    cds_api_call(n, i, year, month, j, name)
-                finally:
-                    pass
+    with ThreadPoolExecutor(max_workers=20) as exe:
+        z = 0
+        for n in experiment:
+            if n == 'historical':
+                month_int = list(range(1, 13))
+                month = list(map(str, month_int))
+                year_int = list(range(1950, 2015))
+                year = list(map(str, year_int))
+            elif n == 'ssp5_8_5':
+                month_int = list(range(1, 13))
+                month = list(map(str, month_int))
+                year_int = list(range(2016, 2101))
+                year = list(map(str, year_int))
+            for i in model_list:
+                for j in variable_list:
+                    name = 'download/' + j + '_Amon_' + i + '_' + n + '.zip'
+                    z += 1
+                    try:
+                        var = [exe.submit(cds_api_call, n, i, year, month, j, name)]
+                    finally:
+                        pass
 
 
 main()
