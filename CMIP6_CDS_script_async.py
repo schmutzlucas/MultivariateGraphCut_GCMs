@@ -25,7 +25,7 @@ def cds_api_call(experiment,
         name
     )
 
-
+# TODO Read model list from files 
 model_list = ['ACCESS-CM2',
               'ACCESS-ESM1-5',
               'AWI-CM-1-1-MR',
