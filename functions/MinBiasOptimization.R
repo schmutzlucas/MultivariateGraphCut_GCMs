@@ -4,19 +4,21 @@
 #' @description
 #' Produces a labelling using the MinBias optimization method
 #'
-#' @param referenceerence list of 2d arrays of the referenceerence data, each entry being one modelsiable
-#' @param models list of 3d arrays
+#' @param reference list of 2d arrays of the reference data, each element of the
+#'                  list being one variable
+#' @param models list of 3d arrays[lon, lat, model], each element of the
+#'               list being one variable
 #'
 #' @examples
 #' Normalize(precipitation, StdSc)
 #' Normalize(temperature, MinMax)
 #'
 #' @return
-#' Returns an array of the same size of the one used as argument normalized
-#' with the chose method
+#' Returns an array the same size as the one used as argument normalized
+#' with the chosen method
 #' 
 MinBiasOptimization <- function (reference, models) {
-# TODO
+# TODO add other methods
   width <- ncol(reference[[1]])         # Number of longitudes
   height <- nrow(reference[[1]])        # Number of latitudes
   n_labels <- length(models[[1]][1,1,]) # Number of labels used in the GC

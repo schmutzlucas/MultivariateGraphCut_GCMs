@@ -63,6 +63,8 @@ tmp <- OpenAndAverageModels(
 models_list <- tmp[[1]]
 models_matrix <- tmp[[2]]
 rm(tmp)
+
+# Open and average the refeences for the selected time periods
 tmp <- OpenAndAverageModels(
   reference_names, variables, year_present, year_future
   )
