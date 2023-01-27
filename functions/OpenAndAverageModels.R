@@ -31,6 +31,7 @@ OpenAndAverageModels <- function (model_names, variables,
       }
 
       print(i)
+      # present
       yyyy <- substr(as.character(nc.get.time.series(nc)), 1, 4)
       iyyyy <- which(yyyy %in% year_present)
       tmp <- apply(
@@ -56,8 +57,8 @@ OpenAndAverageModels <- function (model_names, variables,
     j <- j + 1
   }
   remove(j, i)
-  # dimnames(data_matrix$present) <- dimnames(data_matrix$future) <-
-  #   list(lon = lon, lat = lat, model = paste0(model_names, model_names))
+  dimnames(data_matrix$present) <- dimnames(data_matrix$future) <-
+    list(lon = lon, lat = lat, model = paste0(model_names, model_names))
 
   output <- list(data, data_matrix)
   return(output)

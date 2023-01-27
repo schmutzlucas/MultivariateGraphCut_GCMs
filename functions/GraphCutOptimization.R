@@ -1,8 +1,10 @@
 #' @title
-#' Normalizes an n dimensions array
+#' Graph cut optimization
 #'
 #' @description
-#' Normalizes an array with the chosen method
+#' This function produces a map of labels where each grid-point is affected to
+#' one model. It uses gcoWrapR (https://github.com/thaos/gcoWrapR) and c++ based
+#' gco-v3.0 (https://vision.cs.uwaterloo.ca/code/).
 #'
 #' @param data should be an array
 #' @param method allows the user the chose the normalization method.

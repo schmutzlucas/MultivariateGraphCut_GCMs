@@ -2,7 +2,8 @@
 {
   list.of.packages <- c("RcppXPtrUtils","devtools")
   new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
-  if(length(new.packages)) install.packages(new.packages,repos = "http://cran.us.r-project.org")
+  if(length(new.packages))
+    install.packages(new.packages, repos = "https://cran.us.r-project.org")
   lapply(list.of.packages, library, character.only = TRUE)
   install_github("thaos/gcoWrapR")
 }
@@ -17,8 +18,8 @@
 # Loading local functions
 {
   source_code_dir <- 'functions/' #The directory where all functions are saved.
-  file_path_vec <- list.files(source_code_dir, full.names = T)
-  for(f_path in file_path_vec){source(f_path)}
+  file_paths <- list.files(source_code_dir, full.names = T)
+  for(path in file_paths){source(path)}
 }
 
 
@@ -50,11 +51,12 @@ rm(tmp)
 reference_names <- c('era5')
 
 
-#Method2
-# TODO : test if it works
-model_names <- read.table("model_names.txt", sep="\n")$V1
+# #Method2
+# # TODO : test if it works
+# model_names <- read.table("model_names.txt", sep="\n")$V1
 
 # Open and average the models for the selected time periods
+# TODO : Add path as argument
 tmp <- OpenAndAverageModels(
   model_names, variables, year_present, year_future
   )
