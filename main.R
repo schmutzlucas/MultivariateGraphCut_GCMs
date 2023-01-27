@@ -82,7 +82,7 @@ reference_matrix_nrm <- NormalizeVariables(reference_matrix, variables, 'StdSc')
 MinBias_label <- MinBiasOptimization(reference_list, models_list)
 
 # TODO implement bias_var from old code
-MinBias_error <-
+
 
 # Graphcut labelling
 GC_result <- GraphCutOptimization()

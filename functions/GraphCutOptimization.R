@@ -1,3 +1,10 @@
+list.of.packages <- c("RcppXPtrUtils","devtools")
+new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
+# if(length(new.packages)) install.packages(new.packages,repos = "http://cran.us.r-project.org")
+lapply(list.of.packages, library, character.only = TRUE)
+# install_github("thaos/gcoWrapR")
+library(gcoWrapR)
+
 #' @title
 #' Graph cut optimization
 #'
@@ -57,11 +64,11 @@ GraphCutOptimization <- function(
   ptrSmoothCost <- cppXPtr(
     code = 'float smoothFn(int p1, int p2, int l1, int l2, Rcpp::List extraData)
 {
+  unsigned nbVariable       = extraData["n_variables"]
   int numPix                = extraData["numPix * nbVariable"];
   int nbModels              = extraData["n_labs"];
   float weight              = extraData["weight"];
   NumericVector data        = extraData["data"];
-  unsigned nbVariable       = extraData["n_variables"]
 
   float cost = 0;
 
@@ -78,14 +85,14 @@ GraphCutOptimization <- function(
     rebuild = FALSE, showOutput = FALSE, verbose = FALSE
   )
 
-  ## changes here
   # Preparing the data to perform GraphCut
-  # TODO modify here for mv case
+  # TODO Test
   bias <- array(0, c(height, width, n_labs))
   for (i in 1:nbModels) {
-    ## Modified bias for bivariate
-    bias[,,i] <- abs(models_datacost[,, i] - ref_datacost[[1]]) + abs(models_datacost[,, i+nbModels] - ref_datacost[[2]])
-  }
+    for (j in 1:n_variables) {
+      bias[,,i] <- bias[,,i] + abs(models_datacost[,, i, j] - ref_datacost[[j]])
+    }
+}
 
   # Permuting longitude and latitude since the indexing isn't the same in R and in C++
   # TODO c() call was redundant
@@ -102,6 +109,7 @@ GraphCutOptimization <- function(
                                         n_variables = n_variables))
 
   # Creating the initialization matrix based on the best model from the previous list
+  # TODO Implement random version?
   mae_list <- numeric(n_labs)
   for(i in seq_along(mae_list)){
     mae_list[[i]] <- mean(abs(bias[,,i]))
@@ -121,9 +129,9 @@ GraphCutOptimization <- function(
   print(time_spent)
 
 
-  data_cost <- gco$giveDataEnergy()
-  smooth_cost <- gco$giveSmoothEnergy()
-  data_smooth_list <- list("Data cost" = data_cost, "Smooth cost" = smooth_cost)
+  data_cost         <- gco$giveDataEnergy()
+  smooth_cost       <- gco$giveSmoothEnergy()
+  data_smooth_list  <- list("Data cost" = data_cost, "Smooth cost" = smooth_cost)
 
   label_attribution <- matrix(0,nrow = height,ncol = width)
   for(j in 1:height){
