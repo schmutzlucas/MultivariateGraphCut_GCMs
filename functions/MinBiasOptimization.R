@@ -1,8 +1,9 @@
 #' @title
-#' Min Bias optimization method
+#' MinBias optimization method
 #'
 #' @description
-#' Produces a labelling using the MinBias optimization method
+#' Produces a labelling using the MinBias optimization method that is optimal
+#' for the list of variables passed as argument
 #'
 #' @param reference list of 2d arrays of the reference data, each element of the
 #'                  list being one variable
@@ -10,13 +11,10 @@
 #'               list being one variable
 #'
 #' @examples
-#' Normalize(precipitation, StdSc)
-#' Normalize(temperature, MinMax)
-#'
+#' TODO
 #' @return
-#' Returns an array the same size as the one used as argument normalized
-#' with the chosen method
-#' 
+#' TODO
+#'
 MinBiasOptimization <- function (reference, models) {
 # TODO add other methods
   width <- ncol(reference[[1]])         # Number of longitudes

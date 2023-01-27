@@ -1,8 +1,10 @@
 #' @title
-#' Normalizes an n dimensions array
+#' Used to normalize arrays
 #'
 #' @description
-#' Normalizes an array with the chosen method
+#' Normalizes an array with the chosen method.
+#' Used to normalized individual variables to make them comparable in the graph
+#' cut framework
 #'
 #' @param data should be an array
 #' @param method allows the user the chose the normalization method.
@@ -14,7 +16,7 @@
 #'
 #' @return
 #' Returns an array of the same size of the one used as argument normalized
-#' with the chose method
+#' with the chosen method
 #'
 Normalize <- function(data, method){
 
