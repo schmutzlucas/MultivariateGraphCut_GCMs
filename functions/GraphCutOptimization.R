@@ -34,7 +34,7 @@ GraphCutOptimization <- function(
 ){
 
   n_labs      <- length(ref_datacost[1, 1, , 1])
-  n_variables <- length(ref_datacost[1, 1, 1 , ])
+  n_variables <- length(ref_datacost[1, 1, 1, ])
   width       <- ncol(ref_datacost)
   height      <- nrow(ref_datacost)
 
@@ -60,25 +60,26 @@ GraphCutOptimization <- function(
   )
 
   cat("Creating SmoothCost function...  ")
-
+  #TODO sortie dans un fichier
   ptrSmoothCost <- cppXPtr(
     code = 'float smoothFn(int p1, int p2, int l1, int l2, Rcpp::List extraData)
 {
-  unsigned nbVariable       = extraData["n_variables"]
-  int numPix                = extraData["numPix * nbVariable"];
-  int nbModels              = extraData["n_labs"];
-  float weight              = extraData["weight"];
-  NumericVector data        = extraData["data"];
+  int nbVariables        = extraData["n_variables"]
+  int numPix             = extraData["numPix"];
+  int nbModels           = extraData["n_labs"];
+  float weight           = extraData["weight"];
+  NumericVector data     = extraData["data"];
+  int totPix             = numPix * nbVariabless
 
   float cost = 0;
 
-  for (unsigned k = 0; k < nbVariable; k++) {
-      cost += std::abs(data[k + (p1 + numPix * nbVariable * l1)] -
-              data[k + (p1 + numPix * nbVariable * l2)]) +
-              std::abs(data[k + (p2 + numPix * nbVariable * l1)] -
-              data[k + (p2 + numPix * nbVariable * l2)]) ;
+  for (unsigned k = 0; k < nbVariables; k++) {
+      cost += std::abs(data[k + (p1 * nbVariables + totPix * l1)] -
+              data[k + (p1 * nbVariables + totPix * l2)]) +
+              std::abs(data[k + (p2 * nbVariables + totPix * l1)] -
+              data[k + (p2 * nbVariables + totPix * l2)]) ;
   }
-  
+
   return(weight * cost);
 }',
     includes = c("#include <math.h>", "#include <Rcpp.h>"),
@@ -92,13 +93,15 @@ GraphCutOptimization <- function(
     for (j in 1:n_variables) {
       bias[,,i] <- bias[,,i] + abs(models_datacost[,, i, j] - ref_datacost[[j]])
     }
-}
+  }
 
   # Permuting longitude and latitude since the indexing isn't the same in R and in C++
   # TODO c() call was redundant
   bias_cpp <- aperm(bias, c(2, 1, 3))
+  # TODO modify for 4 dimensions
   smooth_cpp <- aperm(models_smoothcost, c(2, 1, 3))
 
+  # Creation of the data and smooth cost
   gco$setDataCost(ptrDataCost, list(numPix = width * height,
                                     data = bias_cpp,
                                     weight = weight_data))
@@ -108,7 +111,7 @@ GraphCutOptimization <- function(
                                         weight = weight_smooth,
                                         n_variables = n_variables))
 
-  # Creating the initialization matrix based on the best model from the previous list
+  # Creating the initialization matrix based on the best model (bias)
   # TODO Implement random version?
   mae_list <- numeric(n_labs)
   for(i in seq_along(mae_list)){
@@ -120,7 +123,7 @@ GraphCutOptimization <- function(
   }
 
   # Optimizing the MRF energy with alpha-beta swap
-  # (-1 refers to the optimization until convergence)
+  # -1 refers to the optimization until convergence
   cat("Starting GraphCut optimization...  ")
   begin <- Sys.time()
   gco$swap(-1)
