@@ -4,7 +4,7 @@ new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"
 lapply(list.of.packages, library, character.only = TRUE)
 # install_github("thaos/gcoWrapR")
 library(gcoWrapR)
-
+# TODO documentation of gc
 #' @title
 #' Graph cut optimization
 #'
@@ -22,8 +22,7 @@ library(gcoWrapR)
 #' Normalize(temperature, MinMax)
 #'
 #' @return
-#' Returns an array of the same size of the one used as argument normalized
-#' with the chose method
+#' Returns the results of the graphcut as an array of labels
 #'
 GraphCutOptimization <- function(
   ref_datacost,
@@ -96,10 +95,10 @@ GraphCutOptimization <- function(
   }
 
   # Permuting longitude and latitude since the indexing isn't the same in R and in C++
-  # TODO c() call was redundant
-  bias_cpp <- aperm(bias, c(2, 1, 3))
-  # TODO modify for 4 dimensions
-  smooth_cpp <- aperm(models_smoothcost, c(2, 1, 3))
+  # changed: c(aperm(bias, c(2, 1, 3))) call was redundant
+  # when go from matrix to vector
+  bias_cpp <- c(aperm(bias, c(2, 1, 3)))
+  smooth_cpp <- c(aperm(models_smoothcost, c(4, 2, 1, 3)))
 
   # Creation of the data and smooth cost
   gco$setDataCost(ptrDataCost, list(numPix = width * height,
