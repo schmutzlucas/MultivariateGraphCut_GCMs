@@ -21,8 +21,10 @@
 #' with the chosen method
 #'
 NormalizeVariables <- function (data, variables, method) {
-  tmp_dim <- dim(data[1])
+  tmp_dim <- dim(data$present)
+  print(tmp_dim)
   tmp_dim[4] <- tmp_dim[4] / length(variables)
+  print(tmp_dim)
   data_nrm <- list()
   data_nrm$future <- data_nrm$present <- array(0, dim = dim(data$present))
   print(tmp_dim)

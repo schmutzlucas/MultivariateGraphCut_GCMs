@@ -85,4 +85,8 @@ MinBias_label <- MinBiasOptimization(reference_list, models_list)
 
 
 # Graphcut labelling
-GC_result <- GraphCutOptimization()
+GC_result <- GraphCutOptimization(reference = reference_matrix_nrm$present,
+                                  models_datacost = models_matrix_nrm$present,
+                                  models_smoothcost = models_matrix_nrm$future,
+                                  weight_data = 1,
+                                  weight_smooth = 1)

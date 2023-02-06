@@ -25,17 +25,17 @@ library(gcoWrapR)
 #' Returns the results of the graphcut as an array of labels
 #'
 GraphCutOptimization <- function(
-  ref_datacost,
+  reference,
   models_datacost,
   models_smoothcost,
   weight_data,
   weight_smooth
 ){
 
-  n_labs      <- length(ref_datacost[1, 1, , 1])
-  n_variables <- length(ref_datacost[1, 1, 1, ])
-  width       <- ncol(ref_datacost)
-  height      <- nrow(ref_datacost)
+  n_labs      <- length(reference[1, 1, , 1])
+  n_variables <- length(reference[1, 1, 1, ])
+  width       <- ncol(reference)
+  height      <- nrow(reference)
 
   # Instanciation of the GraphCut environment
 
@@ -90,7 +90,7 @@ GraphCutOptimization <- function(
   bias <- array(0, c(height, width, n_labs))
   for (i in 1:nbModels) {
     for (j in 1:n_variables) {
-      bias[,,i] <- bias[,,i] + abs(models_datacost[,, i, j] - ref_datacost[[j]])
+      bias[,,i] <- bias[,,i] + abs(models_datacost[,, i, j] - reference[[j]])
     }
   }
 
@@ -117,7 +117,7 @@ GraphCutOptimization <- function(
     mae_list[[i]] <- mean(abs(bias[,,i]))
   }
   best_label <- which.min(mae_list)-1 # in C++ label indices start at 0
-  for(z in 0:(length(ref_datacost)-1)){
+  for(z in 0:(length(reference)-1)){
     gco$setLabel(z, best_label)
   }
 
