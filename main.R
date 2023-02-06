@@ -1,9 +1,11 @@
 # Install and load necessary libraries
 {
-  list.of.packages <- c("RcppXPtrUtils","devtools")
+  list.of.packages <- c('RcppXPtrUtils','devtools', 'Rcpp', 'ncdf4',
+                        'ncdf4.helpers', 'abind')
   new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
   if(length(new.packages))
     install.packages(new.packages, repos = "https://cran.us.r-project.org")
+  library(devtools)
   lapply(list.of.packages, library, character.only = TRUE)
   install_github("thaos/gcoWrapR")
 }
@@ -11,7 +13,6 @@
   library(ncdf4)
   library(ncdf4.helpers)
   library(abind)
-  library(devtools)
   library(roxygen2)
 }
 
@@ -79,7 +80,7 @@ reference_matrix_nrm <- NormalizeVariables(reference_matrix, variables, 'StdSc')
 
 # MinBias labelling
 # TODO Not working!!!
-MinBias_label <- MinBiasOptimization(reference_list, models_list)
+# MinBias_label <- MinBiasOptimization(reference_list, models_list)
 
 # TODO implement bias_var from old code
 

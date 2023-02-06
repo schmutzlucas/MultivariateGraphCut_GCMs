@@ -32,10 +32,16 @@ GraphCutOptimization <- function(
   weight_smooth
 ){
 
-  n_labs      <- length(reference[1, 1, , 1])
+  n_labs      <- length(models_datacost[1, 1, , 1])
   n_variables <- length(reference[1, 1, 1, ])
   width       <- ncol(reference)
   height      <- nrow(reference)
+
+  print(height)
+  print(width)
+  print(n_labs)
+  print(n_variables)
+
 
   # Instanciation of the GraphCut environment
 
@@ -63,20 +69,19 @@ GraphCutOptimization <- function(
   ptrSmoothCost <- cppXPtr(
     code = 'float smoothFn(int p1, int p2, int l1, int l2, Rcpp::List extraData)
 {
-  int nbVariables        = extraData["n_variables"]
+  int nbVariables        = extraData["n_variables"];
   int numPix             = extraData["numPix"];
-  int nbModels           = extraData["n_labs"];
   float weight           = extraData["weight"];
   NumericVector data     = extraData["data"];
-  int totPix             = numPix * nbVariabless
+  int totPix             = numPix * nbVariables;
 
   float cost = 0;
 
-  for (unsigned k = 0; k < nbVariables; k++) {
-      cost += std::abs(data[k + (p1 * nbVariables + totPix * l1)] -
+  for (int k = 0; k < nbVariables; k++) {
+    cost += std::abs(data[k + (p1 * nbVariables + totPix * l1)] -
               data[k + (p1 * nbVariables + totPix * l2)]) +
               std::abs(data[k + (p2 * nbVariables + totPix * l1)] -
-              data[k + (p2 * nbVariables + totPix * l2)]) ;
+              data[k + (p2 * nbVariables + totPix * l2)]);
   }
 
   return(weight * cost);
@@ -88,7 +93,7 @@ GraphCutOptimization <- function(
   # Preparing the data to perform GraphCut
   # TODO Test
   bias <- array(0, c(height, width, n_labs))
-  for (i in 1:nbModels) {
+  for (i in 1:n_labs) {
     for (j in 1:n_variables) {
       bias[,,i] <- bias[,,i] + abs(models_datacost[,, i, j] - reference[[j]])
     }
@@ -98,7 +103,7 @@ GraphCutOptimization <- function(
   # changed: c(aperm(bias, c(2, 1, 3))) call was redundant
   # when go from matrix to vector
   bias_cpp <- c(aperm(bias, c(2, 1, 3)))
-  smooth_cpp <- c(aperm(models_smoothcost, c(4, 2, 1, 3)))
+  smooth_cpp <- c(aperm(models_smoothcost, c(4, 1,2, 3)))
 
   # Creation of the data and smooth cost
   gco$setDataCost(ptrDataCost, list(numPix = width * height,
