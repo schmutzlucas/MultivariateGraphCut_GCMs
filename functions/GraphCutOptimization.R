@@ -103,7 +103,8 @@ GraphCutOptimization <- function(
   # changed: c(aperm(bias, c(2, 1, 3))) call was redundant
   # when go from matrix to vector
   bias_cpp <- c(aperm(bias, c(2, 1, 3)))
-  smooth_cpp <- c(aperm(models_smoothcost, c(4, 1,2, 3)))
+  smooth_cpp <- c(aperm(models_smoothcost, c(4, 2, 1, 3)))
+
 
   # Creation of the data and smooth cost
   gco$setDataCost(ptrDataCost, list(numPix = width * height,
