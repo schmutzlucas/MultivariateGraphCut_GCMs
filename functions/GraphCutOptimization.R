@@ -68,24 +68,24 @@ GraphCutOptimization <- function(
   #TODO sortie dans un fichier
   ptrSmoothCost <- cppXPtr(
     code = 'float smoothFn(int p1, int p2, int l1, int l2, Rcpp::List extraData)
-{
-  int nbVariables        = extraData["n_variables"];
-  int numPix             = extraData["numPix"];
-  float weight           = extraData["weight"];
-  NumericVector data     = extraData["data"];
-  int totPix             = numPix * nbVariables;
+    {
+      int nbVariables        = extraData["n_variables"];
+      int numPix             = extraData["numPix"];
+      float weight           = extraData["weight"];
+      NumericVector data     = extraData["data"];
+      int totPix             = numPix * nbVariables;
 
-  float cost = 0;
+      float cost = 0;
 
-  for (int k = 0; k < nbVariables; k++) {
-    cost += std::abs(data[k + (p1 * nbVariables + totPix * l1)] -
-            data[k + (p1 * nbVariables + totPix * l2)]) +
-            std::abs(data[k + (p2 * nbVariables + totPix * l1)] -
-            data[k + (p2 * nbVariables + totPix * l2)]);
-  }
+      for (int k = 0; k < nbVariables; k++) {
+        cost += std::abs(data[k + (p1 * nbVariables + totPix * l1)] -
+                data[k + (p1 * nbVariables + totPix * l2)]) +
+                std::abs(data[k + (p2 * nbVariables + totPix * l1)] -
+                data[k + (p2 * nbVariables + totPix * l2)]);
+      }
 
-  return(weight * cost);
-}',
+      return(weight * cost);
+    }',
     includes = c("#include <math.h>", "#include <Rcpp.h>"),
     rebuild = FALSE, showOutput = FALSE, verbose = FALSE
   )
