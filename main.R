@@ -9,7 +9,8 @@
   lapply(list.of.packages, library, character.only = TRUE)
   install_github("thaos/gcoWrapR")
 }
-{ library(gcoWrapR)
+{
+  library(gcoWrapR)
   library(ncdf4)
   library(ncdf4.helpers)
   library(abind)

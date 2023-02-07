@@ -53,22 +53,25 @@ GraphCutOptimization <- function(
 
   ptrDataCost <- cppXPtr(
     code = 'float dataFn(int p, int l, Rcpp::List extraData)
-{
-  int numPix          = extraData["numPix"];
-  float weight        = extraData["weight"];
-  NumericVector data  = extraData["data"];
+    {
+    /*
+      int numPix          = extraData["numPix"];
+      float weight        = extraData["weight"];
+      NumericVector data  = extraData["data"];
 
-  return(weight * data[p + numPix * l]);
-}',
+      //return(weight * data[p + numPix * l]);
+      */
+      return(0);
+    }',
     includes = c("#include <math.h>", "#include <Rcpp.h>"),
-    rebuild = FALSE, showOutput = FALSE, verbose = FALSE
+    rebuild = FALSE, showOutput = TRUE, verbose = TRUE
   )
 
   cat("Creating SmoothCost function...  ")
   #TODO sortie dans un fichier
   ptrSmoothCost <- cppXPtr(
     code = 'float smoothFn(int p1, int p2, int l1, int l2, Rcpp::List extraData)
-    {
+    {/*
       int nbVariables        = extraData["n_variables"];
       int numPix             = extraData["numPix"];
       float weight           = extraData["weight"];
@@ -83,11 +86,12 @@ GraphCutOptimization <- function(
                 std::abs(data[k + (p2 * nbVariables + totPix * l1)] -
                 data[k + (p2 * nbVariables + totPix * l2)]);
       }
-
-      return(weight * cost);
+      */
+      //return(weight * cost);
+      return(0);
     }',
     includes = c("#include <math.h>", "#include <Rcpp.h>"),
-    rebuild = FALSE, showOutput = FALSE, verbose = FALSE
+    rebuild = FALSE, showOutput = TRUE, verbose = TRUE
   )
 
   # Preparing the data to perform GraphCut
@@ -131,7 +135,7 @@ GraphCutOptimization <- function(
   # -1 refers to the optimization until convergence
   cat("Starting GraphCut optimization...  ")
   begin <- Sys.time()
-  gco$swap(-1)
+  gco$swap(1)
   time_spent <- Sys.time()-begin
   cat("GraphCut optimization done :  ")
   print(time_spent)
