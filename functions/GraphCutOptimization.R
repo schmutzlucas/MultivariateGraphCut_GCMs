@@ -79,9 +79,9 @@ GraphCutOptimization <- function(
 
   for (int k = 0; k < nbVariables; k++) {
     cost += std::abs(data[k + (p1 * nbVariables + totPix * l1)] -
-              data[k + (p1 * nbVariables + totPix * l2)]) +
-              std::abs(data[k + (p2 * nbVariables + totPix * l1)] -
-              data[k + (p2 * nbVariables + totPix * l2)]);
+            data[k + (p1 * nbVariables + totPix * l2)]) +
+            std::abs(data[k + (p2 * nbVariables + totPix * l1)] -
+            data[k + (p2 * nbVariables + totPix * l2)]);
   }
 
   return(weight * cost);
