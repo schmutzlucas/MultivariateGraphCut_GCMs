@@ -30,7 +30,7 @@ GraphCutOptimization <- function(
   models_smoothcost,
   weight_data,
   weight_smooth,
-  verbose = TRUE
+  verbose
 ){
 
   n_labs      <- length(models_datacost[1, 1, , 1])
@@ -38,12 +38,29 @@ GraphCutOptimization <- function(
   width       <- ncol(reference)
   height      <- nrow(reference)
 
-  print(height)
-  print(width)
-  print(n_labs)
-  print(n_variables)
+  cat(height)
+  cat(width)
+  cat(n_labs)
+  cat(n_variables)
   print(dim(models_datacost))
   print(dim(models_smoothcost))
+
+
+
+  # Preparing the data to perform GraphCut
+  # TODO Test
+  bias <- array(0, c(height, width, n_labs))
+  for (i in 1:n_labs) {
+    for (j in 1:n_variables) {
+      bias[,,i] <- bias[,,i] + abs(models_datacost[,, i, j] - reference[[j]])
+    }
+  }
+
+  # Permuting longitude and latitude since the indexing isn't the same in R and in C++
+  # changed: c(aperm(bias, c(2, 1, 3))) call was redundant
+  # when go from matrix to vector
+  bias_cpp <- c(aperm(bias, c(2, 1, 3)))
+  smooth_cpp <- c(aperm(models_smoothcost, c(4, 2, 1, 3)))
 
 
   # Instanciation of the GraphCut environment
@@ -64,7 +81,8 @@ GraphCutOptimization <- function(
 
       //return(weight * data[p + numPix * l]);
       */
-      return(0);
+      float test = 0.5;
+      return(test);
     }',
     includes = c("#include <math.h>", "#include <Rcpp.h>"),
     rebuild = TRUE, showOutput = FALSE, verbose = FALSE
@@ -91,28 +109,12 @@ GraphCutOptimization <- function(
       }
       */
       //return(weight * cost);
-      return(0);
+      float test = 0.5;
+      return(test);
     }',
     includes = c("#include <math.h>", "#include <Rcpp.h>"),
     rebuild = TRUE, showOutput = FALSE, verbose = FALSE
   )
-
-  # Preparing the data to perform GraphCut
-  # TODO Test
-  bias <- array(0, c(height, width, n_labs))
-  for (i in 1:n_labs) {
-    for (j in 1:n_variables) {
-      bias[,,i] <- bias[,,i] + abs(models_datacost[,, i, j] - reference[[j]])
-    }
-  }
-
-  # Permuting longitude and latitude since the indexing isn't the same in R and in C++
-  # changed: c(aperm(bias, c(2, 1, 3))) call was redundant
-  # when go from matrix to vector
-  bias_cpp <- c(aperm(bias, c(2, 1, 3)))
-  smooth_cpp <- c(aperm(models_smoothcost, c(4, 2, 1, 3)))
-  print(dim((bias_cpp)))
-  print(dim((smooth_cpp)))
 
 
   # Creation of the data and smooth cost
@@ -157,7 +159,7 @@ GraphCutOptimization <- function(
     }
   }
 
-  gc_result <- vector("list",length=2)
+  # gc_result <- vector("list",length=2)
   gc_result <- list("label_attribution" = label_attribution, "Data and smooth cost" = data_smooth_list)
 
   return(gc_result)
