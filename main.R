@@ -95,4 +95,5 @@ GC_result <- GraphCutOptimization(reference = reference_matrix_nrm$present,
                                   weight_smooth = 1,
                                   verbose = TRUE)
 save(GC_result, test.txt)
-print('test finished line 98')
+
+print('test finished line 99')
