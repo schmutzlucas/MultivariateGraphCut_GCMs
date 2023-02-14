@@ -85,7 +85,7 @@ GraphCutOptimization <- function(
       return(test);
     }',
     includes = c("#include <math.h>", "#include <Rcpp.h>"),
-    rebuild = TRUE, showOutput = FALSE, verbose = FALSE
+    rebuild = FALSE, showOutput = FALSE, verbose = FALSE
   )
 
   cat("Creating SmoothCost function...  ")
@@ -113,7 +113,7 @@ GraphCutOptimization <- function(
       return(test);
     }',
     includes = c("#include <math.h>", "#include <Rcpp.h>"),
-    rebuild = TRUE, showOutput = FALSE, verbose = FALSE
+    rebuild = FALSE, showOutput = FALSE, verbose = FALSE
   )
 
 
@@ -146,7 +146,6 @@ GraphCutOptimization <- function(
   time_spent <- Sys.time()-begin
   cat("GraphCut optimization done :  ")
   print(time_spent)
-
 
   data_cost         <- gco$giveDataEnergy()
   smooth_cost       <- gco$giveSmoothEnergy()

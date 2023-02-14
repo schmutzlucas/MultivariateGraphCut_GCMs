@@ -4,6 +4,7 @@ list.of.packages <- c('RcppXPtrUtils','devtools', 'Rcpp', 'ncdf4',
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
 if(length(new.packages))
   install.packages(new.packages, repos = "https://cran.us.r-project.org")
+
 library(devtools)
 lapply(list.of.packages, library, character.only = TRUE)
 install_github("thaos/gcoWrapR")
@@ -93,5 +94,5 @@ GC_result <- GraphCutOptimization(reference = reference_matrix_nrm$present,
                                   weight_data = 1,
                                   weight_smooth = 1,
                                   verbose = TRUE)
-
+save(GC_result, test.txt)
 print('test finished line 98')
