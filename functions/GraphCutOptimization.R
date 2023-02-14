@@ -29,7 +29,8 @@ GraphCutOptimization <- function(
   models_datacost,
   models_smoothcost,
   weight_data,
-  weight_smooth
+  weight_smooth,
+  verbose = TRUE
 ){
 
   n_labs      <- length(models_datacost[1, 1, , 1])
@@ -41,6 +42,8 @@ GraphCutOptimization <- function(
   print(width)
   print(n_labs)
   print(n_variables)
+  print(dim(models_datacost))
+  print(dim(models_smoothcost))
 
 
   # Instanciation of the GraphCut environment
@@ -64,7 +67,7 @@ GraphCutOptimization <- function(
       return(0);
     }',
     includes = c("#include <math.h>", "#include <Rcpp.h>"),
-    rebuild = FALSE, showOutput = TRUE, verbose = TRUE
+    rebuild = TRUE, showOutput = FALSE, verbose = FALSE
   )
 
   cat("Creating SmoothCost function...  ")
@@ -91,7 +94,7 @@ GraphCutOptimization <- function(
       return(0);
     }',
     includes = c("#include <math.h>", "#include <Rcpp.h>"),
-    rebuild = FALSE, showOutput = TRUE, verbose = TRUE
+    rebuild = TRUE, showOutput = FALSE, verbose = FALSE
   )
 
   # Preparing the data to perform GraphCut
@@ -108,6 +111,8 @@ GraphCutOptimization <- function(
   # when go from matrix to vector
   bias_cpp <- c(aperm(bias, c(2, 1, 3)))
   smooth_cpp <- c(aperm(models_smoothcost, c(4, 2, 1, 3)))
+  print(dim((bias_cpp)))
+  print(dim((smooth_cpp)))
 
 
   # Creation of the data and smooth cost

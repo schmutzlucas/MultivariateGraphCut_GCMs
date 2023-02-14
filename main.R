@@ -1,4 +1,4 @@
-# Install and load necessary libraries
+ # Install and load necessary libraries
 {
   list.of.packages <- c('RcppXPtrUtils','devtools', 'Rcpp', 'ncdf4',
                         'ncdf4.helpers', 'abind')
