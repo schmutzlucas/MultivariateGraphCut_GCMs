@@ -1,28 +1,27 @@
- # Install and load necessary libraries
-{
-  list.of.packages <- c('RcppXPtrUtils','devtools', 'Rcpp', 'ncdf4',
-                        'ncdf4.helpers', 'abind')
-  new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
-  if(length(new.packages))
-    install.packages(new.packages, repos = "https://cran.us.r-project.org")
-  library(devtools)
-  lapply(list.of.packages, library, character.only = TRUE)
-  install_github("thaos/gcoWrapR")
-}
-{
-  library(gcoWrapR)
-  library(ncdf4)
-  library(ncdf4.helpers)
-  library(abind)
-  library(roxygen2)
-}
+# Install and load necessary libraries
+list.of.packages <- c('RcppXPtrUtils','devtools', 'Rcpp', 'ncdf4',
+                      'ncdf4.helpers', 'abind')
+new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
+if(length(new.packages))
+  install.packages(new.packages, repos = "https://cran.us.r-project.org")
+library(devtools)
+lapply(list.of.packages, library, character.only = TRUE)
+install_github("thaos/gcoWrapR")
+
+# Import libraries
+library(gcoWrapR)
+library(ncdf4)
+library(ncdf4.helpers)
+library(abind)
+library(roxygen2)
+
 
 # Loading local functions
-{
-  source_code_dir <- 'functions/' #The directory where all functions are saved.
-  file_paths <- list.files(source_code_dir, full.names = T)
-  for(path in file_paths){source(path)}
-}
+
+source_code_dir <- 'functions/' #The directory where all functions are saved.
+file_paths <- list.files(source_code_dir, full.names = T)
+for(path in file_paths){source(path)}
+
 
 
 # Temporal ranges
@@ -40,8 +39,8 @@ variables <- c('tas', 'pr', 'tas')
 # TODO choose the method for the list of model names
 # Selected models
 selected_models <- c(
-                      28,34,16,9,8,2
-                    )
+  28,34,16,9,8,2
+)
 # Obtains the list of models from the model names or from a file
 # Method 1
 # TODO This needs ajustements to remove prefixes and suffixes
@@ -61,7 +60,7 @@ reference_names <- c('era5')
 # TODO : Add path as argument
 tmp <- OpenAndAverageModels(
   model_names, variables, year_present, year_future
-  )
+)
 models_list <- tmp[[1]]
 models_matrix <- tmp[[2]]
 rm(tmp)
@@ -69,7 +68,7 @@ rm(tmp)
 # Open and average the refeences for the selected time periods
 tmp <- OpenAndAverageModels(
   reference_names, variables, year_present, year_future
-  )
+)
 reference_list <- tmp[[1]]
 reference_matrix <- tmp[[2]]
 
@@ -87,7 +86,7 @@ reference_matrix_nrm <- NormalizeVariables(reference_matrix, variables, 'StdSc')
 
 
 # Graphcut labelling
- GC_result <- list()
+GC_result <- list()
 GC_result <- GraphCutOptimization(reference = reference_matrix_nrm$present,
                                   models_datacost = models_matrix_nrm$present,
                                   models_smoothcost = models_matrix_nrm$future,
@@ -95,4 +94,4 @@ GC_result <- GraphCutOptimization(reference = reference_matrix_nrm$present,
                                   weight_smooth = 1,
                                   verbose = TRUE)
 
- print('test finished')
+print('test finished line 98')
