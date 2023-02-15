@@ -1,24 +1,29 @@
 list.of.packages <- c("RcppXPtrUtils","devtools")
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
-if(length(new.packages)) install.packages(new.packages,repos = "http://cran.us.r-project.org")
+# if(length(new.packages)) install.packages(new.packages,repos = "http://cran.us.r-project.org")
 lapply(list.of.packages, library, character.only = TRUE)
 # install_github("thaos/gcoWrapR")
 library(gcoWrapR)
 # TODO documentation of gc
+#' @title
 #' Graph cut optimization
 #'
-#' @description This function produces a map of labels where each grid-point is affected to
+#' @description
+#' This function produces a map of labels where each grid-point is affected to
 #' one model. It uses gcoWrapR (https://github.com/thaos/gcoWrapR) and c++ based
 #' gco-v3.0 (https://vision.cs.uwaterloo.ca/code/).
 #'
-#' @param reference should be an array
-#' @param models_datacost should be an array
-#' @param models_smoothcost should be an array
-#' @param weight_data numeric value that sets the weight of the data
-#' @param weight_smooth numeric value that sets the weight of the smoothness
-#' @param verbose logical value to print debugging information
+#' @param data should be an array
+#' @param method allows the user the chose the normalization method.
+#' Currently: Standard Score or Min Max
 #'
-#' @return returns the results of the graphcut as an array of labels
+#' @examples
+#' Normalize(precipitation, StdSc)
+#' Normalize(temperature, MinMax)
+#'
+#' @return
+#' Returns the results of the graphcut as an array of labels
+#'
 GraphCutOptimization <- function(
   reference,
   models_datacost,
@@ -69,25 +74,26 @@ GraphCutOptimization <- function(
   ptrDataCost <- cppXPtr(
     code = 'float dataFn(int p, int l, Rcpp::List extraData)
     {
-    /*
+    
       int numPix          = extraData["numPix"];
       float weight        = extraData["weight"];
       NumericVector data  = extraData["data"];
+      std::cout << "TeeeeeeeeeSSSSSSSSSSSSSSttttttt: " << numPix << std::endl;
 
       return(weight * data[p + numPix * l]);
-      */
-      float test = 0;
-      return(test);
+      
+      //float test = 0;
+      //return(test);
     }',
-    includes = c("#include <math.h>", "#include <Rcpp.h>"),
-    rebuild = FALSE, showOutput = FALSE, verbose = FALSE
+    includes = c("#include <math.h>", "#include <Rcpp.h>", "#include <iostream>"),
+    rebuild = TRUE, showOutput = FALSE, verbose = FALSE
   )
 
   cat("Creating SmoothCost function...  ")
   #TODO sortie dans un fichier
   ptrSmoothCost <- cppXPtr(
     code = 'float smoothFn(int p1, int p2, int l1, int l2, Rcpp::List extraData)
-    {/*
+    {
       int nbVariables        = extraData["n_variables"];
       int numPix             = extraData["numPix"];
       float weight           = extraData["weight"];
@@ -102,13 +108,13 @@ GraphCutOptimization <- function(
                 std::abs(data[k + (p2 * nbVariables + totPix * l1)] -
                 data[k + (p2 * nbVariables + totPix * l2)]);
       }
-      */
-      //return(weight * cost);
-      float test = 0;
-      return(test);
+      
+      return(weight * cost);
+      //float test = 0;
+      //return(test);
     }',
     includes = c("#include <math.h>", "#include <Rcpp.h>"),
-    rebuild = FALSE, showOutput = FALSE, verbose = FALSE
+    rebuild = TRUE, showOutput = FALSE, verbose = FALSE
   )
 
 
@@ -129,15 +135,23 @@ GraphCutOptimization <- function(
     mae_list[[i]] <- mean(abs(bias[,,i]))
   }
   best_label <- which.min(mae_list)-1 # in C++ label indices start at 0
-  for(z in 0:(length(reference)-1)){
+  #print(best_label)
+  for(z in 0:(width*height-1)){
+  #for(z in 0:1){
     gco$setLabel(z, best_label)
+    #gco$setLabel(z, sample(0:(n_labs-1), 1))
+    #gco$setLabel(z, -1)
   }
+  #for(z in 0:(length(reference)-1)){
+  #  gco$setLabel(z, 0)
+  #}
+  #gco$setLabel(0, 0)
 
   # Optimizing the MRF energy with alpha-beta swap
   # -1 refers to the optimization until convergence
   cat("Starting GraphCut optimization...  ")
   begin <- Sys.time()
-  gco$swap(1)
+  gco$swap(-1)
   time_spent <- Sys.time()-begin
   cat("GraphCut optimization done :  ")
   print(time_spent)
