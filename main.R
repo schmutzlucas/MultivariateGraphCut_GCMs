@@ -94,6 +94,6 @@ GC_result <- GraphCutOptimization(reference = reference_matrix_nrm$present,
                                   weight_data = 1,
                                   weight_smooth = 1,
                                   verbose = TRUE)
-save(GC_result, test.txt)
+saveRDS(GC_result, file = 'GC_result.rds')
 
 print('test finished line 99')

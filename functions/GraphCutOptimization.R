@@ -1,29 +1,24 @@
 list.of.packages <- c("RcppXPtrUtils","devtools")
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
-# if(length(new.packages)) install.packages(new.packages,repos = "http://cran.us.r-project.org")
+if(length(new.packages)) install.packages(new.packages,repos = "http://cran.us.r-project.org")
 lapply(list.of.packages, library, character.only = TRUE)
 # install_github("thaos/gcoWrapR")
 library(gcoWrapR)
 # TODO documentation of gc
-#' @title
 #' Graph cut optimization
 #'
-#' @description
-#' This function produces a map of labels where each grid-point is affected to
+#' @description This function produces a map of labels where each grid-point is affected to
 #' one model. It uses gcoWrapR (https://github.com/thaos/gcoWrapR) and c++ based
 #' gco-v3.0 (https://vision.cs.uwaterloo.ca/code/).
 #'
-#' @param data should be an array
-#' @param method allows the user the chose the normalization method.
-#' Currently: Standard Score or Min Max
+#' @param reference should be an array
+#' @param models_datacost should be an array
+#' @param models_smoothcost should be an array
+#' @param weight_data numeric value that sets the weight of the data
+#' @param weight_smooth numeric value that sets the weight of the smoothness
+#' @param verbose logical value to print debugging information
 #'
-#' @examples
-#' Normalize(precipitation, StdSc)
-#' Normalize(temperature, MinMax)
-#'
-#' @return
-#' Returns the results of the graphcut as an array of labels
-#'
+#' @return returns the results of the graphcut as an array of labels
 GraphCutOptimization <- function(
   reference,
   models_datacost,
