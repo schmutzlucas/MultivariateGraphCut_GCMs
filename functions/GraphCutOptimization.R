@@ -78,7 +78,7 @@ GraphCutOptimization <- function(
       int numPix          = extraData["numPix"];
       float weight        = extraData["weight"];
       NumericVector data  = extraData["data"];
-      std::cout << "TeeeeeeeeeSSSSSSSSSSSSSSttttttt: " << numPix << std::endl;
+      std::cout << "Test: " << numPix << std::endl;
 
       return(weight * data[p + numPix * l]);
       
