@@ -26,7 +26,6 @@ def cds_api_call(experiment,
     )
 
 
-# TODO Read model list from files
 with open('model_list.txt', 'r') as file:
     model_list = file.read().splitlines()
 
