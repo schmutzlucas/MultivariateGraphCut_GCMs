@@ -1,6 +1,7 @@
 from concurrent.futures import ThreadPoolExecutor
 
 import cdsapi
+import os
 
 c = cdsapi.Client()
 
@@ -55,8 +56,12 @@ def main():
                 year_int = list(range(2015, 2101))
                 year = list(map(str, year_int))
             for i in model_list:
+                directory = os.path.abspath(f"download/{i}")
+                if not os.path.exists(directory):
+                    os.makedirs(directory)
+                    print(f"Created directory: {directory}")
                 for j in variable_list:
-                    name = 'download/' + j + '_Amon_' + i + '_' + n + '.zip'
+                    name = f"download/{i}/{j}_Amon_{i}_{n}.zip"
                     z += 1
                     try:
                         var = [exe.submit(cds_api_call, n, i, year, month, j, name)]
