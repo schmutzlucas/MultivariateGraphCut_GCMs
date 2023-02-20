@@ -60,7 +60,7 @@ def main():
             for i in model_list:
                 # Create a directory to store the downloaded files for each
                 # model
-                directory = os.path.abspath(f"download_day{i}")
+                directory = os.path.abspath(f"download_day/{i}")
                 if not os.path.exists(directory):
                     os.makedirs(directory)
                     print(f"Created directory: {directory}")
