@@ -78,9 +78,7 @@ def main():
                                               month, day, j, name)]
                         finally:
                             pass
-
-
-print('finished')
+    print('finished')
 
 # Call the main function to start the data retrieval
 main()
