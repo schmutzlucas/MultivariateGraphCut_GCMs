@@ -15,7 +15,7 @@ def cds_api_call(experiment, model, year, month, day, variable, name):
             'temporal_resolution': 'daily',  # Temporal resolution of the data
             'year': year,  # Years to retrieve data for
             'month': month,  # Months to retrieve data for
-            'day': day, # Days to retrieve data for
+            'day': day,  # Days to retrieve data for
             'experiment': experiment,  # Experiment name
             'variable': variable,  # Variable name
             'model': model,  # Model name
@@ -79,6 +79,8 @@ def main():
                         finally:
                             pass
 
+
+print('finished')
 
 # Call the main function to start the data retrieval
 main()
