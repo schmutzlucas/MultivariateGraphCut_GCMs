@@ -11,14 +11,14 @@ def cds_api_call(experiment, model, year, month, day, variable, name):
     c.retrieve(
         'projections-cmip6',  # Dataset ID
         {
-            'format': 'zip',  # Output format
             'temporal_resolution': 'daily',  # Temporal resolution of the data
-            'year': year,  # Years to retrieve data for
-            'month': month,  # Months to retrieve data for
-            'day': day,  # Days to retrieve data for
             'experiment': experiment,  # Experiment name
             'variable': variable,  # Variable name
             'model': model,  # Model name
+            'year': year,  # Years to retrieve data for
+            'month': month,  # Months to retrieve data for
+            'day': day,  # Days to retrieve data for
+            'format': 'zip',  # Output format
         },
         name  # Output filename
     )
