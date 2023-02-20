@@ -1,3 +1,4 @@
+import os
 from concurrent.futures import ThreadPoolExecutor
 
 import cdsapi
@@ -26,7 +27,6 @@ def cds_api_call(experiment,
     )
 
 
-# TODO Read model list from files
 with open('model_list.txt', 'r') as file:
     model_list = file.read().splitlines()
 
@@ -58,11 +58,12 @@ def main():
             for i in model_list:
                 for j in variable_list:
                     name = 'download/' + j + '_Amon_' + i + '_' + n + '.zip'
-                    z += 1
-                    try:
-                        var = [exe.submit(cds_api_call, n, i, year, month, j, name)]
-                    finally:
-                        pass
+                    if not os.path.exists(name):
+                        z += 1
+                        try:
+                            var = [exe.submit(cds_api_call, n, i, year, month, j, name)]
+                        finally:
+                            pass
 
 
 main()
