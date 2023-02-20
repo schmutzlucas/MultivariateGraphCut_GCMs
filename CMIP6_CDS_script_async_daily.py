@@ -60,14 +60,14 @@ def main():
             for i in model_list:
                 # Create a directory to store the downloaded files for each
                 # model
-                directory = os.path.abspath(f"download_daily/{i}")
+                directory = os.path.abspath(f"download_day{i}")
                 if not os.path.exists(directory):
                     os.makedirs(directory)
                     print(f"Created directory: {directory}")
                 # Retrieve data for each variable
                 for j in variable_list:
                     # Set the output filename for the downloaded file
-                    name = f"download_daily/{i}/{j}_Aday_{i}_{n}.zip"
+                    name = f"download_day/{i}/{j}_day_{i}_{n}.zip"
                     # Check if the file already exists before downloading it
                     if not os.path.exists(name):
                         z += 1
