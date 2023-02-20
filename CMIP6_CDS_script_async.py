@@ -76,6 +76,5 @@ def main():
     print('finished')
 
 
-
 # Call the main function to start the data retrieval
 main()
