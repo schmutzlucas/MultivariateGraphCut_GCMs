@@ -7,14 +7,15 @@ c = cdsapi.Client()
 
 
 # Define a function to call the CDS API and retrieve data
-def cds_api_call(experiment, model, year, month, variable, name):
+def cds_api_call(experiment, model, year, month, day, variable, name):
     c.retrieve(
         'projections-cmip6',  # Dataset ID
         {
             'format': 'zip',  # Output format
-            'temporal_resolution': 'monthly',  # Temporal resolution of the data
+            'temporal_resolution': 'daily',  # Temporal resolution of the data
             'year': year,  # Years to retrieve data for
             'month': month,  # Months to retrieve data for
+            'day': day, # Days to retrieve data for
             'experiment': experiment,  # Experiment name
             'variable': variable,  # Variable name
             'model': model,  # Model name
@@ -28,8 +29,8 @@ with open('model_list.txt', 'r') as file:
     model_list = file.read().splitlines()
 
 # Define the list of variables to retrieve
-variable_list = ['pr', 'tas', 'huss', 'uas', 'vas',
-                 'tasmax', 'tasmin', 'psl', 'prw']
+variable_list = ['pr', 'tas', 'uas', 'vas',
+                 'tasmax', 'tasmin']
 
 # Define the list of experiments to retrieve data for
 experiment = ['historical', 'ssp5_8_5']
@@ -43,11 +44,15 @@ def main():
         for n in experiment:
             # Set the year and month ranges depending on the experiment
             if n == 'historical':
+                day_int = list(range(1, 31))
+                day = list(map(str, day_int))
                 month_int = list(range(1, 13))
                 month = list(map(str, month_int))
                 year_int = list(range(1950, 2015))
                 year = list(map(str, year_int))
             elif n == 'ssp5_8_5':
+                day_int = list(range(1, 31))
+                day = list(map(str, day_int))
                 month_int = list(range(1, 13))
                 month = list(map(str, month_int))
                 year_int = list(range(2015, 2101))
@@ -62,7 +67,7 @@ def main():
                 # Retrieve data for each variable
                 for j in variable_list:
                     # Set the output filename for the downloaded file
-                    name = f"download/{i}/{j}_Amon_{i}_{n}.zip"
+                    name = f"download/{i}/{j}_Aday_{i}_{n}.zip"
                     # Check if the file already exists before downloading it
                     if not os.path.exists(name):
                         z += 1
@@ -70,7 +75,7 @@ def main():
                             # Submit a job to the thread pool to download the
                             # data
                             var = [exe.submit(cds_api_call, n, i, year,
-                                              month, j, name)]
+                                              month, day, j, name)]
                         finally:
                             pass
 
