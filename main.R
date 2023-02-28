@@ -78,7 +78,8 @@ reference_matrix_nrm <- list()
 reference_matrix_nrm <- NormalizeVariables(reference_matrix, variables, 'StdSc')
 
 # MinBias labelling
-MinBias_labels <- MinBiasOptimization(reference_list, models_list)
+MinBias_labels <- MinBiasOptimization(reference_matrix_nrm$present,
+                                      models_matrix_nrm$present)
 
 # TODO implement bias_var from old code
 
