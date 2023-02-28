@@ -58,7 +58,6 @@ reference_names <- c('era5')
 #model_names <- read.table("model_list.txt", sep="\n")$V1
 
 # Open and average the models for the selected time periods
-# TODO : Add path as argument
 tmp <- OpenAndAverageModels(
   model_names, variables, year_present, year_future
 )
