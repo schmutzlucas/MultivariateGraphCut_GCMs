@@ -47,8 +47,7 @@ GraphCutOptimization <- function(
 
 
 
-  # Preparing the data to perform GraphCut
-  # TODO Test
+  # Computing the bias between models and reference --> used as datacost
   bias <- array(0, c(height, width, n_labs))
   for (i in 1:n_labs) {
     for (j in 1:n_variables) {

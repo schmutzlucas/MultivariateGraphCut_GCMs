@@ -1,20 +1,15 @@
 # Install and load necessary libraries
-list.of.packages <- read.table("package_list.txt", sep="\n")$V1
-new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
+list_of_packages <- read.table("package_list.txt", sep="\n")$V1
+new.packages <- list_of_packages[!(list_of_packages %in% installed.packages()[,"Package"])]
 if(length(new.packages))
   install.packages(new.packages, repos = "https://cran.us.r-project.org")
 
 library(devtools)
-lapply(list.of.packages, library, character.only = TRUE)
+lapply(list_of_packages, library, character.only = TRUE)
 install_github("thaos/gcoWrapR")
 
 # Import libraries
-library(gcoWrapR)
-library(ncdf4)
-library(ncdf4.helpers)
-library(abind)
-library(roxygen2)
-library(ggplot2)
+#library(c(list_of_packages))
 
 
 # Loading local functions

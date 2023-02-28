@@ -31,3 +31,4 @@ ncdf4
 ncdf4.helpers
 abind
 ggplot2
+energy
