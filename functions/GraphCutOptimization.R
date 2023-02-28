@@ -78,12 +78,9 @@ GraphCutOptimization <- function(
       int numPix          = extraData["numPix"];
       float weight        = extraData["weight"];
       NumericVector data  = extraData["data"];
-      std::cout << "Test: " << numPix << std::endl;
+      //std::cout << "Test: " << numPix << std::endl;
 
       return(weight * data[p + numPix * l]);
-      
-      //float test = 0;
-      //return(test);
     }',
     includes = c("#include <math.h>", "#include <Rcpp.h>", "#include <iostream>"),
     rebuild = TRUE, showOutput = FALSE, verbose = FALSE
@@ -110,8 +107,6 @@ GraphCutOptimization <- function(
       }
       
       return(weight * cost);
-      //float test = 0;
-      //return(test);
     }',
     includes = c("#include <math.h>", "#include <Rcpp.h>"),
     rebuild = TRUE, showOutput = FALSE, verbose = FALSE

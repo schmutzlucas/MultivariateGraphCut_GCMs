@@ -1,6 +1,5 @@
 # Install and load necessary libraries
-list.of.packages <- c('RcppXPtrUtils','devtools', 'Rcpp', 'ncdf4',
-                      'ncdf4.helpers', 'abind')
+list.of.packages <- read.table("package_list.txt", sep="\n")$V1
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
 if(length(new.packages))
   install.packages(new.packages, repos = "https://cran.us.r-project.org")
@@ -15,6 +14,7 @@ library(ncdf4)
 library(ncdf4.helpers)
 library(abind)
 library(roxygen2)
+library(ggplot2)
 
 
 # Loading local functions
@@ -40,7 +40,7 @@ variables <- c('tas', 'pr', 'tas')
 # TODO choose the method for the list of model names
 # Selected models
 selected_models <- c(
-  28,34,16,9,8,2
+  2,34,16,9,8,28
 )
 # Obtains the list of models from the model names or from a file
 # Method 1
@@ -55,7 +55,7 @@ reference_names <- c('era5')
 
 # #Method2
 # # TODO : test if it works
-# model_names <- read.table("model_names.txt", sep="\n")$V1
+#model_names <- read.table("model_list.txt", sep="\n")$V1
 
 # Open and average the models for the selected time periods
 # TODO : Add path as argument
