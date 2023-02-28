@@ -78,11 +78,9 @@ reference_matrix_nrm <- list()
 reference_matrix_nrm <- NormalizeVariables(reference_matrix, variables, 'StdSc')
 
 # MinBias labelling
-# TODO Not working!!!
-# MinBias_label <- MinBiasOptimization(reference_list, models_list)
+MinBias_labels <- MinBiasOptimization(reference_list, models_list)
 
 # TODO implement bias_var from old code
-
 
 # Graphcut labelling
 GC_result <- list()
@@ -94,4 +92,5 @@ GC_result <- GraphCutOptimization(reference = reference_matrix_nrm$present,
                                   verbose = TRUE)
 saveRDS(GC_result, file = 'GC_result.rds')
 
-print('test finished line 99')
+GC_labels <- GC_result$label_attribution
+
