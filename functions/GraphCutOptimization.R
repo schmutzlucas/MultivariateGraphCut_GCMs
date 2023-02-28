@@ -52,7 +52,7 @@ GraphCutOptimization <- function(
   bias <- array(0, c(height, width, n_labs))
   for (i in 1:n_labs) {
     for (j in 1:n_variables) {
-      bias[,,i] <- bias[,,i] + abs(models_datacost[,, i, j] - reference[[j]])
+      bias[,,i] <- bias[,,i] + abs(models_datacost[,, i, j] - reference[ , , 1, j])
     }
   }
 

@@ -1,4 +1,4 @@
-label_df <-melt(GC_result$label_attribution, c("lon", "lat"),
+label_df <-melt(test, c("lon", "lat"),
                 value.name = "label_attribution")
 label_df$lat <- label_df$lat -91
 p <- ggplot() +

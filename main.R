@@ -24,7 +24,6 @@ file_paths <- list.files(source_code_dir, full.names = T)
 for(path in file_paths){source(path)}
 
 
-
 # Temporal ranges
 year_present <- 1979:1998
 year_future <- 1999:2019
