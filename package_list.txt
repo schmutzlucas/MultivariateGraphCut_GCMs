@@ -32,3 +32,4 @@ ncdf4.helpers
 abind
 ggplot2
 energy
+distr
