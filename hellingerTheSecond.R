@@ -29,7 +29,6 @@ generate_climate_model <- function(n, correlation, temp_mean, temp_sd, precip_me
 }
 
 
-
 # Generate new model parameters
 generate_model_params <- function(num_models) {
   temp_mean_range <- c(18, 22)
@@ -60,11 +59,9 @@ generate_model_params <- function(num_models) {
   return(model_params)
 }
 
-# Generate 4 climate models with 1000 observations each
-climate_models <- generate_climate_models(n = 1e4, num_models = 3)
 
-# Print the array
-summary(climate_models[,3,1])
+# Generate 3 climate models with n observations each
+climate_models <- generate_climate_models(n = 1e4, num_models = 3)
 
 
 
