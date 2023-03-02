@@ -1,3 +1,25 @@
+generate_climate_models <- function(n, num_models) {
+  correlation <- 0.5
+
+  # Generate model parameters
+  model_params <- generate_model_params(num_models)
+
+  # Create the array to store the models
+  climate_models <- array(0, dim = c(n, 3, num_models))
+
+  # Generate the models and store them in the array
+  for (i in seq_along(model_params)) {
+    model <- generate_climate_model(n = n, correlation = correlation,
+                                    temp_mean = model_params[[i]]$temp_mean, temp_sd = model_params[[i]]$temp_sd,
+                                    precip_mean = model_params[[i]]$precip_mean, precip_sd = model_params[[i]]$precip_sd,
+                                    humidity_mean = model_params[[i]]$humidity_mean, humidity_sd = model_params[[i]]$humidity_sd)
+    climate_models[, , i] <- model
+  }
+
+  # Return the array of climate models
+  return(climate_models)
+}
+
 generate_climate_model <- function(n, correlation, temp_mean, temp_sd, precip_mean, precip_sd, humidity_mean, humidity_sd) {
   temp <- rnorm(n, mean = temp_mean, sd = temp_sd)
   precip <- rnorm(n, mean = precip_mean + correlation * (temp - temp_mean), sd = precip_sd)
@@ -5,6 +27,8 @@ generate_climate_model <- function(n, correlation, temp_mean, temp_sd, precip_me
   joint_dist <- cbind(temp, precip, humidity)
   return(joint_dist)
 }
+
+
 
 # Generate new model parameters
 generate_model_params <- function(num_models) {
@@ -36,38 +60,11 @@ generate_model_params <- function(num_models) {
   return(model_params)
 }
 
-
-model_params <- # Generate new model parameters
-model_params <- generate_model_params(num_models = 4)
-
-
-
-# Parameters for the climate models
-n <- 1000
-correlation <- 0.5
-
-# Define the models
-model_params <- list(
-  list(temp_mean = 20, temp_sd = 2, precip_mean = 50, precip_sd = 10, humidity_mean = 70, humidity_sd = 5),
-  list(temp_mean = 18, temp_sd = 3, precip_mean = 55, precip_sd = 15, humidity_mean = 75, humidity_sd = 10),
-  list(temp_mean = 22, temp_sd = 1.5, precip_mean = 60, precip_sd = 12, humidity_mean = 68, humidity_sd = 8),
-  list(temp_mean = 21, temp_sd = 2.5, precip_mean = 52, precip_sd = 13, humidity_mean = 71, humidity_sd = 7)
-)
-
-# Create the array to store the models
-climate_models <- array(0, dim = c(n, 3, length(model_params)))
-
-# Generate the models and store them in the array
-for (i in seq_along(model_params)) {
-    climate_models[, , i] <- generate_climate_model(n = n, correlation = correlation,
-                                  temp_mean = model_params[[i]]$temp_mean, temp_sd = model_params[[i]]$temp_sd,
-                                  precip_mean = model_params[[i]]$precip_mean, precip_sd = model_params[[i]]$precip_sd,
-                                  humidity_mean = model_params[[i]]$humidity_mean, humidity_sd = model_params[[i]]$humidity_sd)
-
-}
+# Generate 4 climate models with 1000 observations each
+climate_models <- generate_climate_models(n = 1e4, num_models = 3)
 
 # Print the array
-summary(climate_models)
+summary(climate_models[,3,1])
 
 
 
