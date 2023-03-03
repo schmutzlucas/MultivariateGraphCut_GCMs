@@ -59,9 +59,47 @@ generate_model_params <- function(num_models) {
   return(model_params)
 }
 
+library(hexbin)
 
+
+compute_joint_dist <- function(model, var1_idx, var2_idx, nbins) {
+  # Extract the data for the two variables
+  X_data <- model[, var1_idx]
+  Y_data <- model[, var2_idx]
+
+  # Compute the bin widths for each variable
+  X_bw <- diff(range(X_data)) / sqrt(length(X_data))
+  Y_bw <- diff(range(Y_data)) / sqrt(length(Y_data))
+
+  # Compute the histogram counts for each variable
+  X_hist <- hist(X_data, breaks = nbins, plot = FALSE)
+  Y_hist <- hist(Y_data, breaks = nbins, plot = FALSE)
+
+  # Compute the joint histogram counts for the two variables
+  XY_hist <- hist2d(X_data, Y_data)
+
+  # Compute the joint probabilities for the two variables
+  XY_prob <- XY_hist$counts / sum(XY_hist$counts)
+
+  # Return the joint probabilities
+  return(XY_prob)
+}
+
+
+
+
+library(ggplot2)
 # Generate 3 climate models with n observations each
-climate_models <- generate_climate_models(n = 1e4, num_models = 3)
+climate_models <- generate_climate_models(n = 1e6, num_models = 3)
+# Generate the reference model
+reference <- generate_climate_models(n = 1e6, num_models = 1)[, , 1]
 
+# Compute the joint distribution of temperature and precipitation for the first model
+tp_joint_model2 <- compute_joint_dist(climate_models[, , 2], var1_idx = 1, var2_idx = 2, nbins = 200)
+tp_joint_model3 <- compute_joint_dist(climate_models[, , 3], var1_idx = 1, var2_idx = 2, nbins = 200)
+
+# Print the resulting matrix
+
+test <- abs(tp_joint_model2) - abs(tp_joint_model1)
 
 
