@@ -33,3 +33,4 @@ abind
 ggplot2
 energy
 distr
+r2d2
