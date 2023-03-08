@@ -34,3 +34,6 @@ ggplot2
 energy
 distr
 r2d2
+MASS
+gplots
+ggplot2

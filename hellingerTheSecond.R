@@ -65,7 +65,7 @@ compute_joint_dist <- function(model, var1_idx, var2_idx, nbins) {
   Y_data <- model[, var2_idx]
 
   # Compute the joint histogram counts for the two variables
-  XY_hist <- hist2d(X_data, Y_data)
+  XY_hist <- hist2d(X_data, Y_data, nbins = nbins)
 
   # Compute the joint probabilities for the two variables
   XY_prob <- XY_hist$counts / sum(XY_hist$counts)
@@ -74,24 +74,77 @@ compute_joint_dist <- function(model, var1_idx, var2_idx, nbins) {
   return(XY_prob)
 }
 
+compute_kde2d <- function(climate_models, num_models, n_bins = 50) {
+  kde2d_list <- vector("list", length = num_models)
+
+  temp_range <- range(climate_models[, 1, ])
+  precip_range <- range(climate_models[, 2, ])
+
+  for (i in seq_along(kde2d_list)) {
+    kde2d_list[[i]] <- kde2d(climate_models[, 1, i], climate_models[, 2, i],
+                             n = n_bins, lims = c(temp_range, precip_range))
+  }
+
+  return(kde2d_list)
+}
 
 
-
-library(ggplot2)
 # Generate 3 climate models with n observations each
-climate_models <- generate_climate_models(n = 1e6, num_models = 3)
+climate_models <- generate_climate_models(n = 1e4, num_models = 3)
+
 # Generate the reference model
-reference <- generate_climate_models(n = 1e6, num_models = 1)[, , 1]
+reference <- generate_climate_models(n = 1e4, num_models = 1)[, , 1]
 
-test <- generate_climate_models(n = 1e6, num_models = 1)
+# Compute the range of temperature and precipitation across both models
+temp_range <- range(climate_models[, 1, ])
+precip_range <- range(climate_models[, 2, ])
 
-hist_test <- freq2d(test[,1,1], test[,2,1])
+# Compute the 2D kernel density estimate of temperature and precipitation for the second model
+tp_dens_model2 <- kde2d(climate_models[, 1, 2], climate_models[, 2, 2], n = 50,
+                        lims = c(temp_range, precip_range))
 
-joint_test <- hist_test / sum(hist_test)
-
-contour(joint_test)
-
-# Compute joint distribution for model 2 with precip and temp as variables
-model2_joint_prob <- compute_joint_dist(model = climate_models[, , 2], var1_idx = 2, var2_idx = 1, nbins = 50)
+# Compute the 2D kernel density estimate of temperature and precipitation for the third model
+tp_dens_model3 <- kde2d(climate_models[, 1, 3], climate_models[, 2, 3], n = 50,
+                       lims = c(temp_range, precip_range))
 
 
+
+
+
+
+h_dist <- sqrt(sum((sqrt(tp_dens_model3$z) - sqrt(tp_dens_model2$z))^2)) / sqrt(2)
+
+
+
+
+
+
+
+
+
+
+
+contour(tp_dens_model3)
+
+
+# Convert the density matrix to long format for ggplot
+# Convert the density matrix to long format for ggplot
+tp_dens_model3_long <- reshape2::melt(tp_dens_model3$z)
+
+# Create a ggplot graph of the density estimates
+ggplot(tp_dens_model3_long, aes(x = Var1, y = Var2, fill = value)) +
+  geom_tile() +
+  scale_fill_viridis() +
+  labs(x = "Temperature", y = "Precipitation", fill = "Density") +
+  ggtitle("Density Estimation for Climate Model 3") +
+  theme_bw()
+
+jet.colors <- colorRampPalette(c("#00007F", "blue", "#007FFF", "cyan", "#7FFF7F", "yellow", "#FF7F00", "red", "#7F0000"))
+
+# Create a ggplot graph of the density estimates with jet color scale
+ggplot(tp_dens_model3_long, aes(x = Var1, y = Var2, fill = value)) +
+  geom_tile() +
+  scale_fill_gradientn(colors = jet.colors(20)) +
+  labs(x = "Temperature", y = "Precipitation", fill = "Density") +
+  ggtitle("Density Estimation for Climate Model 3") +
+  theme_bw()
