@@ -105,22 +105,18 @@ reference <- generate_climate_models(n = 1e4, num_models = 1)
 
 
 
-
-# Compute the kde2d objects for all models
-pdf_models_list <- compute_kde2d(climate_models, num_models = 3)
-
-# Plot the kde2d object for the third model
-ggplot(data.frame(x = kde2d_list[[3]]$x, y = kde2d_list[[3]]$y, z = kde2d_list[[3]]$z), aes(x, y, z = z)) +
-  geom_raster(interpolate = TRUE) +
-  scale_fill_gradientn(colors = jet.colors(20))
-
-
 temp_range <- range(reference[,1,])
 precip_range <- range(reference[ , 2, ])
 
 # Compute the kde2d objects for all models
-tp_kde_models <- compute_2d_kde(climate_models, var1_idx = 1, var2_idx = 2, nbins = 50, range1 = temp_range, range2 = precip_range)
-tp_kde_ref <- compute_2d_kde(reference, var1_idx = 1, var2_idx = 2, nbins = 50, range1 = temp_range, range2 = precip_range)
+tp_kde_models <- compute_2d_kde(climate_models,
+                                var1_idx = 1, var2_idx = 2,
+                                nbins = 50,
+                                range1 = temp_range, range2 = precip_range)
+tp_kde_ref <- compute_2d_kde(reference,
+                             var1_idx = 1, var2_idx = 2,
+                             nbins = 50,
+                             range1 = temp_range, range2 = precip_range)
 
 # Compute the Hellinger distance between all models and the reference
 h_dist_list <- compute_all_hellinger_dist(tp_kde_models, tp_kde_ref[[1]])
@@ -130,7 +126,7 @@ contour(tp_kde_models[[10]])
 
 # Convert the density matrix to long format for ggplot
 # Convert the density matrix to long format for ggplot
-tp_dens_model3_long <- reshape2::melt(tp_dens_model3$z)
+tp_dens_model3_long <- reshape2::melt(tp_kde_models[[4]]$z)
 
 # Create a ggplot graph of the density estimates
 ggplot(tp_dens_model3_long, aes(x = Var1, y = Var2, fill = value)) +
