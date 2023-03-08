@@ -74,57 +74,58 @@ compute_joint_dist <- function(model, var1_idx, var2_idx, nbins) {
   return(XY_prob)
 }
 
-compute_kde2d <- function(climate_models, num_models, n_bins = 50) {
-  kde2d_list <- vector("list", length = num_models)
 
-  temp_range <- range(climate_models[, 1, ])
-  precip_range <- range(climate_models[, 2, ])
-
-  for (i in seq_along(kde2d_list)) {
-    kde2d_list[[i]] <- kde2d(climate_models[, 1, i], climate_models[, 2, i],
-                             n = n_bins, lims = c(temp_range, precip_range))
+compute_2d_kde <- function(data, var1_idx, var2_idx, nbins, range1, range2) {
+  kde_models <- vector("list", length = dim(data)[3])
+  for (i in seq_along(kde_models)) {
+    kde_models[[i]] <- kde2d(data[, var1_idx, i], data[, var2_idx, i], n = nbins, lims = c(range1, range2))
   }
+  return(kde_models)
+}
 
-  return(kde2d_list)
+compute_hellinger_dist <- function(kde1, kde2) {
+  h_dist <- sqrt(sum((sqrt(kde1$z) - sqrt(kde2$z))^2)) / sqrt(2)
+  return(h_dist)
+}
+
+compute_all_hellinger_dist <- function(kde_models, kde_ref) {
+  num_models <- length(kde_models)
+  h_dist_list <- vector("list", length = num_models)
+  for (i in seq_along(h_dist_list)) {
+    h_dist_list[[i]] <- compute_hellinger_dist(kde_models[[i]], kde_ref)
+  }
+  return(h_dist_list)
 }
 
 
 # Generate 3 climate models with n observations each
-climate_models <- generate_climate_models(n = 1e4, num_models = 3)
+climate_models <- generate_climate_models(n = 1e4, num_models = 10)
 
-# Generate the reference model
-reference <- generate_climate_models(n = 1e4, num_models = 1)[, , 1]
-
-# Compute the range of temperature and precipitation across both models
-temp_range <- range(climate_models[, 1, ])
-precip_range <- range(climate_models[, 2, ])
-
-# Compute the 2D kernel density estimate of temperature and precipitation for the second model
-tp_dens_model2 <- kde2d(climate_models[, 1, 2], climate_models[, 2, 2], n = 50,
-                        lims = c(temp_range, precip_range))
-
-# Compute the 2D kernel density estimate of temperature and precipitation for the third model
-tp_dens_model3 <- kde2d(climate_models[, 1, 3], climate_models[, 2, 3], n = 50,
-                       lims = c(temp_range, precip_range))
+reference <- generate_climate_models(n = 1e4, num_models = 1)
 
 
 
 
+# Compute the kde2d objects for all models
+pdf_models_list <- compute_kde2d(climate_models, num_models = 3)
+
+# Plot the kde2d object for the third model
+ggplot(data.frame(x = kde2d_list[[3]]$x, y = kde2d_list[[3]]$y, z = kde2d_list[[3]]$z), aes(x, y, z = z)) +
+  geom_raster(interpolate = TRUE) +
+  scale_fill_gradientn(colors = jet.colors(20))
 
 
-h_dist <- sqrt(sum((sqrt(tp_dens_model3$z) - sqrt(tp_dens_model2$z))^2)) / sqrt(2)
+temp_range <- range(reference[,1,])
+precip_range <- range(reference[ , 2, ])
 
+# Compute the kde2d objects for all models
+tp_kde_models <- compute_2d_kde(climate_models, var1_idx = 1, var2_idx = 2, nbins = 50, range1 = temp_range, range2 = precip_range)
+tp_kde_ref <- compute_2d_kde(reference, var1_idx = 1, var2_idx = 2, nbins = 50, range1 = temp_range, range2 = precip_range)
 
+# Compute the Hellinger distance between all models and the reference
+h_dist_list <- compute_all_hellinger_dist(tp_kde_models, tp_kde_ref[[1]])
 
-
-
-
-
-
-
-
-
-contour(tp_dens_model3)
+contour(tp_kde_models[[10]])
 
 
 # Convert the density matrix to long format for ggplot
