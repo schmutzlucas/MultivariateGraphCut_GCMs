@@ -54,4 +54,7 @@ for model_dir in "$root_dir"/*; do
         # Set the permissions of the output file to match the input files
         if [ ${#input_files[@]} -gt 0 ]; then
             chown --reference="${input_files[0]}" "$output_path" || { echo "Error: failed to set owner for $output_path"; exit 1; }
-            chmod --reference="${input_files[0]}" "$
+            chmod --reference="${input_files[0]}" "$output_path" || { echo "Error: failed to set permissions for $output_path"; exit 1; }
+        fi
+    done
+done
