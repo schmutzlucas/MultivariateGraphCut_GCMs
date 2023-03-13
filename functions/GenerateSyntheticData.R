@@ -75,20 +75,24 @@ generate_climate_model <- function(n, correlation, temp_mean, temp_sd, precip_me
 
 #' Generate model parameters for synthetic climate data
 #'
-#' This function generates parameters for multiple synthetic climate models, where each model has its own
-#' set of parameters for the mean and standard deviation of the temperature, precipitation, and humidity variables.
+#' This function generates parameters for multiple synthetic climate models, where each model has its own set of parameters for the mean and standard deviation of the temperature, precipitation, and humidity variables.
 #'
 #' @param num_models The number of models to generate parameters for.
 #'
-#' @return A list of length num_models, where each element is a list containing the parameters for one
-#' of the synthetic climate models. The list includes the following elements:
+#' @return A list of length num_models, where each element is a list containing the parameters for one of the synthetic climate models.
+#' The list includes the following elements:
 #'
-#' \item{temp_mean}{The mean temperature value.}
-#' \item{temp_sd}{The standard deviation of the temperature values.}
-#' \item{precip_mean}{The mean precipitation value.}
-#' \item{precip_sd}{The standard deviation of the precipitation values.}
-#' \item{humidity_mean}{The mean humidity value.}
-#' \item{humidity_sd}{The standard deviation of the humidity values.}
+#' temp_mean: The mean temperature value.
+#'
+#' temp_sd: The standard deviation of the temperature values.
+#'
+#' precip_mean: The mean precipitation value.
+#'
+#' precip_sd: The standard deviation of the precipitation values.
+#'
+#' humidity_mean: The mean humidity value.
+#'
+#' humidity_sd: The standard deviation of the humidity values.
 #'
 #' @examples
 #' # Generate parameters for 5 synthetic climate models
