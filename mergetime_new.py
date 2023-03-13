@@ -1,6 +1,5 @@
 import os
 import shutil
-import tempfile
 import xarray as xr
 
 # Define the root directory containing all the model folders
@@ -8,9 +7,6 @@ root_dir = 'Y:\LucasSchmutz\MultivariateGraphCut_GCMs\download_day_unzip'
 
 # Define the directory where the merged files will be stored
 merged_dir = 'Y:\LucasSchmutz\MultivariateGraphCut_GCMs\download_day_merged'
-
-# Define the temporary directory to store the merged files before writing to network
-temp_dir = tempfile.mkdtemp()
 
 # Loop over all model folders
 for model_dir in os.listdir(root_dir):
@@ -34,9 +30,7 @@ for model_dir in os.listdir(root_dir):
                 os.path.join(root_dir, model_dir, var_exp_dir)):
             if filename.endswith(".nc"):
                 input_file_path = os.path.join(root_dir, model_dir, var_exp_dir, filename)
-                temp_file_path = os.path.join(temp_dir, filename)
-                shutil.copy(input_file_path, temp_file_path)
-                input_files.append(temp_file_path)
+                input_files.append(input_file_path)
 
         # Print the input files being merged
         print(f"Merging {len(input_files)} files:")
@@ -45,25 +39,21 @@ for model_dir in os.listdir(root_dir):
         # Merge the netCDF files using xarray
         ds = xr.open_mfdataset(input_files, combine='nested', concat_dim='time')
 
-        # Define output file name for merged file
-        output_filename = os.path.basename(input_files[0]).replace("_19500101-",
-                                                                   "_").replace(
-            "_v", "_merged_v")
+        # Extract the start and end dates from the input files and convert them to datetime objects
+        start_dates = [os.path.basename(input_file).split('_')[3] for input_file in input_files]
+        end_dates = [os.path.basename(input_file).split('_')[4][:8] for input_file in input_files]
+        start_date = min(start_dates)
+        end_date = max(end_dates)
 
-        # Write merged file to local temp directory
-        temp_merged_path = os.path.join(temp_dir, output_filename)
-        ds.to_netcdf(temp_merged_path)
+        # Define output file name for merged file
+        output_filename = os.path.basename(input_files[0]).replace(start_date + "-",
+                                                                   "").replace(
+            "_v", f"_{start_date}-{end_date}_v")
 
         # Write merged file to network folder
         output_path = os.path.join(output_dir, output_filename)
-        shutil.copy(temp_merged_path, output_path)
+        ds.to_netcdf(output_path)
 
-        # Remove the temporary input files
-        for temp_file_path in input_files:
-            os.remove(temp_file_path)
-
-        # Remove the temporary merged file
-        os.remove(temp_merged_path)
-
-# Remove the temporary directory
-os.rmdir(temp_dir)
+# Remove the temporary directory if it exists
+if os.path.exists(temp_dir):
+    os.rmdir(temp_dir)
