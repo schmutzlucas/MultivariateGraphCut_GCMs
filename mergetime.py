@@ -34,9 +34,10 @@ for model_dir in os.listdir(root_dir):
                 os.path.join(root_dir, model_dir, var_exp_dir)):
             if filename.endswith(".nc"):
                 input_file_path = os.path.join(root_dir, model_dir, var_exp_dir, filename)
-                temp_file_path = os.path.join(temp_dir, filename)
-                shutil.copy(input_file_path, temp_file_path)
-                input_files.append(temp_file_path)
+                with open(input_file_path, 'rb') as f:
+                    temp_file = tempfile.NamedTemporaryFile(delete=False, dir=temp_dir)
+                    shutil.copyfileobj(f, temp_file)
+                    input_files.append(temp_file.name)
 
         # Print the input files being merged
         print(f"Merging {len(input_files)} files:")
