@@ -35,12 +35,19 @@ for model_dir in "$root_dir"/*; do
             fi
         done
 
-        # Merge the netCDF files using cdo mergetime in parallel
+        # Merge the netCDF files using cdo mergetime
         output_filename="$(basename "${input_files[0]}")"
         output_filename="${output_filename/_19500101-/}"
         output_filename="${output_filename/_v/_merged_v}"
         output_path="$output_dir/$output_filename"
-        echo "${input_files[@]}" | tr ' ' '\n' | \
-            parallel -j $nprocs --no-notice cdo mergetime {} "$output_path"
+        cdo mergetime "${input_files[@]}" "$output_path" &
+
+        # Limit the number of parallel processes
+        if [ $(jobs -r -p | wc -l) -ge $nprocs ]; then
+            wait -n
+        fi
     done
 done
+
+# Wait for all background jobs to finish
+wait
