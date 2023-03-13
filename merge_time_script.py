@@ -1,10 +1,10 @@
 import os
 
 # Define the root directory containing all the model folders
-root_dir = "W:\\LucasSchmutz\\MultivariateGraphCut_GCMs\\download_day_unzip"
+root_dir = "Y:\\scratch_idyst\\LucasSchmutz\\MultivariateGraphCut_GCMs\\download_day_unzip"
 
 # Define the directory where the merged files will be stored
-merged_dir = "W:\\LucasSchmutz\\MultivariateGraphCut_GCMs\\download_day_merged"
+merged_dir = "Y:\\scratch_idyst\\LucasSchmutz\\MultivariateGraphCut_GCMs\\download_day_merged"
 
 # Loop over all model folders
 for model_dir in os.listdir(root_dir):
