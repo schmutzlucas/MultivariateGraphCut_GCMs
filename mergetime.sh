@@ -32,6 +32,10 @@ for model_dir in "$root_dir"/*; do
             fi
         done
 
+        # Print the input files being merged
+        echo "Merging ${#input_files[@]} files:"
+        printf '%s\n' "${input_files[@]}"
+
         # Merge the netCDF files using cdo mergetime
         output_filename="$(basename "${input_files[0]}")"
         output_filename="${output_filename/_19500101-/}"

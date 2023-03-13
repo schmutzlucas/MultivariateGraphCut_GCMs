@@ -42,6 +42,10 @@ for model_dir in "$root_dir"/*; do
         output_filename="${output_filename/_19500101-/}"
         output_filename="${output_filename/_v/_merged_v}"
         output_path="$output_dir/$output_filename"
+        echo "Merging files:"
+        echo "${input_files[@]}"
+        echo "to create:"
+        echo "$output_path"
         echo "${input_files[@]}" | tr ' ' '\n' | \
             parallel -j $nprocs --no-notice cdo mergetime {} "$output_path" || { echo "Error: failed to merge files for $var_exp_dir"; exit 1; }
 
