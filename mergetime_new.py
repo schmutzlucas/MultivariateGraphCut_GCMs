@@ -1,6 +1,8 @@
 import os
 import shutil
 import xarray as xr
+import numpy as np
+from datetime import datetime
 
 # Define the root directory containing all the model folders
 root_dir = 'Y:\LucasSchmutz\MultivariateGraphCut_GCMs\download_day_unzip'
@@ -40,15 +42,30 @@ for model_dir in os.listdir(root_dir):
         ds = xr.open_mfdataset(input_files, combine='nested', concat_dim='time')
 
         # Extract the start and end dates from the input files and convert them to datetime objects
-        start_dates = [os.path.basename(input_file).split('_')[3] for input_file in input_files]
-        end_dates = [os.path.basename(input_file).split('_')[4][:8] for input_file in input_files]
-        start_date = min(start_dates)
-        end_date = max(end_dates)
+        start_dates = []
+        end_dates = []
+        for input_file in input_files:
+            time_obj = xr.open_dataset(input_file).time.values[0]
+            start_date_str = np.datetime_as_string(time_obj, unit='D')
+            start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
+            start_dates.append(start_date)
+
+            time_obj = xr.open_dataset(input_file).time.values[-1]
+            end_date_str = np.datetime_as_string(time_obj, unit='D')
+            end_date = datetime.strptime(end_date_str, '%Y-%m-%d')
+            end_dates.append(end_date)
+
+        start_date = min(start_dates).strftime("%Y%m%d")
+        end_date = max(end_dates).strftime("%Y%m%d")
 
         # Define output file name for merged file
-        output_filename = os.path.basename(input_files[0]).replace(start_date + "-",
-                                                                   "").replace(
-            "_v", f"_{start_date}-{end_date}_v")
+        input_filename = os.path.basename(input_files[0])
+        var = input_filename.split("_")[0]
+        model = input_filename.split("_")[2]
+        exp = input_filename.split("_")[3]
+        ens = input_filename.split("_")[4]
+        version = input_filename.split("_")[-1].split(".")[0]
+        output_filename = f"{var}_{model}_{exp}_{ens}_{start_date}-{end_date}_{version}.nc"
 
         # Write merged file to network folder
         output_path = os.path.join(output_dir, output_filename)
