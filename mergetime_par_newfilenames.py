@@ -41,10 +41,37 @@ def process_model_dir(root_dir, model_dir, merged_dir):
         # Merge the netCDF files using xarray
         ds = xr.open_mfdataset(input_files, combine='nested', concat_dim='time')
 
+        grid_path = 'my_grid.txt'
+        with open(grid_path, 'r') as f:
+            grid_info = f.read()
+        grid_dict = {}
+        for line in grid_info.split('\n'):
+            if '=' in line:
+                key, val = line.split('=')
+                grid_dict[key.strip()] = float(val)
+
+        # Define the output grid
+        output_lon = np.linspace(grid_dict['xfirst'],
+                                 grid_dict['xfirst'] + grid_dict['xinc'] * (
+                                         grid_dict['xsize'] - 1),
+                                 grid_dict['xsize'])
+        output_lat = np.linspace(grid_dict['yfirst'],
+                                 grid_dict['yfirst'] + grid_dict['yinc'] * (
+                                         grid_dict['ysize'] - 1),
+                                 grid_dict['ysize'])
+
+        # Define the interpolation method (e.g. 'linear', 'nearest', etc.)
+        interp_method = 'linear'
+
+        # Merge and regrid the netCDF files using xarray
+        ds = xr.open_mfdataset(input_files, combine='nested', concat_dim='time')
+        ds_regrid = ds.interp(lon=output_lon, lat=output_lat,
+                              method=interp_method)
+
         # Extract the start and end dates from the input files and convert
         # them to datetime objects
-        start_date = ds.time.values[0].strftime('%Y%m%d')
-        end_date = ds.time.values[-1].strftime('%Y%m%d')
+        start_date = ds_regrid.time.values[0].strftime('%Y%m%d')
+        end_date = ds_regrid.time.values[-1].strftime('%Y%m%d')
 
         # Define output file name for merged file
         input_filename = os.path.basename(input_files[0])
@@ -55,9 +82,9 @@ def process_model_dir(root_dir, model_dir, merged_dir):
         version = input_filename.split("_")[-1].split(".")[0]
         output_filename = f"{var}_{model}_{exp}_{ens}_{start_date}-{end_date}_{version}.nc"
 
-        # Write merged file to network folder
+        # Write merged and regridded file to network folder
         output_path = os.path.join(output_dir, output_filename)
-        ds.to_netcdf(output_path)
+        ds_regrid.to_netcdf(output_path)
 
 
 if __name__ == '__main__':
