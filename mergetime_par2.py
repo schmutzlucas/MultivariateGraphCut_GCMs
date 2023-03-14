@@ -4,6 +4,10 @@ import numpy as np
 from datetime import datetime
 import functools
 import multiprocessing
+import dask
+import netCDF4
+import h5netcdf
+import scipy
 
 
 def process_model_dir(root_dir, model_dir, merged_dir):
@@ -29,6 +33,11 @@ def process_model_dir(root_dir, model_dir, merged_dir):
         # Print the input files being merged
         print(f"Merging {len(input_files)} files:")
         print('\n'.join(input_files))
+
+        # Get the current system time
+        now = datetime.now()
+        # Print the current system time
+        print("Current time:", now)
 
         # Merge the netCDF files using xarray
         ds = xr.open_mfdataset(input_files, combine='nested', concat_dim='time')
@@ -73,7 +82,7 @@ if __name__ == '__main__':
     merged_dir = 'Y:\LucasSchmutz\MultivariateGraphCut_GCMs\download_day_merged'
 
     # Define the number of processes to use
-    num_processes = 4
+    num_processes = 40
 
     # Create a list of model directories
     model_dirs = [d for d in os.listdir(root_dir) if
