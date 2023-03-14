@@ -1,20 +1,15 @@
 import os
-import shutil
 import xarray as xr
 import numpy as np
 from datetime import datetime
+import functools
+import multiprocessing
+import dask.distributed as dd
 
-# Define the root directory containing all the model folders
-root_dir = 'Y:\LucasSchmutz\MultivariateGraphCut_GCMs\download_day_unzip'
 
-# Define the directory where the merged files will be stored
-merged_dir = 'Y:\LucasSchmutz\MultivariateGraphCut_GCMs\download_day_merged_1thread'
-
-# Loop over all model folders
-for model_dir in os.listdir(root_dir):
-    # Ignore any non-directory files in the root directory
-    if not os.path.isdir(os.path.join(root_dir, model_dir)):
-        continue
+def process_model_dir(root_dir, model_dir, merged_dir):
+    # Create a dask client for parallel processing
+    client = dd.Client()
 
     # Loop over all variable/experiment subfolders in the model directory
     for var_exp_dir in os.listdir(os.path.join(root_dir, model_dir)):
@@ -31,7 +26,8 @@ for model_dir in os.listdir(root_dir):
         for filename in os.listdir(
                 os.path.join(root_dir, model_dir, var_exp_dir)):
             if filename.endswith(".nc"):
-                input_file_path = os.path.join(root_dir, model_dir, var_exp_dir, filename)
+                input_file_path = os.path.join(root_dir, model_dir, var_exp_dir,
+                                               filename)
                 input_files.append(input_file_path)
 
         # Print the input files being merged
@@ -39,14 +35,17 @@ for model_dir in os.listdir(root_dir):
         print('\n'.join(input_files))
         # Get the current system time
         now = datetime.now()
-
         # Print the current system time
         print("Current time:", now)
 
-        # Merge the netCDF files using xarray
-        ds = xr.open_mfdataset(input_files, combine='nested', concat_dim='time')
+        # Merge the netCDF files using xarray and dask
+        dsets = [xr.open_dataset(f) for f in input_files]
+        ds = xr.concat(dsets, dim='time', data_vars='minimal', coords='minimal',
+                       compat='override')
+        ds = ds.chunk({'time': 'auto'})
 
-        # Extract the start and end dates from the input files and convert them to datetime objects
+        # Extract the start and end dates from the input files and convert
+        # them to datetime objects
         start_dates = []
         end_dates = []
         for input_file in input_files:
@@ -74,8 +73,35 @@ for model_dir in os.listdir(root_dir):
 
         # Write merged file to network folder
         output_path = os.path.join(output_dir, output_filename)
-        ds.to_netcdf(output_path)
+        ds.to_netcdf(output_path, compute=False)
+        # Close the dataset to free up resources
+        ds.close()
 
-# Remove the temporary directory if it exists
-if os.path.exists(temp_dir):
-    os.rmdir(temp_dir)
+    # Close the dask client
+    client.close()
+
+
+if __name__ == '__main__':
+    # Define the root directory containing all the model folders
+    root_dir = 'Y:\LucasSchmutz\MultivariateGraphCut_GCMs\download_day_unzip'
+
+    # Define the directory where the merged files will be stored
+    merged_dir = 'Y:\LucasSchmutz\MultivariateGraphCut_GCMs\download_day_merged_dask'
+
+    # Define the number of processes to use
+    num_processes = 8
+
+    # Create a list of model directories
+    model_dirs = [d for d in os.listdir(root_dir) if
+                  os.path.isdir(os.path.join(root_dir, d))]
+
+    # Create a partial function to pass the fixed arguments to
+    # process_model_dir()
+    partial_func = functools.partial(process_model_dir, root_dir,
+                                     merged_dir=merged_dir)
+
+    # Use multiprocessing.Pool to parallelize the execution of
+    # process_model_dir()
+    with multiprocessing.Pool(processes=num_processes) as pool:
+        pool.map(partial_func, model_dirs)
+

@@ -1,21 +1,16 @@
 import os
-import shutil
 import xarray as xr
 import numpy as np
 from datetime import datetime
+import functools
+import multiprocessing
+import dask
+import netCDF4
+import h5netcdf
+import scipy
 
-# Define the root directory containing all the model folders
-root_dir = 'Y:\LucasSchmutz\MultivariateGraphCut_GCMs\download_day_unzip'
 
-# Define the directory where the merged files will be stored
-merged_dir = 'Y:\LucasSchmutz\MultivariateGraphCut_GCMs\download_day_merged_1thread'
-
-# Loop over all model folders
-for model_dir in os.listdir(root_dir):
-    # Ignore any non-directory files in the root directory
-    if not os.path.isdir(os.path.join(root_dir, model_dir)):
-        continue
-
+def process_model_dir(root_dir, model_dir, merged_dir):
     # Loop over all variable/experiment subfolders in the model directory
     for var_exp_dir in os.listdir(os.path.join(root_dir, model_dir)):
         # Ignore any non-directory files in the variable/experiment subfolder
@@ -31,7 +26,8 @@ for model_dir in os.listdir(root_dir):
         for filename in os.listdir(
                 os.path.join(root_dir, model_dir, var_exp_dir)):
             if filename.endswith(".nc"):
-                input_file_path = os.path.join(root_dir, model_dir, var_exp_dir, filename)
+                input_file_path = os.path.join(root_dir, model_dir, var_exp_dir,
+                                               filename)
                 input_files.append(input_file_path)
 
         # Print the input files being merged
@@ -39,29 +35,16 @@ for model_dir in os.listdir(root_dir):
         print('\n'.join(input_files))
         # Get the current system time
         now = datetime.now()
-
         # Print the current system time
         print("Current time:", now)
 
         # Merge the netCDF files using xarray
         ds = xr.open_mfdataset(input_files, combine='nested', concat_dim='time')
 
-        # Extract the start and end dates from the input files and convert them to datetime objects
-        start_dates = []
-        end_dates = []
-        for input_file in input_files:
-            time_obj = xr.open_dataset(input_file).time.values[0]
-            start_date_str = np.datetime_as_string(time_obj, unit='D')
-            start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
-            start_dates.append(start_date)
-
-            time_obj = xr.open_dataset(input_file).time.values[-1]
-            end_date_str = np.datetime_as_string(time_obj, unit='D')
-            end_date = datetime.strptime(end_date_str, '%Y-%m-%d')
-            end_dates.append(end_date)
-
-        start_date = min(start_dates).strftime("%Y%m%d")
-        end_date = max(end_dates).strftime("%Y%m%d")
+        # Extract the start and end dates from the input files and convert
+        # them to datetime objects
+        start_date = ds.time.values[0].strftime('%Y%m%d')
+        end_date = ds.time.values[-1].strftime('%Y%m%d')
 
         # Define output file name for merged file
         input_filename = os.path.basename(input_files[0])
@@ -76,6 +59,27 @@ for model_dir in os.listdir(root_dir):
         output_path = os.path.join(output_dir, output_filename)
         ds.to_netcdf(output_path)
 
-# Remove the temporary directory if it exists
-if os.path.exists(temp_dir):
-    os.rmdir(temp_dir)
+
+if __name__ == '__main__':
+    # Define the root directory containing all the model folders
+    root_dir = 'Y:\LucasSchmutz\MultivariateGraphCut_GCMs\download_day_unzip'
+
+    # Define the directory where the merged files will be stored
+    merged_dir = 'Y:\LucasSchmutz\MultivariateGraphCut_GCMs\download_day_merged'
+
+    # Define the number of processes to use
+    num_processes = 64
+
+    # Create a list of model directories
+    model_dirs = [d for d in os.listdir(root_dir) if
+                  os.path.isdir(os.path.join(root_dir, d))]
+
+    # Create a partial function to pass the fixed arguments to
+    # process_model_dir()
+    partial_func = functools.partial(process_model_dir, root_dir,
+                                     merged_dir=merged_dir)
+
+    # Use multiprocessing.Pool to parallelize the execution of
+    # process_model_dir()
+    with multiprocessing.Pool(processes=num_processes) as pool:
+        pool.map(partial_func, model_dirs)

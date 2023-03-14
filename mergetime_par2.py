@@ -33,7 +33,6 @@ def process_model_dir(root_dir, model_dir, merged_dir):
         # Print the input files being merged
         print(f"Merging {len(input_files)} files:")
         print('\n'.join(input_files))
-
         # Get the current system time
         now = datetime.now()
         # Print the current system time
@@ -82,7 +81,7 @@ if __name__ == '__main__':
     merged_dir = 'Y:\LucasSchmutz\MultivariateGraphCut_GCMs\download_day_merged'
 
     # Define the number of processes to use
-    num_processes = 40
+    num_processes = 64
 
     # Create a list of model directories
     model_dirs = [d for d in os.listdir(root_dir) if
