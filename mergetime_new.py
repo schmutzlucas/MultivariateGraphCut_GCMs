@@ -31,7 +31,8 @@ for model_dir in os.listdir(root_dir):
         for filename in os.listdir(
                 os.path.join(root_dir, model_dir, var_exp_dir)):
             if filename.endswith(".nc"):
-                input_file_path = os.path.join(root_dir, model_dir, var_exp_dir, filename)
+                input_file_path = os.path.join(root_dir, model_dir, var_exp_dir,
+                                               filename)
                 input_files.append(input_file_path)
 
         # Print the input files being merged
@@ -44,37 +45,37 @@ for model_dir in os.listdir(root_dir):
         print("Current time:", now)
 
         # Merge the netCDF files using xarray
-        ds = xr.open_mfdataset(input_files, combine='nested', concat_dim='time')
+        try:
+            ds = xr.open_mfdataset(input_files, combine='nested',
+                                   concat_dim='time')
 
-        # Extract the start and end dates from the input files and convert them to datetime objects
-        start_dates = []
-        end_dates = []
-        for input_file in input_files:
-            time_obj = xr.open_dataset(input_file).time.values[0]
-            start_date_str = np.datetime_as_string(time_obj, unit='D')
-            start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
-            start_dates.append(start_date)
+            # Extract the start and end dates from the input files and convert
+            # them to datetime objects
+            start_date = np.datetime_as_string(ds.time.values[0],
+                                               unit='D').replace('-', '')
+            end_date = np.datetime_as_string(ds.time.values[-1],
+                                             unit='D').replace('-', '')
 
-            time_obj = xr.open_dataset(input_file).time.values[-1]
-            end_date_str = np.datetime_as_string(time_obj, unit='D')
-            end_date = datetime.strptime(end_date_str, '%Y-%m-%d')
-            end_dates.append(end_date)
+            # Define output file name for merged file
+            input_filename = os.path.basename(input_files[0])
+            var = input_filename.split("_")[0]
+            model = input_filename.split("_")[2]
+            exp = input_filename.split("_")[3]
+            ens = input_filename.split("_")[4]
+            version = input_filename.split("_")[-1].split(".")[0]
+            output_filename = f"{var}_{model}_{exp}_{ens}_{start_date}-{end_date}_{version}.nc"
 
-        start_date = min(start_dates).strftime("%Y%m%d")
-        end_date = max(end_dates).strftime("%Y%m%d")
-
-        # Define output file name for merged file
-        input_filename = os.path.basename(input_files[0])
-        var = input_filename.split("_")[0]
-        model = input_filename.split("_")[2]
-        exp = input_filename.split("_")[3]
-        ens = input_filename.split("_")[4]
-        version = input_filename.split("_")[-1].split(".")[0]
-        output_filename = f"{var}_{model}_{exp}_{ens}_{start_date}-{end_date}_{version}.nc"
-
-        # Write merged file to network folder
-        output_path = os.path.join(output_dir, output_filename)
-        ds.to_netcdf(output_path)
+            # Check if output file already exists before writing
+            output_path = os.path.join(output_dir, output_filename)
+            print(output_path)
+            if os.path.exists(output_path):
+                print(
+                    f"Output file {output_filename} already exists, skipping...")
+            else:
+                # Write merged file to network folder
+                ds.to_netcdf(output_path)
+        except Exception as e:
+            print(f"An error occurred while processing {input_files}: {e}")
 
 # Remove the temporary directory if it exists
 if os.path.exists(temp_dir):
