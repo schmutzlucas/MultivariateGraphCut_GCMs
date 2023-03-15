@@ -3,7 +3,7 @@ import shutil
 import xarray as xr
 import numpy as np
 from datetime import datetime
-import xesmf as xe
+from scipy.interpolate import griddata
 
 # Define the root directory containing all the model folders
 root_dir = 'Y:\LucasSchmutz\MultivariateGraphCut_GCMs\download_day_unzip'
@@ -27,6 +27,10 @@ try:
 except Exception as e:
     print(f"Error occurred while loading grid information: {e}")
     exit(1)
+
+# Define the destination grid for regridding
+grid_x, grid_y = np.meshgrid(np.linspace(xfirst, xfirst + xinc * (xsize - 1), xsize),
+                             np.linspace(yfirst, yfirst + yinc * (ysize - 1), ysize))
 
 # Loop over all model folders
 for model_dir in os.listdir(root_dir):
@@ -66,30 +70,30 @@ for model_dir in os.listdir(root_dir):
             ds = xr.open_mfdataset(input_files, combine='nested', concat_dim='time')
 
             # Regrid the dataset to the destination grid
-            regridder = xe.Regridder(ds, ds_out, 'bilinear')
-            ds_regrid = regridder(ds)
+            new_data = []
+            for var in ds.data_vars:
+                data = ds[var].values
+                old_lat = ds[var].lat.values
+                old_lon = ds[var].lon.values
+                points = np.array([old_lon.ravel(), old_lat.ravel()]).T
+                new_points = np.array([grid_x.ravel(), grid_y.ravel()]).T
+                new_data.append(griddata(points, data.ravel(), new_points,
+                                         method='linear').reshape(ysize, xsize))
 
-            # Extract the start and end dates from the input files and convert
-            # them to datetime objects
-            start_date = np.datetime_as_string(ds_regrid.time.values[0],
-                                               unit='D').replace('-', '')
-            end_date = np.datetime_as_string(ds_regrid.time.values[-1],
-                                             unit='D').replace('-', '')
+            # Create a new xarray dataset with the regridded data
+            new_ds = xr.Dataset(
+                {var: (['time', 'lat', 'lon'], new_data[i]) for i, var in
+                 enumerate(ds.data_vars)})
+            new_ds['time'] = ds['time']
+            new_ds['lat'] = (['lat'], grid_y[:, 0])
+            new_ds['lon'] = (['lon'], grid_x[0, :])
 
-            # Define the output file name based on the start and end dates and
-            # the variable name
-            var_name = os.path.basename(var_exp_dir)
-            output_filename = f"{var_name}_{start_date}_{end_date}.nc"
-            output_path = os.path.join(output_dir, output_filename)
-            # Print the output file path
-            print("Output file:", output_path)
+            # Write the new dataset to a netCDF file
+            output_file_path = os.path.join(output_dir, f"{var_exp_dir}.nc")
+            new_ds.to_netcdf(output_file_path)
 
-            # Save the merged and regridded dataset to a new netCDF file
-            ds_regrid.to_netcdf(output_path)
-
-            # Print the time elapsed for the merging process
-            elapsed_time = datetime.now() - now
-            print("Elapsed time:", elapsed_time)
+            # Print a success message
+            print(f"Regridded file saved to {output_file_path}")
         except Exception as e:
-            print(f"Error occurred while processing files: {e}")
-
+            print(f"Error occurred while regridding: {e}")
+            continue
