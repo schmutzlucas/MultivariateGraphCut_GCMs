@@ -70,15 +70,20 @@ def merge_model_dir(model_dir):
             else:
                 # Write merged file to network folder
                 ds.to_netcdf(output_path)
+
         except Exception as e:
+            with open("failed_merge.log", "a") as f:
+                f.write(
+                    f"An error occurred while processing {input_files}: {e}\n")
             print(f"An error occurred while processing {input_files}: {e}")
+
 
 if __name__ == '__main__':
     # Get a list of all model folders
     model_dirs = [d for d in os.listdir(root_dir) if os.path.isdir(os.path.join(root_dir, d))]
 
     # Define the number of processes to use
-    num_processes = 10
+    num_processes = 8
 
     # Create a multiprocessing pool with the specified number of processes
     pool = Pool(num_processes)

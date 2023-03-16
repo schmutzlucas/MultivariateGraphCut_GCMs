@@ -8,7 +8,7 @@ from datetime import datetime
 root_dir = 'Y:\LucasSchmutz\MultivariateGraphCut_GCMs\download_day_unzip'
 
 # Define the directory where the merged files will be stored
-merged_dir = 'Y:\LucasSchmutz\MultivariateGraphCut_GCMs\download_day_merged_1thread'
+merged_dir = 'Y:\LucasSchmutz\MultivariateGraphCut_GCMs\download_day_merged_multithread'
 
 # Loop over all model folders
 for model_dir in os.listdir(root_dir):
