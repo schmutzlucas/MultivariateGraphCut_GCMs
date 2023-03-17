@@ -1,19 +1,34 @@
+import cftime
+import pandas as pd
 import os
-import shutil
 import xarray as xr
 import numpy as np
 from datetime import datetime
 from multiprocessing import Pool
+from cftime import DatetimeProlepticGregorian
+
+def get_time_constraint(start, end):
+    start_date = pd.Timestamp(start).to_pydatetime()
+    end_date = pd.Timestamp(end).to_pydatetime()
+
+    time_constraint = iris.Constraint(time=lambda cell: start_date <= cell.point <= end_date)
+    return time_constraint
 
 root_dir = 'Y:\LucasSchmutz\MultivariateGraphCut_GCMs\download_day_unzip'
 merged_dir = 'Y:\LucasSchmutz\MultivariateGraphCut_GCMs\download_day_merged_multithread'
 
-
 def preprocess(ds):
     ds = ds.copy()
-    ds['time'] = ds.indexes['time'].normalize()
-    return ds
+    time_units = "days since 1850-01-01"
+    calendar = "proleptic_gregorian"
 
+    decoded_time = xr.coding.times.decode_cf_datetime(ds['time'],
+                                                      units=time_units,
+                                                      calendar=calendar)
+    ds['time'] = xr.DataArray(
+        [cftime.datetime(t.year, t.month, t.day) for t in decoded_time],
+        dims='time')
+    return ds
 
 def merge_model_dir(model_dir):
     for var_exp_dir in os.listdir(os.path.join(root_dir, model_dir)):
@@ -39,10 +54,19 @@ def merge_model_dir(model_dir):
         try:
             ds = xr.open_mfdataset(input_files, combine='nested',
                                    concat_dim='time', preprocess=preprocess)
-            start_date = np.datetime_as_string(ds.time.values[0],
-                                               unit='D').replace('-', '')
-            end_date = np.datetime_as_string(ds.time.values[-1],
-                                             unit='D').replace('-', '')
+
+            # Apply time constraint here
+            start_date = DatetimeProlepticGregorian(
+                pd.Timestamp(start).to_pydatetime())
+            end_date = DatetimeProlepticGregorian(
+                pd.Timestamp(end).to_pydatetime())
+            time_constraint = iris.Constraint(
+                time=lambda cell: start_date <= cell.point <= end_date)
+
+            ds = ds.sel(time=time_constraint)
+
+            start_date = ds.time.values[0].strftime('%Y%m%d')
+            end_date = ds.time.values[-1].strftime('%Y%m%d')
 
             input_filename = os.path.basename(input_files[0])
             var = input_filename.split("_")[0]
@@ -75,5 +99,6 @@ if __name__ == '__main__':
     pool = Pool(num_processes)
     pool.map(merge_model_dir, model_dirs)
     pool.close()
-    pool.join()
+    pool.join
     print("Script complete!")
+
