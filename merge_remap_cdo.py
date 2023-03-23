@@ -3,9 +3,9 @@ import subprocess
 import glob
 import datetime
 
-root_dir = 'Y:\\LucasSchmutz\\MultivariateGraphCut_GCMs\\download_day_unzip'
-output_dir = 'Y:\\LucasSchmutz\\MultivariateGraphCut_GCMs\\merged_regridded'
-grid_file = 'Y:\\LucasSchmutz\\MultivariateGraphCut_GCMs\\my_grid.txt'
+root_dir = '/home/lschmutz1//scratch/LucasSchmutz/MultivariateGraphCut_GCMs/download_day_unzip/'
+output_dir = '/home/lschmutz1//scratch/LucasSchmutz/MultivariateGraphCut_GCMs/merged_regridded/'
+grid_file = '/home/lschmutz1//scratch/LucasSchmutz/MultivariateGraphCut_GCMs/my_grid.txt'
 
 # Iterate through each model folder
 for model_dir in os.listdir(root_dir):

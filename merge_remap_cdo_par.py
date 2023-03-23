@@ -5,9 +5,9 @@ import datetime
 import logging
 from concurrent.futures import ThreadPoolExecutor
 
-root_dir = 'Y:\\LucasSchmutz\\MultivariateGraphCut_GCMs\\download_day_unzip'
-output_dir = 'Y:\\LucasSchmutz\\MultivariateGraphCut_GCMs\\merged_regridded'
-grid_file = 'Y:\\LucasSchmutz\\MultivariateGraphCut_GCMs\\my_grid.txt'
+root_dir = '/home/lschmutz1//scratch/LucasSchmutz/MultivariateGraphCut_GCMs/download_day_unzip/'
+output_dir = '/home/lschmutz1//scratch/LucasSchmutz/MultivariateGraphCut_GCMs/merged_regridded/'
+grid_file = '/home/lschmutz1//scratch/LucasSchmutz/MultivariateGraphCut_GCMs/my_grid.txt'
 
 logging.basicConfig(filename='merge_remap_cdo.log', level=logging.INFO)
 
