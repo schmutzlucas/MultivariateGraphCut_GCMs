@@ -80,4 +80,6 @@ with ThreadPoolExecutor(max_workers=num_workers) as executor:
             future.result()
         except Exception as e:
             print(f"Error occurred while processing task: {e}")
+            with open("error_log.txt", "a") as log_file:
+                log_file.write(f"Error occurred while processing task: {e}\n")
 
