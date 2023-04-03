@@ -1,22 +1,19 @@
 #' @title
-#' Used to normalize arrays
+#' Normalize array
 #'
 #' @description
 #' Normalizes an array with the chosen method.
-#' Used to normalized individual variables to make them comparable in the graph
-#' cut framework
 #'
-#' @param data should be an array
-#' @param method allows the user the chose the normalization method.
-#' Currently: Standard Score or Min Max
+#' @param data array to be normalized
+#' @param method normalization method to be used. Currently available methods are 'StdSc'
+#' and 'min_max'
 #'
 #' @examples
-#' Normalize(precipitation, StdSc)
-#' Normalize(temperature, MinMax)
+#' Normalize(precipitation, method = 'StdSc')
+#' Normalize(temperature, method = 'min_max')
 #'
 #' @return
-#' Returns an array of the same size of the one used as argument normalized
-#' with the chosen method
+#' Returns the normalized array of the same size as the input array.
 #'
 Normalize <- function(data, method){
 

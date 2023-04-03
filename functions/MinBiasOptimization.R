@@ -1,14 +1,20 @@
 #' MinBias optimization method
 #'
 #' @description
-#' This function produces a labelling using the MinBias optimization method that
-#' is optimal for the list of variables passed as argument.
+#' Computes the MinBias optimization method that is optimal for the list of variables passed as argument.
 #'
-#' @param reference A 4D array [lon, lat, 1, n_variables]
-#' @param models A 4D array [lon, lat, model, nvariables]
-#'
+#' @param reference A 4D array [lon, lat, 1, n_variables] containing the reference data
+#' @param models A 4D array [lon, lat, model, nvariables] containing the model data
 #'
 #' @return A 2D array with the same size as the input reference data. Each element in the array corresponds to the index of the optimal label for the corresponding location in the reference data.
+#'
+#' @examples
+#' # Load example data
+#' data(example_data)
+#'
+#' # Compute MinBias optimization
+#' label_attribution <- MinBiasOptimization(reference = example_data$present[, , 1, ],
+#'                                           models = example_data$present[, , 2:4, ])
 #'
 #' @export
 MinBiasOptimization <- function (reference, models) {
@@ -17,7 +23,7 @@ MinBiasOptimization <- function (reference, models) {
   # Number of latitudes
   height <- nrow(reference)
   # Number of labels used in the GC
-  n_labels <- length(models[1,1,,1])
+  n_labels <- length(models[1, 1, , 1])
   # Number of variables in the reference data
   n_variables <- length(reference[1, 1, 1, ])
 
@@ -32,12 +38,12 @@ MinBiasOptimization <- function (reference, models) {
     }
     model_bias[i] <- sum(bias[,,i])
   }
-  print(model_bias)
+
   # Compute optimal label attribution for each location
   label_attribution <- matrix(0, height, width)
   for(x in 1:height){
     for(y in 1:width){
-      label_attribution[x,y] <- which.min(abs(bias[x,y,]))-1
+      label_attribution[x,y] <- which.min(abs(bias[x,y,])) - 1
     }
   }
 

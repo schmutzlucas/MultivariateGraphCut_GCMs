@@ -5,25 +5,51 @@ lapply(list.of.packages, library, character.only = TRUE)
 # install_github("thaos/gcoWrapR")
 library(gcoWrapR)
 # TODO documentation of gc
-#' @title
 #' Graph cut optimization
 #'
-#' @description
-#' This function produces a map of labels where each grid-point is affected to
-#' one model. It uses gcoWrapR (https://github.com/thaos/gcoWrapR) and c++ based
-#' gco-v3.0 (https://vision.cs.uwaterloo.ca/code/).
+#' This function performs graph cut optimization using the gco-v3.0 C++ library and gcoWrapR package.
+#' It produces a map of labels where each grid-point is assigned to one model.
 #'
-#' @param data should be an array
-#' @param method allows the user the chose the normalization method.
-#' Currently: Standard Score or Min Max
+#' @param reference An array representing the reference dataset for the optimization.
+#' @param models_datacost An array representing the models' data cost for the optimization.
+#' @param models_smoothcost An array representing the models' smooth cost for the optimization.
+#' @param weight_data A numeric value representing the weight for the data cost.
+#' @param weight_smooth A numeric value representing the weight for the smooth cost.
+#' @param verbose A logical value indicating whether or not to print information during the optimization process.
+#'
+#' @return A list containing the label attribution matrix, data and smooth cost, and execution time.
 #'
 #' @examples
-#' Normalize(precipitation, StdSc)
-#' Normalize(temperature, MinMax)
+#' # Load example data
+#' data("example_data")
 #'
-#' @return
-#' Returns the results of the graphcut as an array of labels
+#' # Perform graph cut optimization
+#' GC_result <- GraphCutOptimization(
+#' reference = example_data$reference,
+#' models_datacost = example_data$models_datacost,
+#' models_smoothcost = example_data$models_smoothcost,
+#' weight_data = 1,
+#' weight_smooth = 1,
+#' verbose = TRUE
+#' )
 #'
+#' # Print results
+#' print(GC_result)
+#'
+#' @references
+#' https://github.com/thaos/gcoWrapR
+#' https://vision.cs.uwaterloo.ca/code/
+#'
+#' @import gcoWrapR
+#' @export
+GraphCutOptimization <- function(
+reference,
+models_datacost,
+models_smoothcost,
+weight_data,
+weight_smooth,
+verbose
+)
 GraphCutOptimization <- function(
   reference,
   models_datacost,

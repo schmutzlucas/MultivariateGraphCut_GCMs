@@ -30,6 +30,8 @@ year_future <- 1999:2019
 #                'huss')
 variables <- c('tas', 'pr', 'tas')
 
+experiment <- c('historical')
+
 
 # TODO choose the method for the list of model names
 # Selected models
