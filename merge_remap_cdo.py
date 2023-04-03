@@ -3,9 +3,9 @@ import subprocess
 import glob
 import datetime
 
-root_dir = 'Y:\\LucasSchmutz\\MultivariateGraphCut_GCMs\\download_day_unzip'
-output_dir = 'Y:\\LucasSchmutz\\MultivariateGraphCut_GCMs\\merged_regridded'
-grid_file = 'Y:\\LucasSchmutz\\MultivariateGraphCut_GCMs\\my_grid.txt'
+root_dir = '/home/lschmutz1/LucasSchmutz/MultivariateGraphCut_GCMs/download_day_unzip/'
+output_base_dir = '/home/lschmutz1/LucasSchmutz/MultivariateGraphCut_GCMs/merged_regridded/'
+grid_file = '/home/lschmutz1/LucasSchmutz/MultivariateGraphCut_GCMs/my_grid.txt'
 
 # Iterate through each model folder
 for model_dir in os.listdir(root_dir):
@@ -44,6 +44,10 @@ for model_dir in os.listdir(root_dir):
             ens = input_filename.split("_")[4]
             version = input_filename.split("_")[-1].split(".")[0]
             output_filename = f"{var}_{model}_{exp}_{ens}_{start_date}-{end_date}_merged_regridded_{version}.nc"
+
+            # Create output directory with model_dir and var_dir structure
+            output_dir = os.path.join(output_base_dir, model_dir, var_dir)
+            os.makedirs(output_dir, exist_ok=True)
             output_path = os.path.join(output_dir, output_filename)
 
             # Define CDO command
