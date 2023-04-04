@@ -36,3 +36,4 @@ distr
 MASS
 gplots
 ggplot2
+ks
