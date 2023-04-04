@@ -30,7 +30,6 @@
 #' https://www.unidata.ucar.edu/software/netcdf/
 #'
 #' @import ncdf4
-#' @export
 OpenModels <- function(model_names, variables) {
   data <- list()
   for(model_name in model_names) {
