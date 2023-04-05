@@ -21,8 +21,8 @@ for(path in file_paths){source(path)}
 
 
 # Temporal ranges
-year_present <- 1979:1998
-year_future <- 1999:2019
+year_present <- 1971:1990
+year_future <- 1991:2010
 
 # List of the variable used
 # variables <- c('tas', 'tasmax',
