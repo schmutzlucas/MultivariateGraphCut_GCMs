@@ -1,13 +1,11 @@
 library(stringr)
 
 # Get model names in Data
-dir_path <- "data/"
-subdirs <- dir(dir_path, full.names = TRUE, recursive = FALSE)
-model_names <- unique(str_extract(subdirs, "(?<=/)[A-Za-z0-9-]+"))
-model_names <- str_replace_all(cmip6_models, "^data/", "")
+dir_path <- "data/CMIP6"
+model_names <- dir(dir_path)
 
-var <- c('tas', 'pr', 'tasmax')
-experiment <- 'r1i1p1f1'
+variables <- c('tas', 'pr', 'tasmax')
+exp <- 'historical'
 
 
 
@@ -25,27 +23,42 @@ tmp <- ncvar_get(nc, var, start = c(1, 1, min(iyyyy)), count = c(-1, -1, length(
   for(var in variables){
     i <- 1
     for(model_name in model_names){
+      print(var)
+      print(model_name)
       # Set the directory path and file name pattern
-      dir_path <- paste0('data/', model_name, '/', var, '/')
-      file_pattern <- paste0(var, '_', model_name, '_', experiment, '_','*.nc')
+      dir_path <- paste0('data/CMIP6/', model_name, '/', var, '/')
+      print(dir_path)
+      file_pattern <- paste0(var, '_', model_name, '_', exp, '_','*.nc')
+      print(file_pattern)
 
       # Get the full file path of the matching file
       file_path <- list.files(path = dir_path, pattern = file_pattern, full.names = TRUE)
+      print(file_path)
 
-
-      # Create dimensions and initialize matrices for present and future data if this is the first model and variable
-      if(j == 1 && i == 1) {
-        lat <- ncvar_get(nc, "lat")
-        lon <- ncvar_get(nc, "lon")
-        data_matrix$present <- data_matrix$future <-
-          array(0, c(length(lon), length(lat),
-                          length(model_names), length(variables)))
+      # Check that there is only one matching file
+      if (length(file_path) == 1) {
+        # Open the file using nc_open
+        nc <- nc_open(file_path)
+        # do something with the netCDF file
+        # ...
+      } else {
+        # Handle the case where there are multiple or no matching files
+        print("Error: Found multiple or no matching files")
       }
 
-      # Extract and average data for present
-      yyyy <- substr(as.character(nc.get.time.series(nc)), 1, 4)
-      iyyyy <- which(yyyy %in% year_present)
-      tmp <- ncvar_get(nc, var, start = c(1, 1, min(iyyyy)), count = c(-1, -1, length(iyyyy)))
+      # # Create dimensions and initialize matrices for present and future data if this is the first model and variable
+      # if(j == 1 && i == 1) {
+      #   lat <- ncvar_get(nc, "lat")
+      #   lon <- ncvar_get(nc, "lon")
+      #   data_matrix$present <- data_matrix$future <-
+      #     array(0, c(length(lon), length(lat),
+      #                     length(model_names), length(variables)))
+      # }
+
+      # # Extract and average data for present
+      # yyyy <- substr(as.character(nc.get.time.series(nc)), 1, 4)
+      # iyyyy <- which(yyyy %in% year_present)
+      # tmp <- ncvar_get(nc, var, start = c(1, 1, min(iyyyy)), count = c(-1, -1, length(iyyyy)))
 
     }
   }
