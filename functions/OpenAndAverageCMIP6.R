@@ -48,47 +48,44 @@ OpenAndAverageCMIP6 <- function (model_names, variables,
 
       # Check that there is only one matching file
       if (length(file_path) == 1) {
-        # Open the file using nc_open
-        nc <- nc_open(file_path)
-        # do something with the netCDF file
-        # ...
+        # Create dimensions and initialize matrices for present and future data if this is the first model and variable
+        if(j == 1 && i == 1) {
+          lat <- ncvar_get(nc, "lat")
+          lon <- ncvar_get(nc, "lon")
+          data_matrix$present <- data_matrix$future <-
+            array(0, c(length(lon), length(lat),
+                            length(model_names), length(variables)))
+        }
+
+        # Extract and average data for present
+        yyyy <- substr(as.character(nc.get.time.series(nc)), 1, 4)
+        iyyyy <- which(yyyy %in% year_present)
+        tmp <- apply(
+          ncvar_get(nc, var, start = c(1, 1, min(iyyyy)), count = c(-1, -1, length(iyyyy))),
+          1:2,
+          mean
+        )
+        data_matrix$present[, , i, j] <- tmp
+        data[['present']][[var]][[model_name]] <- tmp
+
+        # Extract and average data for future
+        iyyyy <- which(yyyy %in% year_future)
+        tmp <- apply(
+          ncvar_get(nc, var, start = c(1, 1, min(iyyyy)), count = c(-1, -1, length(iyyyy))),
+          1:2,
+          mean
+        )
+        data_matrix$future [, , i, j] <- tmp
+        data[['future']][[var]][[model_name]] <- tmp
+  
+        # Close the file
+        nc_close(nc)
       } else {
         # Handle the case where there are multiple or no matching files
         print("Error: Found multiple or no matching files")
       }
 
-      # Create dimensions and initialize matrices for present and future data if this is the first model and variable
-      if(j == 1 && i == 1) {
-        lat <- ncvar_get(nc, "lat")
-        lon <- ncvar_get(nc, "lon")
-        data_matrix$present <- data_matrix$future <-
-          array(0, c(length(lon), length(lat),
-                          length(model_names), length(variables)))
-      }
-
-      # Extract and average data for present
-      yyyy <- substr(as.character(nc.get.time.series(nc)), 1, 4)
-      iyyyy <- which(yyyy %in% year_present)
-      tmp <- apply(
-        ncvar_get(nc, var, start = c(1, 1, min(iyyyy)), count = c(-1, -1, length(iyyyy))),
-        1:2,
-        mean
-      )
-      data_matrix$present[, , i, j] <- tmp
-      data[['present']][[var]][[model_name]] <- tmp
-
-      # Extract and average data for future
-      iyyyy <- which(yyyy %in% year_future)
-      tmp <- apply(
-        ncvar_get(nc, var, start = c(1, 1, min(iyyyy)), count = c(-1, -1, length(iyyyy))),
-        1:2,
-        mean
-      )
-      data_matrix$future [, , i, j] <- tmp
-      data[['future']][[var]][[model_name]] <- tmp
-
-      # Close the file
-      nc_close(nc)
+      
 
       # Update counter for models
       i <- i + 1
