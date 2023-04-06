@@ -41,7 +41,7 @@ OpenAndAverageCMIP6 <- function (model_names, variables,
     i <- 1
     for(model_name in model_names){
       # Create the pattern
-      pattern <- glob2rx(paste0(var, "_", model_name, "_", experiment, "*.nc"))
+      pattern <- glob2rx(paste0(var, "_", model_name, "_", period, "*.nc"))
       # Get the filepath
       filepath <- list.files(path = dir_path,
                              pattern = pattern)
@@ -56,8 +56,6 @@ OpenAndAverageCMIP6 <- function (model_names, variables,
         # Handle the case where there are multiple or no matching files
         print("Error: Found multiple or no matching files")
       }
-      # Adjust the filepath and add the necessary suffixes and prefixes
-      nc <- nc_open(paste0('data/CMIP6/', model_name, '/', var, '/', var, '_', model_name, '.nc'))
 
       # Create dimensions and initialize matrices for present and future data if this is the first model and variable
       if(j == 1 && i == 1) {
