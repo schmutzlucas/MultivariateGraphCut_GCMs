@@ -31,32 +31,21 @@ year_future <- 1991:2010
 #                'huss')
 variables <- c('tas', 'pr', 'tasmax')
 
-experiment <- c('historical')
+period <- c('historical')
 
 
-# TODO choose the method for the list of model names
-# Selected models
-selected_models <- c(
-  2,34,16,9,8,28
-)
 # Obtains the list of models from the model names or from a file
 # Method 1
 # TODO This needs ajustements to remove prefixes and suffixes
-tmp <- 'pr'
-model_names <- list.files(paste0('data/CMIP5/', tmp))[selected_models]
-model_names <- sub(paste0(tmp, '_'), '', model_names)
-model_names <- sub('.nc', '', model_names)
+dir_path <- dir_path <- paste0('data/CMIP6/')
+model_names <- list.dirs(dir_path, recursive = FALSE)
+model_names <- basename(model_names)
 rm(tmp)
-reference_names <- c('era5')
 
-
-# #Method2
-# # TODO : test if it works
-#model_names <- read.table("model_list.txt", sep="\n")$V1
 
 # Open and average the models for the selected time periods
-tmp <- OpenAndAverageModels(
-  model_names, variables, year_present, year_future
+tmp <- OpenAndAverageCMIP6(
+  model_names, variables, year_present, year_future, period
 )
 models_list <- tmp[[1]]
 models_matrix <- tmp[[2]]

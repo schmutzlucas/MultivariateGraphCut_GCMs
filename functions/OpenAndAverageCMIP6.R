@@ -40,11 +40,14 @@ OpenAndAverageCMIP6 <- function (model_names, variables,
   for(var in variables){
     i <- 1
     for(model_name in model_names){
+      dir_path <- paste0('data/', model_name, '/', var, '/')
       # Create the pattern
       pattern <- glob2rx(paste0(var, "_", model_name, "_", period, "*.nc"))
+
       # Get the filepath
-      filepath <- list.files(path = dir_path,
+      file_path <- list.files(path = dir_path,
                              pattern = pattern)
+      print(file_path)
 
       # Check that there is only one matching file
       if (length(file_path) == 1) {
