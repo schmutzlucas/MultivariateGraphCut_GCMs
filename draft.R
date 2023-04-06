@@ -97,7 +97,7 @@ times_series <- matrix(data = NA, nrow = dim(tas)[3], ncol = 2)
 
 times_series[,1] <- tas[100,100,]
 times_series[,2] <- pr[100,100,]
-nbins = 50
+nbins <- 50
 
 joint_dist <- kde2d(times_series[, 1], times_series[, 2],
                     n = nbins, lims = c(range_tas, range_pr))
