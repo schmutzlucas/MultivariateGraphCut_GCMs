@@ -29,7 +29,7 @@
 #' @import ncdf4
 #'
 OpenAndAverageCMIP6 <- function (model_names, variables,
-                                 year_present, year_future) {
+                                 year_present, year_future, period) {
 
   # Initialize data structures
   data <- list()
@@ -40,9 +40,24 @@ OpenAndAverageCMIP6 <- function (model_names, variables,
   for(var in variables){
     i <- 1
     for(model_name in model_names){
+      # Create the pattern
+      pattern <- glob2rx(paste0(var, "_", model_name, "_", experiment, "*.nc"))
+      # Get the filepath
+      filepath <- list.files(path = dir_path,
+                             pattern = pattern)
 
+      # Check that there is only one matching file
+      if (length(file_path) == 1) {
+        # Open the file using nc_open
+        nc <- nc_open(file_path)
+        # do something with the netCDF file
+        # ...
+      } else {
+        # Handle the case where there are multiple or no matching files
+        print("Error: Found multiple or no matching files")
+      }
       # Adjust the filepath and add the necessary suffixes and prefixes
-      nc <- nc_open(paste0('data/CMIP6/', var, '/', var, '_', model_name, '.nc'))
+      nc <- nc_open(paste0('data/CMIP6/', model_name, '/', var, '/', var, '_', model_name, '.nc'))
 
       # Create dimensions and initialize matrices for present and future data if this is the first model and variable
       if(j == 1 && i == 1) {

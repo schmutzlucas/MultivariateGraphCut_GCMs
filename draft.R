@@ -102,3 +102,30 @@ nbins <- 50
 joint_dist <- kde2d(times_series[, 1], times_series[, 2],
                     n = nbins, lims = c(range_tas, range_pr))
 
+dir_path <- paste0('data/CMIP6/IPSL-CM6A-LR/pr/')
+var <- 'pr'
+model_name <- 'IPSL-CM6A-LR'
+experiment <- 'historical'
+# Create the pattern
+pattern <- glob2rx(paste0(var, "_", model_name, "_", experiment, "*.nc"))
+
+filepath <- list.files(path = dir_path,
+                       pattern = pattern)
+
+
+
+# Set the variables
+var <- "pr"
+model_name <- "IPSL-CM6A-LR"
+experiment <- "historical"
+
+# Create the pattern using glob2rx()
+pattern <- glob2rx(paste0(var, "_", model_name, "_", experiment, "*.nc"))
+
+# Test the pattern
+test_vec <- c("pr_IPSL-CM6A-LR_historical_r1i1p1f1_19500101-20141230_merged_regridded_v20180803.nc",
+              "pr_IPSL-CM6A-LR_ssp585_r1i1p1f1_20150101-21001230_merged_regridded_v20190903.nc",
+              "tasmin_IPSL-CM6A-LR_historical_r1i1p1f1_19500101-20141230_merged_regridded_v20180803.nc",
+              "tasmax_NorESM2-MM_historical_r1i1p1f1_19500101-20141230_merged_regridded_v20191108.nc")
+grep(pattern, test_vec)
+
