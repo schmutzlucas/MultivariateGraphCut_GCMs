@@ -126,7 +126,7 @@ contour(tp_kde_models[[10]])
 
 # Convert the density matrix to long format for ggplot
 # Convert the density matrix to long format for ggplot
-tp_dens_model3_long <- reshape2::melt(tp_kde_models[[4]]$z)
+tp_dens_model3_long <- reshape2::melt(dump$z)
 
 # Create a ggplot graph of the density estimates
 ggplot(tp_dens_model3_long, aes(x = Var1, y = Var2, fill = value)) +

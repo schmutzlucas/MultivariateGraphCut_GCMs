@@ -3,3 +3,5 @@ ncdf4.helpers
 MASS
 foreach
 doParallel
+ggplot2
+viridis
