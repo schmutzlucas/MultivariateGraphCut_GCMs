@@ -8,3 +8,6 @@ viridis
 reshape2
 ggeasy
 ks
+foreach
+doParallel
+iterators
