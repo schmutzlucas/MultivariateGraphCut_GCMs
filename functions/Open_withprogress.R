@@ -11,6 +11,7 @@ OpenAndKDE1D_betterPar_progress <- function (model_names, variables,
   # Initialize data structures
   kde_matrix <- array(0, c(length(lon), length(lat), nbins1d,
                            length(model_names), length(variables)))
+  total_grid_points <- lon*lat
 
   # Loop through variables and models
   v <- 1
@@ -40,7 +41,10 @@ OpenAndKDE1D_betterPar_progress <- function (model_names, variables,
         # For each grid point...
         foreach(i = iter(seq_along(lon)), .combine = 'cbind',
                 .packages = c("ncdf4"), .export = c("grid_data", "min", "iyyyy", "nbins1d", "m", "var")) %dopar% {
-
+          # Print progress message every 100 grid points
+          if (i %% 1 == 0) {
+            cat(sprintf("Processing grid point %d of %d\n", i*j, total_grid_points))
+          }
 
           temp_result <- array(0, c(length(lat), nbins1d, length(model_names), length(variables)))
           # Print progress message every 100 grid points
