@@ -40,17 +40,19 @@ OpenAndAverageCMIP6 <- function (model_names, variables,
   for(var in variables){
     i <- 1
     for(model_name in model_names){
-      dir_path <- paste0('data/', model_name, '/', var, '/')
+      dir_path <- paste0('data/CMIP6/', model_name, '/', var, '/')
       # Create the pattern
       pattern <- glob2rx(paste0(var, "_", model_name, "_", period, "*.nc"))
 
       # Get the filepath
-      file_path <- list.files(path = dir_path,
+      file_name <- list.files(path = dir_path,
                              pattern = pattern)
+      file_path <- paste0(dir_path, file_name)
       print(file_path)
 
       # Check that there is only one matching file
       if (length(file_path) == 1) {
+        nc <- nc_open(file_path)
         # Create dimensions and initialize matrices for present and future data if this is the first model and variable
         if(j == 1 && i == 1) {
           lat <- ncvar_get(nc, "lat")

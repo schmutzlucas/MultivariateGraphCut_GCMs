@@ -129,7 +129,11 @@ test_vec <- c("pr_IPSL-CM6A-LR_historical_r1i1p1f1_19500101-20141230_merged_regr
               "tasmax_NorESM2-MM_historical_r1i1p1f1_19500101-20141230_merged_regridded_v20191108.nc")
 grep(pattern, test_vec)
 
-dir_path <- paste0('data/', model_name, '/', var, '/')
+model_name <- 'MIROC6'
+var <- 'tas'
+period <- 'historical'
+
+dir_path <- paste0('data/CMIP6/', model_name, '/', var, '/')
 # Create the pattern
 pattern <- glob2rx(paste0(var, "_", model_name, "_", period, "*.nc"))
 

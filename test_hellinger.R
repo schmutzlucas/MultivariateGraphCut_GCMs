@@ -18,8 +18,6 @@ source_code_dir <- 'functions/' #The directory where all functions are saved.
 file_paths <- list.files(source_code_dir, full.names = T)
 for(path in file_paths){source(path)}
 
-
-
 # Temporal ranges
 year_present <- 1971:1990
 year_future <- 1991:2010
@@ -33,30 +31,24 @@ variables <- c('tas', 'pr', 'tasmax')
 
 period <- c('historical')
 
-
 # Obtains the list of models from the model names or from a file
 # Method 1
 # TODO This needs ajustements to remove prefixes and suffixes
-dir_path <- dir_path <- paste0('data/CMIP6/')
+dir_path <- paste0('data/CMIP6/')
 model_names <- list.dirs(dir_path, recursive = FALSE)
 model_names <- basename(model_names)
-rm(tmp)
 
 
 # Open and average the models for the selected time periods
 tmp <- OpenAndAverageCMIP6(
   model_names, variables, year_present, year_future, period
 )
-models_list <- tmp[[1]]
-models_matrix <- tmp[[2]]
+models_list_tmp <- tmp[[1]]
+models_matrix_tmp <- tmp[[2]]
 rm(tmp)
 
-# Open and average the refeences for the selected time periods
-tmp <- OpenAndAverageModels(
-  reference_names, variables, year_present, year_future
-)
-reference_list <- tmp[[1]]
-reference_matrix <- tmp[[2]]
+models_matrix$present <- models_matrix_tmp$present[-1]
+models_matrix$future <- models_matrix_tmp$future[-1]
 
 models_matrix_nrm <- list()
 models_matrix_nrm <- NormalizeVariables(models_matrix, variables, 'StdSc')
