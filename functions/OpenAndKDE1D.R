@@ -22,7 +22,7 @@ OpenAndKDE1D <- function (model_names, variables,
 
       # Check that there is only one matching file
       if (length(file_path) == 1) {
-        nc <- nc_open(file_path)
+        nc <<- nc_open(file_path)
         # Extract and average data for present
         yyyy <- substr(as.character(nc.get.time.series(nc)), 1, 4)
         iyyyy <- which(yyyy %in% year_present)
@@ -32,7 +32,8 @@ OpenAndKDE1D <- function (model_names, variables,
         for (i in seq_along(lon)){
           for (j in seq_along(lat)){
             print(c(i, j, var))
-            tmp <- ncvar_get(nc, var, start = c(i, j, min(iyyyy)), count = c(i, j, length(iyyyy)))
+            tmp <- ncvar_get(nc, var, start = c(i, j, min(iyyyy)),
+                             count = c(1, 1, length(iyyyy)))
 
             if(var == 'pr' ) {
               # Changing units to mm/day and log transform
