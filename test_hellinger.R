@@ -38,17 +38,25 @@ dir_path <- paste0('data/CMIP6/')
 model_names <- list.dirs(dir_path, recursive = FALSE)
 model_names <- basename(model_names)
 
+# Choose the reference in the models
+reference_name <- model_names[1]
+model_names <- model_names[-1]
+
 
 # Open and average the models for the selected time periods
 tmp <- OpenAndAverageCMIP6(
   model_names, variables, year_present, year_future, period
 )
-models_list_tmp <- tmp[[1]]
-models_matrix_tmp <- tmp[[2]]
+models_list <- tmp[[1]]
+models_matrix <- tmp[[2]]
 rm(tmp)
 
-models_matrix$present <- models_matrix_tmp$present[-1]
-models_matrix$future <- models_matrix_tmp$future[-1]
+tmp <- OpenAndAverageCMIP6(
+  reference_name, variables, year_present, year_future, period
+)
+reference_list <- tmp[[1]]
+reference_matrix <- tmp[[2]]
+rm(tmp)
 
 models_matrix_nrm <- list()
 models_matrix_nrm <- NormalizeVariables(models_matrix, variables, 'StdSc')

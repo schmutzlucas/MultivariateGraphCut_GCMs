@@ -29,7 +29,7 @@ year_future <- 1999:2019
 #                'tasmin', 'pr',
 #                'psl', 'hur',
 #                'huss')
-variables <- c('tas', 'pr', 'tasmax')
+variables <- c('tas', 'pr', 'tas')
 
 experiment <- c('historical')
 

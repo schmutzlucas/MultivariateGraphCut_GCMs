@@ -22,17 +22,16 @@
 #' normalized with the chosen method.
 #'
 NormalizeVariables <- function(data, variables, method) {
-  tmp_dim <- dim(data$present)
   data_nrm <- list()
-  data_nrm$future <- data_nrm$present <- array(0, dim = tmp_dim)
+  data_nrm$future <- data_nrm$present <- array(0, dim = dim(data$present))
   for (i in 1:length(variables)) {
     # Normalize all models of one variable together to keep the bias between
     # models.
     tmp <- Normalize(data$present[, , , i], method)
-    data_nrm$present[ , , , i] <- array(tmp, dim = tmp_dim)
+    data_nrm$present[ , , , i] <- tmp
 
     tmp <- Normalize(data$future[, , , i], method)
-    data_nrm$future[, , , i] <- array(tmp, dim = tmp_dim)
+    data_nrm$future[, , , i] <- tmp
   }
   return(data_nrm)
 }
