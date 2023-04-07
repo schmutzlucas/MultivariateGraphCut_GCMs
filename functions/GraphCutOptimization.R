@@ -170,6 +170,8 @@ GraphCutOptimization <- function(
     }
   }
 
+  label_attribution <- label_attribution + 1
+
   # gc_result <- vector("list",length=2)
   gc_result <- list("label_attribution" = label_attribution, "Data and smooth cost" = data_smooth_list)
 
