@@ -5,3 +5,5 @@ foreach
 doParallel
 ggplot2
 viridis
+reshape2
+ggeasy

@@ -4,7 +4,6 @@ new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"
 lapply(list.of.packages, library, character.only = TRUE)
 # install_github("thaos/gcoWrapR")
 library(gcoWrapR)
-# TODO documentation of gc
 #' Graph cut optimization
 #'
 #' This function performs graph cut optimization using the gco-v3.0 C++ library and gcoWrapR package.
@@ -43,14 +42,6 @@ library(gcoWrapR)
 #' @import gcoWrapR
 #' @export
 GraphCutOptimization <- function(
-reference,
-models_datacost,
-models_smoothcost,
-weight_data,
-weight_smooth,
-verbose
-)
-GraphCutOptimization <- function(
   reference,
   models_datacost,
   models_smoothcost,
@@ -63,13 +54,6 @@ GraphCutOptimization <- function(
   n_variables <- length(reference[1, 1, 1, ])
   width       <- ncol(reference)
   height      <- nrow(reference)
-
-  cat(height)
-  cat(width)
-  cat(n_labs)
-  cat(n_variables)
-  print(dim(models_datacost))
-  print(dim(models_smoothcost))
 
 
 
@@ -112,7 +96,6 @@ GraphCutOptimization <- function(
   )
 
   cat("Creating SmoothCost function...  ")
-  #TODO sortie dans un fichier
   ptrSmoothCost <- cppXPtr(
     code = 'float smoothFn(int p1, int p2, int l1, int l2, Rcpp::List extraData)
     {
