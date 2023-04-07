@@ -48,7 +48,7 @@ dir_path <- paste0('data/CMIP6/')
 model_names <- list.dirs(dir_path, recursive = FALSE)
 model_names <- basename(model_names)
 
-tmp <- OpenAndKDE1D_betterPar(
+tmp <- OpenAndKDE1D_betterPar_progress(
   model_names, variables, year_present, year_future, period
 )
 

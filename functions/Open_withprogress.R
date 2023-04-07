@@ -1,18 +1,12 @@
-# Custom progress function
-progress_function <- function(n) {
-  cat(sprintf("Processing grid point %d of %d\n", n, length(lon)))
-  return(NULL)
-}
-
-OpenAndKDE1D_betterPar <- function (model_names, variables,
-                                    year_present, year_future, period) {
+OpenAndKDE1D_betterPar_progress <- function (model_names, variables,
+                                             year_present, year_future, period) {
 
 
   lat <- lat
   lon <- lon
   nbins1d <- nbins1d
 
-  registerDoSEQ(.progress = progress_function)
+  registerDoParallel(cores = detectCores())  # Use all available cores
 
   # Initialize data structures
   kde_matrix <- array(0, c(length(lon), length(lat), nbins1d,
@@ -46,8 +40,15 @@ OpenAndKDE1D_betterPar <- function (model_names, variables,
         # For each grid point...
         foreach(i = iter(seq_along(lon)), .combine = 'cbind',
                 .packages = c("ncdf4"), .export = c("grid_data", "min", "iyyyy", "nbins1d", "m", "var")) %dopar% {
+
+
           temp_result <- array(0, c(length(lat), nbins1d, length(model_names), length(variables)))
+          # Print progress message every 100 grid points
           for (j in seq_along(lat)){
+            if (j %% 1== 0) {
+              cat(c(v,m,i,j))
+            }
+
             tmp <- grid_data[i, j, ]
             if(var == 'pr' ) {
               # Changing units to mm/day and log transform
