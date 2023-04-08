@@ -11,6 +11,9 @@ OpenAndKDE1D_betterPar <- function (model_names, variables,
   # Initialize data structures
   kde_matrix <- array(0, c(length(lon), length(lat), nbins1d,
                            length(model_names), length(variables)))
+  # Initialize data structures
+  data <- list()
+  data_matrix <- list()
 
   # Loop through variables and models
   v <- 1

@@ -1,17 +1,11 @@
-OpenAndKDE1D_betterPar_progress <- function (model_names, variables,
-                                             year_present, year_future, period) {
-
-
-  lat <- lat
-  lon <- lon
-  nbins1d <- nbins1d
-
-  registerDoParallel(cores = detectCores())  # Use all available cores
+OpenAndKDE1D_new <- function (model_names, variables,
+                              year_present, year_future, period) {
 
   # Initialize data structures
   kde_matrix <- array(0, c(length(lon), length(lat), nbins1d,
                            length(model_names), length(variables)))
-  total_grid_points <- lon*lat
+  # Initialize data structures
+  range <- list()
 
   # Loop through variables and models
   v <- 1
@@ -30,30 +24,23 @@ OpenAndKDE1D_betterPar_progress <- function (model_names, variables,
 
       # Check that there is only one matching file
       if (length(file_path) == 1) {
-        nc <- nc_open(file_path)
+        nc <<- nc_open(file_path)
+
         # Extract and average data for present
         yyyy <- substr(as.character(nc.get.time.series(nc)), 1, 4)
         iyyyy <- which(yyyy %in% year_present)
 
-        # Read data from NetCDF file for the entire grid
-        grid_data <- ncvar_get(nc, var, start = c(1, 1, min(iyyyy)), count = c(-1, -1, length(iyyyy)))
+        # Get the entire 3D matrix
+        tmp_grid <- ncvar_get(nc, var, start = c(1, 1, min(iyyyy)), count = c(-1, -1, length(iyyyy)))
 
         # For each grid point...
-        foreach(i = iter(seq_along(lon)), .combine = 'cbind',
-                .packages = c("ncdf4"), .export = c("grid_data", "min", "iyyyy", "nbins1d", "m", "var")) %dopar% {
-          # Print progress message every 100 grid points
-          if (i %% 1 == 0) {
-            cat(sprintf("Processing grid point %d of %d\n", i*j, total_grid_points))
-          }
-
-          temp_result <- array(0, c(length(lat), nbins1d, length(model_names), length(variables)))
-          # Print progress message every 100 grid points
+        for (i in seq_along(lon)){
           for (j in seq_along(lat)){
-            if (j %% 1== 0) {
-              cat(c(v,m,i,j))
+            if (j %% 100 == 0) {
+              print(c(v, var, m, model_name, i, j))
             }
+            tmp <- tmp_grid[i, j, ]
 
-            tmp <- grid_data[i, j, ]
             if(var == 'pr' ) {
               # Changing units to mm/day and log transform
               tmp <- log10((tmp * 86400) + 1)
@@ -62,61 +49,60 @@ OpenAndKDE1D_betterPar_progress <- function (model_names, variables,
             # For the first model
             if(m == 1 ) {
               # Compute the range of the variable for grid-point i-j
-              range_var <- range(tmp)
+              range_var <- list
+              range_var$var <- range(tmp)
               # Calculate the 10% margin
-              margin <- diff(range_var) * 0.1
+              margin[v] <- diff(range_var) * 0.1
 
               # Set the lower and upper bounds with a 10% margin
-              range_var[1] <- range_var[1] - margin
-              range_var[2] <- range_var[2] + margin
+              range_var$var[1] <- range_var$var[1] - margin
+              range_var$var[2] <- range_var$var[2] + margin
             }
 
             # TODO should we fix the bandwidth?
             dens_tmp <- density(tmp,
-                                from = range_var[1], to = range_var[2],
+                                from = range_var$var[1], to = range_var$var[2],
                                 n = nbins1d)
 
-            temp_result[j, , , ] <- dens_tmp$y
+            kde_matrix[i, j, , m, v] <- dens_tmp$y
+
           }
-          temp_result
-        } -> kde_matrix_sub
-
-        kde_matrix[, , , m, v] <- kde_matrix_sub
-
-        # Create dimensions and initialize matrices for present and future data if this is the first model and variable
-        if(j == 1 && i == 1) {
-          lat <- ncvar_get(nc, "lat")
-          lon <- ncvar_get(nc, "lon")
-          data_matrix$present <- data_matrix$future <-
-            array(0, c(length(lon), length(lat),
-                       length(model_names), length(variables)))
         }
 
-        # Extract and average data for present
-        yyyy <- substr(as.character(nc.get.time.series(nc)), 1, 4)
-        iyyyy <- which(yyyy %in% year_present)
-        tmp <- apply(
-          ncvar_get(nc, var, start = c(1, 1, min(iyyyy)), count = c(-1, -1, length(iyyyy))),
-          1:2,
-          mean
-        )
-        data_matrix$present[, , i, j] <- tmp
-        data[['present']][[var]][[model_name]] <- tmp
-
-        # Extract and average data for future
-        iyyyy <- which(yyyy %in% year_future)
-        tmp <- apply(
-          ncvar_get(nc, var, start = c(1, 1, min(iyyyy)), count = c(-1, -1, length(iyyyy))),
-          1:2,
-          mean
-        )
-        data_matrix$future [, , i, j] <- tmp
-        data[['future']][[var]][[model_name]] <- tmp
+        # # Create dimensions and initialize matrices for present and future data if this is the first model and variable
+        # if(j == 1 && i == 1) {
+        #   lat <- ncvar_get(nc, "lat")
+        #   lon <- ncvar_get(nc, "lon")
+        #   data_matrix$present <- data_matrix$future <-
+        #     array(0, c(length(lon), length(lat),
+        #                length(model_names), length(variables)))
+        # }
+        #
+        # # Extract and average data for present
+        # yyyy <- substr(as.character(nc.get.time.series(nc)), 1, 4)
+        # iyyyy <- which(yyyy %in% year_present)
+        # tmp <- apply(
+        #   ncvar_get(nc, var, start = c(1, 1, min(iyyyy)), count = c(-1, -1, length(iyyyy))),
+        #   1:2,
+        #   mean
+        # )
+        # data_matrix$present[, , i, j] <- tmp
+        # data[['present']][[var]][[model_name]] <- tmp
+        #
+        # # Extract and average data for future
+        # iyyyy <- which(yyyy %in% year_future)
+        # tmp <- apply(
+        #   ncvar_get(nc, var, start = c(1, 1, min(iyyyy)), count = c(-1, -1, length(iyyyy))),
+        #   1:2,
+        #   mean
+        # )
+        # data_matrix$future [, , i, j] <- tmp
+        # data[['future']][[var]][[model_name]] <- tmp
 
         # Close the file
         nc_close(nc)
 
-      } else {
+      }else {
         # Handle the case where there are multiple or no matching files
         print("Error: Found multiple or no matching files")
       }
@@ -127,9 +113,11 @@ OpenAndKDE1D_betterPar_progress <- function (model_names, variables,
     v <- v + 1
   }
 
-  # ...
+
+  # Remove the counters
+  remove(m, v)
 
   # Return the output as a list of two elements
-  output <- list(data, data_matrix, kde_matrix)
+  output <- list(kde_matrix, range_var)
   return(output)
 }

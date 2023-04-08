@@ -1,3 +1,4 @@
+
 # Install and load necessary libraries
 list_of_packages <- read.table("package_list.txt", sep="\n")$V1
 new.packages <- list_of_packages[!(list_of_packages %in% installed.packages()[,"Package"])]
