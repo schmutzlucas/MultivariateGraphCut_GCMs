@@ -75,13 +75,15 @@ GraphCutHellinger <- function(
 
         }
       }
+      m <- m + 1
     }
+    v <- v + 1
   }
 
   for (i in 1:n_labs) {
-        for (j in 1:n_variables) {
-    sum_h_dist[,,i] <- sum_h_dist[,,i] + h_dist[ , , i, j]
-  }
+    for (j in 1:n_variables) {
+      sum_h_dist[,,i] <- sum_h_dist[,,i] + h_dist[ , , i, j]
+    }
   }
   # Permuting longitude and latitude since the indexing isn't the same in R and in C++
   # changed: c(aperm(sum_h_dist, c(2, 1, 3))) call was redundant
@@ -151,22 +153,20 @@ GraphCutHellinger <- function(
 
   # Creating the initialization matrix based on the best model (sum_h_dist)
   # # TODO Implement random version?
-  # mae_list <- numeric(n_labs)
-  # for(i in seq_along(mae_list)){
-  #   mae_list[[i]] <- mean(abs(sum_h_dist[,,i]))
-  # }
-  # best_label <- which.min(mae_list)-1 # in C++ label indices start at 0
-  # #print(best_label)
-  # for(z in 0:(width*height-1)){
-  #   #for(z in 0:1){
-  #   gco$setLabel(z, best_label)
-  #   #gco$setLabel(z, sample(0:(n_labs-1), 1))
-  #   #gco$setLabel(z, -1)
-  # }
-  for(z in 0:(length(width*height)-1)){
-   gco$setLabel(z, 0)
+  mae_list <- numeric(n_labs)
+  for(i in seq_along(mae_list)){
+    mae_list[[i]] <- mean(abs(sum_h_dist[,,i]))
   }
-  gco$setLabel(0, 0)
+  best_label <- which.min(mae_list)-1 # in C++ label indices start at 0
+  for(z in 0:(width*height-1)){
+    # gco$setLabel(z, best_label)
+    # gco$setLabel(z, sample(0:(n_labs-1), 1))
+    # gco$setLabel(z, -1)
+    gco$setLabel(z, 3)
+  }
+  # for(z in 0:(length(width*height)-1)){
+  #  gco$setLabel(z, 7)
+  # }
 
   # Optimizing the MRF energy with alpha-beta swap
   # -1 refers to the optimization until convergence

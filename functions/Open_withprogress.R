@@ -2,8 +2,8 @@ OpenAndKDE1D_new <- function (model_names, variables,
                               year_present, year_future, period) {
 
   # Initialize data structures
-  kde_matrix <- array(0, c(length(lon), length(lat), nbins1d,
-                           length(model_names), length(variables)))
+  # kde_matrix <- array(0, c(length(lon), length(lat), nbins1d,
+  #                          length(model_names), length(variables)))
   # Initialize data structures
   # range_var <- list()
 
@@ -35,41 +35,31 @@ OpenAndKDE1D_new <- function (model_names, variables,
         tmp_grid <- ncvar_get(nc, var, start = c(1, 1, min(iyyyy)), count = c(-1, -1, length(iyyyy)))
 
         # For each grid point...
-        for (i in seq_along(lon)){
-          for (j in seq_along(lat)){
+        for (i in seq_along(lon)) {
+          for (j in seq_along(lat)) {
             if (i%%10 == 0 && j %% 100 == 0) {
               print(c(v, var, m, model_name, i, j))
             }
             tmp <- tmp_grid[i, j, ]
 
-            if(var == 'pr' ) {
-              # Changing units to mm/day and log transform
+            if (var == 'pr') {
               tmp <- log10((tmp * 86400) + 1)
             }
 
-            # For the first model
-            if(m == 1 ) {
+            if (m == 1) {
               if (i == 1 && j == 1) {
                 range_var[[var]] <<- array(data = NA, dim = c(length(lon), length(lat), 2))
               }
-              # # Compute the range of the variable for grid-point i-j
-              # range_tmp <- range(tmp)
-              # # Calculate the 10% margin
-              # margin <- diff(range_tmp) * 0.1
-
-              # Set the lower and upper bounds with a 10% margin
               range_var[[var]][i, j, 1] <<- range(tmp)[1] - diff(range(tmp)) * 0.1
               range_var[[var]][i, j, 2] <<- range(tmp)[2] + diff(range(tmp)) * 0.1
             }
 
-            # TODO should we fix the bandwidth?
             dens_tmp <- density(tmp,
                                 from = range_var[[var]][i, j, 1],
                                 to = range_var[[var]][i, j, 2],
                                 n = nbins1d)
 
-            kde_matrix[i, j, , m, v] <- dens_tmp$y
-
+            pdf_matrix[i, j, , m, v] <<- dens_tmp$y * dens_tmp$bw
           }
         }
 
@@ -122,6 +112,6 @@ OpenAndKDE1D_new <- function (model_names, variables,
   remove(m, v)
 
   # Return the output as a list of two elements
-  output <- list(kde_matrix, range_var)
+  output <- list(pdf_matrix, range_var)
   return(output)
 }

@@ -22,8 +22,8 @@ for(path in file_paths){source(path)}
 lon <<- 0:359
 lat <<- -90:90
 # Temporal ranges
-year_present <<- 1979:1998
-year_future <<- 1999:2019
+year_present <<- 1979:1983
+year_future <<- 1999:2003
 # data directory
 data_dir <<- 'data/CMIP6/'
 
@@ -33,15 +33,15 @@ nbins1d <<- 512
 # Period
 period <<- 'historical'
 
-range_var <<- list()
+
 
 # List of the variable used
 # variables <- c('tas', 'tasmax',
 #                'tasmin', 'pr',
 #                'psl', 'hur',
 #                'huss')
-variables <- c('tas', 'tasmin', 'tasmax')
-
+# variables <- c('pr', 'tas', 'tasmin', 'tasmax')
+variables <- c('pr', 'tas')
 
 # Obtains the list of models from the model names or from a file
 # Method 1
@@ -50,22 +50,38 @@ dir_path <- paste0('data/CMIP6/')
 model_names <- list.dirs(dir_path, recursive = FALSE)
 model_names <- basename(model_names)
 
+# Initialize data structures
+pdf_matrix <<- array(0, c(length(lon), length(lat), nbins1d,
+                          length(model_names), length(variables)))
+range_var <<- list()
+
 tmp <- OpenAndKDE1D_new(
   model_names, variables, year_present, year_future, period
 )
 
-saveRDS(tmp, file = 'kde1d_cmip6.rds')
+# Get the current date and time
+current_time <- Sys.time()
+
+# Format the date and time as yyyymmddhhmm
+formatted_time <- format(current_time, "%Y%m%d%H%M")
+
+# Create the filename with the formatted timestamp and "GC_results" at the end
+filename <- paste0(formatted_time, "_pdf1d_cmip6.rds")
+saveRDS(tmp, finename)
 
 
 
-{
-  readRDS(kde1d_cmip6.rds)
+
+tmp <- readRDS('pdf1d_cmip6_test.rds')
+#
+#
+#   kde_models <- tmp[[1]][ , , , -1, ]
+#   kde_ref <- tmp[[1]][ , , , 1, ]
 
 
-  kde_models <- tmp[[1]][ , , , -1, ]
-  kde_ref <- tmp[[1]][ , , , 1, ]
-}
-
+pdf_matrix <- tmp[[1]]
+kde_models <- pdf_matrix[ , , , -2, ]
+kde_ref <- pdf_matrix[ , , , 2, ]
 
 
 # Obtains the list of models from the model names or from a file
@@ -76,8 +92,8 @@ model_names <- list.dirs(dir_path, recursive = FALSE)
 model_names <- basename(model_names)
 
 # Choose the reference in the models
-reference_name <- model_names[1]
-model_names <- model_names[-1]
+reference_name <<- model_names[2]
+model_names <<- model_names[-2]
 
 
 # Open and average the models for the selected time periods
@@ -101,41 +117,68 @@ models_matrix_nrm <- NormalizeVariables(models_matrix, variables, 'StdSc')
 reference_matrix_nrm <- list()
 reference_matrix_nrm <- NormalizeVariables(reference_matrix, variables, 'StdSc')
 
+
+
 # MinBias labelling
 MinBias_labels <- MinBiasOptimization(reference_matrix_nrm$present,
                                       models_matrix_nrm$present)
 
+# Get the current date and time
+current_time <- Sys.time()
+
+# Format the date and time as a string in the format 'yyyymmddhhmm'
+formatted_time <- format(current_time, "%Y%m%d%H%M")
+
+# Concatenate the formatted time string with your desired filename
+filename <- paste0(formatted_time, "_my_workspace.RData")
+
+# Save the workspace using the generated filename
+save.image(file = filename)
 
 
-  # Computing the sum of hellinger distances between models and reference --> used as datacost
-  h_dist <- array(data = NA, dim = c(length(lon), length(lat),
-                                     length(model_names), length(variables)))
-
-  # Loop through variables and models
-  v <- 1
-  for(var in variables){
-    m <- 1
-    for(model_name in model_names){
-      for (i in seq_along(lon)){
-        for (j in seq_along(lat)){
-          h_dist[i, j, m, v] <- sqrt(sum((sqrt(kde_models[i, j, , m, v]) -
-            sqrt(kde_ref[i, j, , v]))^2)) / sqrt(2)
-
-        }
-      }
-    }
-  }
+# # Computing the sum of hellinger distances between models and reference --> used as datacost
+# h_dist <- array(data = NA, dim = c(length(lon), length(lat),
+#                                    length(model_names), length(variables)))
+#
+# # Loop through variables and models
+# v <- 1
+# for(var in variables){
+#   m <- 1
+#   for(model_name in model_names){
+#     for (i in seq_along(lon)){
+#       for (j in seq_along(lat)){
+#         h_dist[i, j, m, v] <- sqrt(sum((sqrt(kde_models[i, j, , m, v]) -
+#           sqrt(kde_ref[i, j, , v]))^2)) / sqrt(2)
+#
+#       }
+#     }
+#     m <- m + 1
+#   }
+#   v <- v + 1
+# }
 
 # Graphcut labelling
 GC_result <- list()
 GC_result <- GraphCutHellinger(kde_ref = kde_ref,
-                                  kde_models = kde_models,
-                                  models_smoothcost = models_matrix_nrm$future,
-                                  weight_data = 1,
-                                  weight_smooth = 1,
-                                  verbose = TRUE)
+                               kde_models = kde_models,
+                               models_smoothcost = models_matrix_nrm$future,
+                               weight_data = 1,
+                               weight_smooth = 1,
+                               verbose = TRUE)
 
-saveRDS(GC_result, file = 'GC_result.rds')
+
+# Get the current date and time
+current_time <- Sys.time()
+
+# Format the date and time as yyyymmddhhmm
+formatted_time <- format(current_time, "%Y%m%d%H%M")
+
+# Create the filename with the formatted timestamp and "GC_results" at the end
+filename <- paste0(formatted_time, "_GC_results.rds")
+
+# Save the RDS file with the timestamped filename
+saveRDS(GC_result, file = filename)
+
 
 
 
