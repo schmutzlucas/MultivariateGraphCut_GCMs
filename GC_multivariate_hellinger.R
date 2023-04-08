@@ -54,6 +54,11 @@ tmp <- OpenAndKDE1D_new(
 
 saveRDS(tmp, file = 'kde1d_cmip6.rds')
 
+h_dist <- array(data = NA, dim = c(length(lon), length(lat),
+                                   length(model_names), length(variables)))
+
+h_dist <- sqrt(sum((sqrt(kde1$z) - sqrt(kde2$z))^2)) / sqrt(2)
+
 
 
 

@@ -6,8 +6,7 @@ OpenAndKDE1D_new <- function (model_names, variables,
                            length(model_names), length(variables)))
   # Initialize data structures
   range_var <- list()
-  # Initialize margin as a vector
-  margin <- vector("numeric", length(variables))
+
 
   # Loop through variables and models
   v <- 1
@@ -38,7 +37,7 @@ OpenAndKDE1D_new <- function (model_names, variables,
         # For each grid point...
         for (i in seq_along(lon)){
           for (j in seq_along(lat)){
-            if (j %% 100 == 0) {
+            if (i%%10 == 0 && j %% 100 == 0) {
               print(c(v, var, m, model_name, i, j))
             }
             tmp <- tmp_grid[i, j, ]
@@ -50,19 +49,21 @@ OpenAndKDE1D_new <- function (model_names, variables,
 
             # For the first model
             if(m == 1 ) {
+              range_var[[var]] <- array(data = NA, c(length(lon), length(lat), 2))
               # Compute the range of the variable for grid-point i-j
-              range_var$var <- range(tmp)
+              range_tmp <- range(tmp)
               # Calculate the 10% margin
-              margin[v] <- diff(range_var$var) * 0.1
+              margin <- diff(range_tmp) * 0.1
 
               # Set the lower and upper bounds with a 10% margin
-              range_var$var[1] <- range_var$var[1] - margin[v]
-              range_var$var[2] <- range_var$var[2] + margin[v]
+              range_var[[var]][i, j, 1] <- range_tmp[1] - margin
+              range_var[[var]][i, j, 2] <- range_tmp[2] + margin
             }
 
             # TODO should we fix the bandwidth?
             dens_tmp <- density(tmp,
-                                from = range_var$var[1], to = range_var$var[2],
+                                from = range_var[[var]][i, j, 1],
+                                to = range_var[[var]][i, j, 2],
                                 n = nbins1d)
 
             kde_matrix[i, j, , m, v] <- dens_tmp$y
