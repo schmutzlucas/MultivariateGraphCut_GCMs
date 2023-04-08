@@ -5,7 +5,9 @@ OpenAndKDE1D_new <- function (model_names, variables,
   kde_matrix <- array(0, c(length(lon), length(lat), nbins1d,
                            length(model_names), length(variables)))
   # Initialize data structures
-  range <- list()
+  range_var <- list()
+  # Initialize margin as a vector
+  margin <- vector("numeric", length(variables))
 
   # Loop through variables and models
   v <- 1
@@ -49,14 +51,13 @@ OpenAndKDE1D_new <- function (model_names, variables,
             # For the first model
             if(m == 1 ) {
               # Compute the range of the variable for grid-point i-j
-              range_var <- list
               range_var$var <- range(tmp)
               # Calculate the 10% margin
-              margin[v] <- diff(range_var) * 0.1
+              margin[v] <- diff(range_var$var) * 0.1
 
               # Set the lower and upper bounds with a 10% margin
-              range_var$var[1] <- range_var$var[1] - margin
-              range_var$var[2] <- range_var$var[2] + margin
+              range_var$var[1] <- range_var$var[1] - margin[v]
+              range_var$var[2] <- range_var$var[2] + margin[v]
             }
 
             # TODO should we fix the bandwidth?
