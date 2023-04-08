@@ -83,14 +83,6 @@ pdf_matrix <- tmp[[1]]
 kde_models <- pdf_matrix[ , , , -2, ]
 kde_ref <- pdf_matrix[ , , , 2, ]
 
-
-# Obtains the list of models from the model names or from a file
-# Method 1
-# TODO This needs ajustements to remove prefixes and suffixes
-dir_path <- paste0('data/CMIP6/')
-model_names <- list.dirs(dir_path, recursive = FALSE)
-model_names <- basename(model_names)
-
 # Choose the reference in the models
 reference_name <<- model_names[2]
 model_names <<- model_names[-2]
@@ -178,6 +170,8 @@ filename <- paste0(formatted_time, "_GC_results.rds")
 
 # Save the RDS file with the timestamped filename
 saveRDS(GC_result, file = filename)
+
+
 
 
 

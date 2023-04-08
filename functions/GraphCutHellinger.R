@@ -50,8 +50,8 @@ GraphCutHellinger <- function(
   verbose
 ){
 
-  n_labs      <- length(kde_models[1, 1, 1, , 1])
-  n_variables <- length(kde_ref[1, 1, 1, ])
+  n_labs      <- length(model_names)
+  n_variables <- length(variables)
   width       <- ncol(kde_ref)
   height      <- nrow(kde_ref)
 
@@ -158,12 +158,12 @@ GraphCutHellinger <- function(
     mae_list[[i]] <- mean(abs(sum_h_dist[,,i]))
   }
   best_label <- which.min(mae_list)-1 # in C++ label indices start at 0
-  for(z in 0:(width*height-1)){
-    # gco$setLabel(z, best_label)
-    # gco$setLabel(z, sample(0:(n_labs-1), 1))
-    # gco$setLabel(z, -1)
-    gco$setLabel(z, 3)
-  }
+  # for(z in 0:(width*height-1)){
+  #   # gco$setLabel(z, best_label)
+  #   # gco$setLabel(z, sample(0:(n_labs-1), 1))
+  #   # gco$setLabel(z, -1)
+  #   gco$setLabel(z, 1)
+  # }
   # for(z in 0:(length(width*height)-1)){
   #  gco$setLabel(z, 7)
   # }
