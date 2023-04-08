@@ -62,8 +62,8 @@ saveRDS(tmp, file = 'kde1d_cmip6.rds')
   readRDS(kde1d_cmip6.rds)
 
 
-  kde_models <- tmp$kde_matrix[ , , , -1, ]
-  kde_ref <- tmp$kde_matrix[ , , , 1, ]
+  kde_models <- tmp[[1]][ , , , -1, ]
+  kde_ref <- tmp[[1]][ , , , 1, ]
 }
 
 
@@ -109,8 +109,8 @@ MinBias_labels <- MinBiasOptimization(reference_matrix_nrm$present,
 
 # Graphcut labelling
 GC_result <- list()
-GC_result <- GraphCutOptimization(reference = reference_matrix_nrm$present,
-                                  models_datacost = h_dist,
+GC_result <- GraphCutHellinger(kde_ref = kde_ref,
+                                  kde_models = kde_models,
                                   models_smoothcost = models_matrix_nrm$future,
                                   weight_data = 1,
                                   weight_smooth = 1,

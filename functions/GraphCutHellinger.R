@@ -9,7 +9,7 @@ library(gcoWrapR)
 #' This function performs graph cut optimization using the gco-v3.0 C++ library and gcoWrapR package.
 #' It produces a map of labels where each grid-point is assigned to one model.
 #'
-#' @param reference An array representing the reference dataset for the optimization.
+#' @param kde_ref An array representing the kde_ref dataset for the optimization.
 #' @param models_datacost An array representing the models' data cost for the optimization.
 #' @param models_smoothcost An array representing the models' smooth cost for the optimization.
 #' @param weight_data A numeric value representing the weight for the data cost.
@@ -24,7 +24,7 @@ library(gcoWrapR)
 #'
 #' # Perform graph cut optimization
 #' GC_result <- GraphCutOptimization(
-#' reference = example_data$reference,
+#' kde_ref = example_data$kde_ref,
 #' models_datacost = example_data$models_datacost,
 #' models_smoothcost = example_data$models_smoothcost,
 #' weight_data = 1,
@@ -41,19 +41,19 @@ library(gcoWrapR)
 #'
 #' @import gcoWrapR
 #' @export
-GraphCutOptimization <- function(
-  reference,
-  models_datacost,
+GraphCutHellinger <- function(
+  kde_ref,
+  kde_models,
   models_smoothcost,
   weight_data,
   weight_smooth,
   verbose
 ){
 
-  n_labs      <- length(models_datacost[1, 1, , 1])
-  n_variables <- length(reference[1, 1, 1, ])
-  width       <- ncol(reference)
-  height      <- nrow(reference)
+  n_labs      <- length(kde_models[1, 1, 1, , 1])
+  n_variables <- length(kde_ref[1, 1, 1, ])
+  width       <- ncol(kde_ref)
+  height      <- nrow(kde_ref)
 
 
 
@@ -71,7 +71,7 @@ GraphCutOptimization <- function(
       for (i in seq_along(lon)){
         for (j in seq_along(lat)){
           h_dist[i, j, m, v] <- sqrt(sum((sqrt(kde_models[i, j, , m, v]) -
-            sqrt(kde_ref[i, j, , 1, v]))^2)) / sqrt(2)
+            sqrt(kde_ref[i, j, , v]))^2)) / sqrt(2)
 
         }
       }
@@ -149,23 +149,23 @@ GraphCutOptimization <- function(
                                         n_variables = n_variables))
 
   # Creating the initialization matrix based on the best model (sum_h_dist)
-  # TODO Implement random version?
-  mae_list <- numeric(n_labs)
-  for(i in seq_along(mae_list)){
-    mae_list[[i]] <- mean(abs(sum_h_dist[,,i]))
+  # # TODO Implement random version?
+  # mae_list <- numeric(n_labs)
+  # for(i in seq_along(mae_list)){
+  #   mae_list[[i]] <- mean(abs(sum_h_dist[,,i]))
+  # }
+  # best_label <- which.min(mae_list)-1 # in C++ label indices start at 0
+  # #print(best_label)
+  # for(z in 0:(width*height-1)){
+  #   #for(z in 0:1){
+  #   gco$setLabel(z, best_label)
+  #   #gco$setLabel(z, sample(0:(n_labs-1), 1))
+  #   #gco$setLabel(z, -1)
+  # }
+  for(z in 0:(length(width*height)-1)){
+   gco$setLabel(z, 0)
   }
-  best_label <- which.min(mae_list)-1 # in C++ label indices start at 0
-  #print(best_label)
-  for(z in 0:(width*height-1)){
-    #for(z in 0:1){
-    gco$setLabel(z, best_label)
-    #gco$setLabel(z, sample(0:(n_labs-1), 1))
-    #gco$setLabel(z, -1)
-  }
-  #for(z in 0:(length(reference)-1)){
-  #  gco$setLabel(z, 0)
-  #}
-  #gco$setLabel(0, 0)
+  gco$setLabel(0, 0)
 
   # Optimizing the MRF energy with alpha-beta swap
   # -1 refers to the optimization until convergence
