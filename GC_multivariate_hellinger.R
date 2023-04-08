@@ -33,6 +33,8 @@ nbins1d <<- 512
 # Period
 period <<- 'historical'
 
+range_var <<- list()
+
 # List of the variable used
 # variables <- c('tas', 'tasmax',
 #                'tasmin', 'pr',
@@ -53,11 +55,16 @@ tmp <- OpenAndKDE1D_new(
 )
 
 saveRDS(tmp, file = 'kde1d_cmip6.rds')
-
-h_dist <- array(data = NA, dim = c(length(lon), length(lat),
-                                   length(model_names), length(variables)))
-
-h_dist <- sqrt(sum((sqrt(kde1$z) - sqrt(kde2$z))^2)) / sqrt(2)
+#
+# h_dist <- array(data = NA, dim = c(length(lon), length(lat),
+#                                    length(model_names), length(variables)))
+#
+# for (i in seq_along(lon)){
+#   for (j in seq_along(lat)){
+#     h_dist[i,j,,v] <- sqrt(sum((sqrt(kde1$z) - sqrt(kde2$z))^2)) / sqrt(2)
+#
+#   }
+# }
 
 
 
