@@ -79,9 +79,10 @@ GraphCutHellinger <- function(
   }
 
   for (i in 1:n_labs) {
-    sum_h_dist[,,i] <- h_dist[ , , i, ]
+        for (j in 1:n_variables) {
+    sum_h_dist[,,i] <- sum_h_dist[,,i] + h_dist[ , , i, j]
   }
-
+  }
   # Permuting longitude and latitude since the indexing isn't the same in R and in C++
   # changed: c(aperm(sum_h_dist, c(2, 1, 3))) call was redundant
   # when go from matrix to vector

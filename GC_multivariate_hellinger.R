@@ -40,7 +40,7 @@ range_var <<- list()
 #                'tasmin', 'pr',
 #                'psl', 'hur',
 #                'huss')
-variables <- c('pr', 'tas', 'tasmax')
+variables <- c('tas', 'tasmin', 'tasmax')
 
 
 # Obtains the list of models from the model names or from a file
@@ -106,6 +106,25 @@ MinBias_labels <- MinBiasOptimization(reference_matrix_nrm$present,
                                       models_matrix_nrm$present)
 
 
+
+  # Computing the sum of hellinger distances between models and reference --> used as datacost
+  h_dist <- array(data = NA, dim = c(length(lon), length(lat),
+                                     length(model_names), length(variables)))
+
+  # Loop through variables and models
+  v <- 1
+  for(var in variables){
+    m <- 1
+    for(model_name in model_names){
+      for (i in seq_along(lon)){
+        for (j in seq_along(lat)){
+          h_dist[i, j, m, v] <- sqrt(sum((sqrt(kde_models[i, j, , m, v]) -
+            sqrt(kde_ref[i, j, , v]))^2)) / sqrt(2)
+
+        }
+      }
+    }
+  }
 
 # Graphcut labelling
 GC_result <- list()
