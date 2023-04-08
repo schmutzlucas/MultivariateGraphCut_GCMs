@@ -56,7 +56,8 @@ tmp <- OpenAndKDE1D_new(
 
 saveRDS(tmp, file = 'kde1d_cmip6.rds')
 
-kde_matrix <- tmp$kde_matrix
+kde_models <- tmp$kde_matrix[ , , , -1, ]
+kde_ref <- tmp$kde_matrix[ , , , 1, ]
 
 h_dist <- array(data = NA, dim = c(length(lon), length(lat),
                                    length(model_names), length(variables)))
@@ -68,8 +69,8 @@ for(var in variables){
   for(model_name in model_names){
     for (i in seq_along(lon)){
       for (j in seq_along(lat)){
-        h_dist[i, j, , m, v] <- sqrt(sum((sqrt(kde_matrix[i, j, , m, v]) -
-                                    sqrt(kde2$z))^2)) / sqrt(2)
+        h_dist[i, j, m, v] <- sqrt(sum((sqrt(kde_models[i, j, , m, v]) -
+                                    sqrt(kde_ref[i, j, , 1, v]))^2)) / sqrt(2)
 
       }
     }
