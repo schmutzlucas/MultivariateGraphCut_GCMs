@@ -56,27 +56,66 @@ tmp <- OpenAndKDE1D_new(
 
 saveRDS(tmp, file = 'kde1d_cmip6.rds')
 
-kde_models <- tmp$kde_matrix[ , , , -1, ]
-kde_ref <- tmp$kde_matrix[ , , , 1, ]
 
-h_dist <- array(data = NA, dim = c(length(lon), length(lat),
-                                   length(model_names), length(variables)))
 
-# Loop through variables and models
-v <- 1
-for(var in variables){
-  m <- 1
-  for(model_name in model_names){
-    for (i in seq_along(lon)){
-      for (j in seq_along(lat)){
-        h_dist[i, j, m, v] <- sqrt(sum((sqrt(kde_models[i, j, , m, v]) -
-                                    sqrt(kde_ref[i, j, , 1, v]))^2)) / sqrt(2)
+{
+  readRDS(kde1d_cmip6.rds)
 
-      }
-    }
-  }
+
+  kde_models <- tmp$kde_matrix[ , , , -1, ]
+  kde_ref <- tmp$kde_matrix[ , , , 1, ]
 }
 
+
+
+# Obtains the list of models from the model names or from a file
+# Method 1
+# TODO This needs ajustements to remove prefixes and suffixes
+dir_path <- paste0('data/CMIP6/')
+model_names <- list.dirs(dir_path, recursive = FALSE)
+model_names <- basename(model_names)
+
+# Choose the reference in the models
+reference_name <- model_names[1]
+model_names <- model_names[-1]
+
+
+# Open and average the models for the selected time periods
+tmp <- OpenAndAverageCMIP6(
+  model_names, variables, year_present, year_future, period
+)
+models_list <- tmp[[1]]
+models_matrix <- tmp[[2]]
+rm(tmp)
+
+tmp <- OpenAndAverageCMIP6(
+  reference_name, variables, year_present, year_future, period
+)
+reference_list <- tmp[[1]]
+reference_matrix <- tmp[[2]]
+rm(tmp)
+
+models_matrix_nrm <- list()
+models_matrix_nrm <- NormalizeVariables(models_matrix, variables, 'StdSc')
+
+reference_matrix_nrm <- list()
+reference_matrix_nrm <- NormalizeVariables(reference_matrix, variables, 'StdSc')
+
+# MinBias labelling
+MinBias_labels <- MinBiasOptimization(reference_matrix_nrm$present,
+                                      models_matrix_nrm$present)
+
+
+
+# Graphcut labelling
+GC_result <- list()
+GC_result <- GraphCutOptimization(reference = reference_matrix_nrm$present,
+                                  models_datacost = h_dist,
+                                  models_smoothcost = models_matrix_nrm$future,
+                                  weight_data = 1,
+                                  weight_smooth = 1,
+                                  verbose = TRUE)
+saveRDS(GC_result, file = 'GC_result.rds')
 
 
 
