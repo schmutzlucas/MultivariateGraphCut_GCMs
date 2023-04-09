@@ -1,3 +1,26 @@
+#' Open and compute 1D KDE of climate model data
+#'
+#' This function opens NetCDF climate model data files and computes the 1D Kernel Density Estimation (KDE) for each grid point and specified variables.
+#'
+#' @param model_names A character vector containing the names of the climate models to be processed.
+#' @param variables A character vector containing the names of the variables to be processed.
+#' @param year_present A character vector containing the years to be considered for the present period.
+#' @param year_future A character vector containing the years to be considered for the future period.
+#' @param period A character string specifying the period of the data (e.g., "historical" or "rcp85").
+#'
+#' @return A list containing the computed 1D KDE matrix and the variable ranges.
+#'
+#' @examples
+#' # Example usage:
+#' # model_names <- c("Model1", "Model2")
+#' # variables <- c("pr", "tas")
+#' # year_present <- 1979:1998
+#' # year_future <- 1999:2019
+#' # period <- "historical"
+#' # results <- OpenAndKDE1D_new(model_names, variables, year_present, year_future, period)
+#'
+#' @import ncdf4
+#' @export
 OpenAndKDE1D_new <- function (model_names, variables,
                               year_present, year_future, period) {
 
@@ -59,7 +82,7 @@ OpenAndKDE1D_new <- function (model_names, variables,
                                 to = range_var[[var]][i, j, 2],
                                 n = nbins1d)
 
-            pdf_matrix[i, j, , m, v] <<- dens_tmp$y * dens_tmp$bw
+            pdf_matrix[i, j, , m, v] <- dens_tmp$y * dens_tmp$bw
           }
         }
 

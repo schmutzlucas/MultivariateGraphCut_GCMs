@@ -8,8 +8,6 @@ library(devtools)
 lapply(list_of_packages, library, character.only = TRUE)
 install_github("thaos/gcoWrapR")
 
-# Import libraries
-#library(c(list_of_packages))
 
 
 # Loading local functions
@@ -40,8 +38,8 @@ period <<- 'historical'
 #                'tasmin', 'pr',
 #                'psl', 'hur',
 #                'huss')
-# variables <- c('pr', 'tas', 'tasmin', 'tasmax')
-variables <- c('pr', 'tas')
+variables <- c('pr', 'tas', 'tasmin', 'tasmax')
+#variables <- c('pr', 'tas')
 
 # Obtains the list of models from the model names or from a file
 # Method 1
@@ -67,16 +65,8 @@ formatted_time <- format(current_time, "%Y%m%d%H%M")
 
 # Create the filename with the formatted timestamp and "GC_results" at the end
 filename <- paste0(formatted_time, "_pdf1d_cmip6.rds")
-saveRDS(tmp, finename)
+saveRDS(tmp, filename)
 
-
-
-
-tmp <- readRDS('pdf1d_cmip6_test.rds')
-#
-#
-#   kde_models <- tmp[[1]][ , , , -1, ]
-#   kde_ref <- tmp[[1]][ , , , 1, ]
 
 
 pdf_matrix <- tmp[[1]]
@@ -149,14 +139,24 @@ save.image(file = filename)
 #   v <- v + 1
 # }
 
-# Graphcut labelling
-GC_result <- list()
-GC_result <- GraphCutHellinger(kde_ref = kde_ref,
+# Graphcut hellinger labelling
+GC_result_hellinger <- list()
+GC_result_hellinger <- GraphCutHellinger(kde_ref = kde_ref,
                                kde_models = kde_models,
                                models_smoothcost = models_matrix_nrm$future,
                                weight_data = 1,
                                weight_smooth = 1,
                                verbose = TRUE)
+
+
+# Graphcut labelling
+GC_result <- list()
+GC_result <- GraphCutOptimization(reference = reference_matrix_nrm$present,
+                                  models_datacost = models_matrix_nrm$present,
+                                  models_smoothcost = models_matrix_nrm$future,
+                                  weight_data = 1,
+                                  weight_smooth = 1,
+                                  verbose = TRUE)
 
 
 # Get the current date and time
@@ -166,7 +166,7 @@ current_time <- Sys.time()
 formatted_time <- format(current_time, "%Y%m%d%H%M")
 
 # Create the filename with the formatted timestamp and "GC_results" at the end
-filename <- paste0(formatted_time, "_GC_results.rds")
+filename <- paste0(formatted_time, "_GC_results_hellinger.rds")
 
 # Save the RDS file with the timestamped filename
 saveRDS(GC_result, file = filename)
