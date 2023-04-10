@@ -58,7 +58,7 @@ GraphCutHellinger <- function(
 
 
   # Computing the sum of hellinger distances between models and reference --> used as datacost
-  h_dist <- array(data = NA, dim = c(length(lon), length(lat),
+  h_dist <- array(data = 0, dim = c(length(lon), length(lat),
                                      length(model_names), length(variables)))
   sum_h_dist <- array(data = 0, dim = c(length(lon), length(lat),
                                         length(model_names)))
@@ -81,7 +81,6 @@ for (var in variables) {
   }
   v <- v + 1
 }
-
   remove(v,m)
   for (i in 1:n_labs) {
     for (j in 1:n_variables) {

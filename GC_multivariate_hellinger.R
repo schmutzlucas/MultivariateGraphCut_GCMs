@@ -20,8 +20,8 @@ for(path in file_paths){source(path)}
 lon <<- 0:359
 lat <<- -90:90
 # Temporal ranges
-year_present <<- 1979:1983
-year_future <<- 1999:2003
+year_present <<- 1979:1994
+year_future <<- 1999:2014
 # data directory
 data_dir <<- 'data/CMIP6/'
 
@@ -171,7 +171,7 @@ formatted_time <- format(current_time, "%Y%m%d%H%M")
 filename <- paste0(formatted_time, "_GC_results_hellinger.rds")
 
 # Save the RDS file with the timestamped filename
-saveRDS(GC_result, file = filename)
+#saveRDS(GC_result, file = filename)
 
 
 # Get the current date and time
@@ -184,7 +184,7 @@ formatted_time <- format(current_time, "%Y%m%d%H%M")
 filename <- paste0(formatted_time, "_my_workspace.RData")
 
 # Save the workspace using the generated filename
-save.image(file = filename)
+save.image(file = filename, compression = FALSE)
 
 
 #
