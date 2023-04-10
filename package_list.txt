@@ -11,3 +11,4 @@ ks
 foreach
 doParallel
 iterators
+fst

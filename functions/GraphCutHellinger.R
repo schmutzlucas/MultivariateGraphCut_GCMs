@@ -63,23 +63,26 @@ GraphCutHellinger <- function(
   sum_h_dist <- array(data = 0, dim = c(length(lon), length(lat),
                                         length(model_names)))
 
-  # Loop through variables and models
-  v <- 1
-  for(var in variables){
-    m <- 1
-    for(model_name in model_names){
-      for (i in seq_along(lon)){
-        for (j in seq_along(lat)){
-          h_dist[i, j, m, v] <- sqrt(sum((sqrt(kde_models[i, j, , m, v]) -
-            sqrt(kde_ref[i, j, , v]))^2)) / sqrt(2)
+# Loop through variables and models
+v <- 1
+for (var in variables) {
+  m <- 1
+  for (model_name in model_names) {
+    for (i in seq_along(lon)) {
+      for (j in seq_along(lat)) {
+        # Compute Hellinger distance
+        h_dist_unchecked <- sqrt(sum((sqrt(kde_models[i, j, , m, v]) - sqrt(kde_ref[i, j, , v]))^2)) / sqrt(2)
 
-        }
+        # Replace NaN with 0
+        h_dist[i, j, m, v] <- replace(h_dist_unchecked, is.nan(h_dist_unchecked), 0)
       }
-      m <- m + 1
     }
-    v <- v + 1
+    m <- m + 1
   }
+  v <- v + 1
+}
 
+  remove(v,m)
   for (i in 1:n_labs) {
     for (j in 1:n_variables) {
       sum_h_dist[,,i] <- sum_h_dist[,,i] + h_dist[ , , i, j]
@@ -157,13 +160,16 @@ GraphCutHellinger <- function(
   for(i in seq_along(mae_list)){
     mae_list[[i]] <- mean(abs(sum_h_dist[,,i]))
   }
+  print(mae_list)
   best_label <- which.min(mae_list)-1 # in C++ label indices start at 0
-  for(z in 0:(width*height-1)){
-  #   # gco$setLabel(z, best_label)
-   gco$setLabel(z, sample(0:(n_labs-1), 1))
+  print(best_label)
+  for(z in 0:((width*height)-1)){
+     gco$setLabel(z, best_label)
+  #  gco$setLabel(z, sample(0:(n_labs-1), 1))
   #   # gco$setLabel(z, -1)
   #   gco$setLabel(z, 1)
   }
+
   # for(z in 0:(length(width*height)-1)){
   #  gco$setLabel(z, 7)
   # }
@@ -191,7 +197,7 @@ GraphCutHellinger <- function(
   label_attribution <- label_attribution + 1
 
   # gc_result <- vector("list",length=2)
-  gc_result <- list("label_attribution" = label_attribution, "Data and smooth cost" = data_smooth_list)
+  gc_result <- list("label_attribution" = label_attribution, "Data and smooth cost" = data_smooth_list, 'h_dist' = h_dist)
 
   return(gc_result)
 }

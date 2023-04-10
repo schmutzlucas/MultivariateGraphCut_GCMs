@@ -57,15 +57,15 @@ tmp <- OpenAndKDE1D_new(
   model_names, variables, year_present, year_future, period
 )
 
-# Get the current date and time
-current_time <- Sys.time()
-
-# Format the date and time as yyyymmddhhmm
-formatted_time <- format(current_time, "%Y%m%d%H%M")
-
-# Create the filename with the formatted timestamp and "GC_results" at the end
-filename <- paste0(formatted_time, "_pdf1d_cmip6.rds")
-saveRDS(tmp, filename)
+# # Get the current date and time
+# current_time <- Sys.time()
+#
+# # Format the date and time as yyyymmddhhmm
+# formatted_time <- format(current_time, "%Y%m%d%H%M")
+#
+# # Create the filename with the formatted timestamp and "GC_results" at the end
+# filename <- paste0(formatted_time, "_pdf1d_cmip6.rds")
+# saveRDS(tmp, filename)
 
 
 
@@ -105,23 +105,24 @@ reference_matrix_nrm <- NormalizeVariables(reference_matrix, variables, 'StdSc')
 MinBias_labels <- MinBiasOptimization(reference_matrix_nrm$present,
                                       models_matrix_nrm$present)
 
-# Get the current date and time
-current_time <- Sys.time()
-
-# Format the date and time as a string in the format 'yyyymmddhhmm'
-formatted_time <- format(current_time, "%Y%m%d%H%M")
-
-# Concatenate the formatted time string with your desired filename
-filename <- paste0(formatted_time, "_my_workspace.RData")
-
-# Save the workspace using the generated filename
-save.image(file = filename)
-
-
-# # Computing the sum of hellinger distances between models and reference --> used as datacost
-# h_dist <- array(data = NA, dim = c(length(lon), length(lat),
-#                                    length(model_names), length(variables)))
+# # Get the current date and time
+# current_time <- Sys.time()
 #
+# # Format the date and time as a string in the format 'yyyymmddhhmm'
+# formatted_time <- format(current_time, "%Y%m%d%H%M")
+#
+# # Concatenate the formatted time string with your desired filename
+# filename <- paste0(formatted_time, "_my_workspace.RData")
+#
+# # Save the workspace using the generated filename
+# save.image(file = filename)
+
+
+
+# Computing the sum of hellinger distances between models and reference --> used as datacost
+h_dist <- array(data = NA, dim = c(length(lon), length(lat),
+                                   length(model_names), length(variables)))
+
 # # Loop through variables and models
 # v <- 1
 # for(var in variables){
@@ -138,6 +139,7 @@ save.image(file = filename)
 #   }
 #   v <- v + 1
 # }
+# remove(v,m)
 
 # Graphcut hellinger labelling
 GC_result_hellinger <- list()
@@ -172,8 +174,31 @@ filename <- paste0(formatted_time, "_GC_results_hellinger.rds")
 saveRDS(GC_result, file = filename)
 
 
+# Get the current date and time
+current_time <- Sys.time()
+
+# Format the date and time as a string in the format 'yyyymmddhhmm'
+formatted_time <- format(current_time, "%Y%m%d%H%M")
+
+# Concatenate the formatted time string with your desired filename
+filename <- paste0(formatted_time, "_my_workspace.RData")
+
+# Save the workspace using the generated filename
+save.image(file = filename)
 
 
-
+#
+#
+# idx <- which.max(h_dist)
+# subscripts <- arrayInd(idx, dim(h_dist))
+#
+# i <- subscripts[1, 1]
+# j <- subscripts[1, 2]
+# m <- subscripts[1, 3]
+# v <- subscripts[1, 4]
+#
+# pdf_max <- kde_models[i, j, , m, v]
+#
+#
 
 

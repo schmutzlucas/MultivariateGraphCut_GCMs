@@ -73,8 +73,8 @@ OpenAndKDE1D_new <- function (model_names, variables,
               if (i == 1 && j == 1) {
                 range_var[[var]] <<- array(data = NA, dim = c(length(lon), length(lat), 2))
               }
-              range_var[[var]][i, j, 1] <<- range(tmp)[1] - diff(range(tmp)) * 0.1
-              range_var[[var]][i, j, 2] <<- range(tmp)[2] + diff(range(tmp)) * 0.1
+              range_var[[var]][i, j, 1] <<- range(tmp)[1] - diff(range(tmp)) * 0.2
+              range_var[[var]][i, j, 2] <<- range(tmp)[2] + diff(range(tmp)) * 0.2
             }
 
             dens_tmp <- density(tmp,
@@ -82,7 +82,7 @@ OpenAndKDE1D_new <- function (model_names, variables,
                                 to = range_var[[var]][i, j, 2],
                                 n = nbins1d)
 
-            pdf_matrix[i, j, , m, v] <- dens_tmp$y * dens_tmp$bw
+            pdf_matrix[i, j, , m, v] <- dens_tmp$y / sum(dens_tmp$y)
           }
         }
 
