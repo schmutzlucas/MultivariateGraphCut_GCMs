@@ -67,6 +67,7 @@ OpenAndKDE1D_new <- function (model_names, variables,
 
             if (var == 'pr') {
               tmp <- log10((tmp * 86400) + 1)
+              # TODO compute range here for PR
             }
 
             if (m == 1) {
@@ -76,7 +77,7 @@ OpenAndKDE1D_new <- function (model_names, variables,
               range_var[[var]][i, j, 1] <<- range(tmp)[1] - diff(range(tmp)) * 0.2
               range_var[[var]][i, j, 2] <<- range(tmp)[2] + diff(range(tmp)) * 0.2
             }
-
+            # TODO use hist
             dens_tmp <- density(tmp,
                                 from = range_var[[var]][i, j, 1],
                                 to = range_var[[var]][i, j, 2],

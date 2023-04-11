@@ -184,7 +184,7 @@ formatted_time <- format(current_time, "%Y%m%d%H%M")
 filename <- paste0(formatted_time, "_my_workspace.RData")
 
 # Save the workspace using the generated filename
-save.image(file = filename, compression = FALSE)
+save.image(file = filename, compress = FALSE)
 
 
 #
