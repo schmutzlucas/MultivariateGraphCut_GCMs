@@ -1,39 +1,4 @@
-#' Open and compute 1D KDE of climate model data
-#'
-#' This function opens NetCDF climate model data files and computes the 1D Kernel Density Estimation (KDE) for each grid point and specified variables.
-#'
-#' @param model_names A character vector containing the names of the climate models to be processed.
-#' @param variables A character vector containing the names of the variables to be processed.
-#' @param year_present A character vector containing the years to be considered for the present period.
-#' @param year_future A character vector containing the years to be considered for the future period.
-#' @param period A character string specifying the period of the data (e.g., "historical" or "rcp85").
-#'
-#' @return A list containing the computed 1D KDE matrix and the variable ranges.
-#'
-#' @examples
-#' # Example usage:
-#' # model_names <- c("Model1", "Model2")
-#' # variables <- c("pr", "tas")
-#' # year_present <- 1979:1998
-#' # year_future <- 1999:2019
-#' # period <- "historical"
-#' # results <- OpenAndKDE1D_new(model_names, variables, year_present, year_future, period)
-#'
-#' @import ncdf4
-#' @export
-OpenAndKDE1D_new <- function (model_names, variables,
-                              year_present, year_future, period) {
-
-  # Initialize data structures
-  # kde_matrix <- array(0, c(length(lon), length(lat), nbins1d,
-  #                          length(model_names), length(variables)))
-  # Initialize data structures
-  # range_var <- list()
-
-
-  # Loop through variables and models
-  v <- 1
-  for(var in variables){
+ for(var in variables){
     m <- 1
     for(model_name in model_names){
       dir_path <- paste0(data_dir, model_name, '/', var, '/')
@@ -54,7 +19,7 @@ OpenAndKDE1D_new <- function (model_names, variables,
         yyyy <- substr(as.character(nc.get.time.series(nc)), 1, 4)
         iyyyy <- which(yyyy %in% year_present)
 
-        # Get the entire 2D-time model as array
+        # Get the entire 3D matrix
         tmp_grid <- ncvar_get(nc, var, start = c(1, 1, min(iyyyy)), count = c(-1, -1, length(iyyyy)))
 
         # For each grid point...
@@ -66,33 +31,29 @@ OpenAndKDE1D_new <- function (model_names, variables,
             tmp <- tmp_grid[i, j, ]
 
             if (var == 'pr') {
-              tmp <- log2((tmp * 86400) + 1)
+              tmp <- log10((tmp * 86400) + 1)
+              # TODO compute range here for PR
             }
 
             if (m == 1) {
               if (i == 1 && j == 1) {
-                range_var[[var]] <<- array(data = NA, dim = c(length(lon), length(lat), 2))
+                if (var == 'pr') {
+                  # TODO compute range here for PR
+                }
+                else{
+                  range_var[[var]] <<- array(data = NA, dim = c(length(lon), length(lat), 2))
+                }
               }
-              if (var == 'pr') {
-                range_var[[var]][i, j, 1] <<- 0
-                range_var[[var]][i, j, 2] <<- range(tmp)[2] + diff(range(tmp)) * 0.2
-              }
-              else{
-                range_var[[var]][i, j, 1] <<- range(tmp)[1] - diff(range(tmp)) * 0.2
-                range_var[[var]][i, j, 2] <<- range(tmp)[2] + diff(range(tmp)) * 0.2
-              }
+              range_var[[var]][i, j, 1] <<- range(tmp)[1] - diff(range(tmp)) * 0.2
+              range_var[[var]][i, j, 2] <<- range(tmp)[2] + diff(range(tmp)) * 0.2
             }
-            # Calculate the breaks
-            breaks <- seq(from = range_var[[var]][i, j, 1],
-                            to = range_var[[var]][i, j, 2],
-                            length.out = nbin1d + 1)
+            # TODO use hist
+            dens_tmp <- density(tmp,
+                                from = range_var[[var]][i, j, 1],
+                                to = range_var[[var]][i, j, 2],
+                                n = nbins1d)
 
-            dens_tmp <- hist(tmp,
-                             xlim = range_var[[var]][i, j, ],
-                             freq = FALSE)
-
-            pdf_matrix[i, j, , m, v] <- dens_tmp$counts / sum(dens_tmp$counts)
-
+            pdf_matrix[i, j, , m, v] <- dens_tmp$y / sum(dens_tmp$y)
           }
         }
 
@@ -139,11 +100,3 @@ OpenAndKDE1D_new <- function (model_names, variables,
     # Update counter for variables
     v <- v + 1
   }
-
-  # Remove the counters
-  remove(m, v)
-
-  # Return the output as a list of two elements
-  output <- list(pdf_matrix, range_var)
-  return(output)
-}

@@ -20,8 +20,8 @@ for(path in file_paths){source(path)}
 lon <<- 0:359
 lat <<- -90:90
 # Temporal ranges
-year_present <<- 1979:1994
-year_future <<- 1999:2014
+year_present <<- 1976:1999
+year_future <<- 2000:2014
 # data directory
 data_dir <<- 'data/CMIP6/'
 
