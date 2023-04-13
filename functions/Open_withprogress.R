@@ -27,9 +27,9 @@ OpenAndKDE1D_new <- function (model_names, variables,
   # Initialize data structures
   pdf_matrix <- array(0, c(length(lon), length(lat), nbins1d,
                            length(model_names), length(variables)))
-    # Initialize data structures
+  # Initialize data structures
   mids_matrix <- array(0, c(length(lon), length(lat), nbins1d,
-                           length(model_names), length(variables)))
+                            length(model_names), length(variables)))
 
   range_var <- list()
 
@@ -75,29 +75,37 @@ OpenAndKDE1D_new <- function (model_names, variables,
 
             if (m == 1) {
               if (i == 1 && j == 1) {
-                range_var[[var]] <<- array(data = NA, dim = c(length(lon), length(lat), 2))
+                range_var[[var]] <- array(data = NA, dim = c(length(lon), length(lat), 2))
               }
               if (var == 'pr') {
-                range_var[[var]][i, j, 1] <<- 0
-                range_var[[var]][i, j, 2] <<- range(tmp)[2] + diff(range(tmp)) * 0.2
+                range_var[[var]][i, j, 1] <- 0
+                range_var[[var]][i, j, 2] <- range(tmp)[2] * 2
               }
               else{
-                range_var[[var]][i, j, 1] <<- range(tmp)[1] - diff(range(tmp)) * 0.2
-                range_var[[var]][i, j, 2] <<- range(tmp)[2] + diff(range(tmp)) * 0.2
+                range_var[[var]][i, j, 1] <- range(tmp)[1] - diff(range(tmp)) * 0.3
+                range_var[[var]][i, j, 2] <- range(tmp)[2] + diff(range(tmp)) * 0.3
               }
             }
-            # Calculate the breaks
+            # Compute the breaks
             breaks <- seq(from = range_var[[var]][i, j, 1],
                           to = range_var[[var]][i, j, 2],
-                          length.out = nbin1d + 1)
+                          length.out = nbins1d + 1)
 
-            dens_tmp <- hist(tmp, breaks = breaks,)
+            # Replace values lower or higher than the range with min or max
+            min_range <- range_var[[var]][i, j, 1]
+            max_range <- range_var[[var]][i, j, 2]
+            tmp[tmp < min_range] <- min_range
+            tmp[tmp > max_range] <- max_range
+
+            # Compute the histogram using the modified data
+            dens_tmp <- hist(tmp, breaks = breaks, plot = FALSE)
 
             pdf_matrix[i, j, , m, v] <- dens_tmp$counts / sum(dens_tmp$counts)
             mids_matrix[i,j,,m,v] <- dens_tmp$mids
 
           }
         }
+
 
         # # Create dimensions and initialize matrices for present and future data if this is the first model and variable
         # if(j == 1 && i == 1) {

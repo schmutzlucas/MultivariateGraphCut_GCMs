@@ -19,13 +19,13 @@ for(path in file_paths){source(path)}
 lon <<- 0:359
 lat <<- -90:90
 # Temporal ranges
-year_present <<- 1976:1999
+year_present <<- 1985:1999
 year_future <<- 2000:2014
 # data directory
 data_dir <<- 'data/CMIP6/'
 
 # Bins for the kde
-nbins1d <<- 512
+nbins1d <<- 120
 
 # Period
 period <<- 'historical'
@@ -50,7 +50,6 @@ model_names <- basename(model_names)
 # Initialize data structures
 pdf_matrix <<- array(0, c(length(lon), length(lat), nbins1d,
                           length(model_names), length(variables)))
-range_var <<- list()
 
 tmp <- OpenAndKDE1D_new(
   model_names, variables, year_present, year_future, period
@@ -118,9 +117,6 @@ MinBias_labels <- MinBiasOptimization(reference_matrix_nrm$present,
 
 
 
-# Computing the sum of hellinger distances between models and reference --> used as datacost
-h_dist <- array(data = NA, dim = c(length(lon), length(lat),
-                                   length(model_names), length(variables)))
 
 # # Loop through variables and models
 # v <- 1
