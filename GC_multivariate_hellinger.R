@@ -9,7 +9,6 @@ lapply(list_of_packages, library, character.only = TRUE)
 install_github("thaos/gcoWrapR")
 
 
-
 # Loading local functions
 
 source_code_dir <- 'functions/' #The directory where all functions are saved.
