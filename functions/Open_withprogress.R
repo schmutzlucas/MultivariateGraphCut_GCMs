@@ -25,10 +25,14 @@ OpenAndKDE1D_new <- function (model_names, variables,
                               year_present, year_future, period) {
 
   # Initialize data structures
-  # kde_matrix <- array(0, c(length(lon), length(lat), nbins1d,
-  #                          length(model_names), length(variables)))
-  # Initialize data structures
-  # range_var <- list()
+  pdf_matrix <- array(0, c(length(lon), length(lat), nbins1d,
+                           length(model_names), length(variables)))
+    # Initialize data structures
+  mids_matrix <- array(0, c(length(lon), length(lat), nbins1d,
+                           length(model_names), length(variables)))
+
+  range_var <- list()
+
 
 
   # Loop through variables and models
@@ -84,14 +88,13 @@ OpenAndKDE1D_new <- function (model_names, variables,
             }
             # Calculate the breaks
             breaks <- seq(from = range_var[[var]][i, j, 1],
-                            to = range_var[[var]][i, j, 2],
-                            length.out = nbin1d + 1)
+                          to = range_var[[var]][i, j, 2],
+                          length.out = nbin1d + 1)
 
-            dens_tmp <- hist(tmp,
-                             xlim = range_var[[var]][i, j, ],
-                             freq = FALSE)
+            dens_tmp <- hist(tmp, breaks = breaks,)
 
             pdf_matrix[i, j, , m, v] <- dens_tmp$counts / sum(dens_tmp$counts)
+            mids_matrix[i,j,,m,v] <- dens_tmp$mids
 
           }
         }
