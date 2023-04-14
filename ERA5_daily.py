@@ -3,7 +3,7 @@ import cdsapi
 import os
 import calendar
 
-dir = r'/mnt/w\LucasSchmutz\MultivariateGraphCut_GCMs'
+dir = r'/mnt/w/LucasSchmutz/MultivariateGraphCut_GCMs/data/ERA5'
 #dir = r'w:\LucasSchmutz\mHM\volta_data\raw_data\era5'
 os.chdir(dir)
 
@@ -55,18 +55,7 @@ def main():
             # Retrieve data for each variable
             for year in years:
                 os.chdir(var_dir)
-                #yr_dir = os.path.abspath(f"{year}")
-                #if not os.path.exists(yr_dir):
-                #    os.makedirs(yr_dir)
-                #    print(f"Created directory: {yr_dir}")
-                #os.chdir(yr_dir)
                 for month in months:
-                    #os.chdir(yr_dir)
-                    #month_dir = os.path.abspath(f"{month}")
-                    #if not os.path.exists(month_dir):
-                    #    os.makedirs(month_dir)
-                    #    print(f"Created directory: {month_dir}")
-                    #os.chdir(month_dir)
                     if (month not in month_31d) and (month != '2'):
                         days_int = list(range(1,31))
                         days = list(map(str,days_int))
