@@ -98,6 +98,7 @@ OpenAndKDE2D <- function (model_names, variables,
         }
 
         if (m == 1) {
+
           if (i == 1 && j == 1) {
             range_var[[variables[1]]] <- array(data = NA, dim = c(length(lon), length(lat), 2))
             range_var[[variables[2]]] <- array(data = NA, dim = c(length(lon), length(lat), 2))
@@ -149,8 +150,9 @@ OpenAndKDE2D <- function (model_names, variables,
         # Compute the histogram using the modified data
         dens_tmp <- hist2(tmp1, tmp2, xbreaks = breaks1, ybreaks = breaks2, plot = FALSE)
         dens_tmp$z <- replace(dens_tmp$z, is.nan(dens_tmp$z), 0)
-
-        pdf_matrix[i, j, , m] <- c(dens_tmp$z / sum(dens_tmp$z))
+        hist_tmp <- dens_tmp$z
+        hist_tmp <- replace(hist_tmp, is.na(hist_tmp), 0)
+        pdf_matrix[i, j, , m] <- c(hist_tmp / sum(hist_tmp))
         x_breaks[i,j,,m] <- dens_tmp$x
         y_breaks[i,j,,m] <- dens_tmp$y
       }
@@ -198,6 +200,6 @@ OpenAndKDE2D <- function (model_names, variables,
   remove(m, v)
 
   # Return the output as a list of two elements
-  output <- list(pdf_matrix, range_var)
+  output <- list(pdf_matrix, range_var, breaks1, breaks2)
   return(output)
 }

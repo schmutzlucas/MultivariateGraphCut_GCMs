@@ -31,7 +31,6 @@ nbins1d <<- 32
 period <<- 'historical'
 
 
-
 # List of the variable used
 # variables <- c('tas', 'tasmax',
 #                'tasmin', 'pr',
