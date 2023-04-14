@@ -129,3 +129,31 @@ dens <- density(x, from = -3, to = 3)
 plot(dens)
 
 
+
+
+
+nc2 <- nc_open('data/CMIP6/IPSL-CM6A-LR/tas/tas_IPSL-CM6A-LR_historical_r1i1p1f1_19500101-20141230_merged_regridded_v20190614.nc')
+var <- 'tas'
+# Temporal ranges
+year_present <- 1970:1990
+year_future <- 1999:2019
+yyyy <- substr(as.character(nc.get.time.series(nc2)), 1, 4)
+iyyyy <- which(yyyy %in% year_present)
+tmp2 <- ncvar_get(nc2, var, start = c(1, 1, min(iyyyy)), count = c(-1, -1, length(iyyyy)))
+
+var <- 'pr'
+nc1 <- nc_open('data/CMIP6/IPSL-CM6A-LR/pr/pr_IPSL-CM6A-LR_historical_r1i1p1f1_19500101-20141230_merged_regridded_v20180803.nc')
+tmp1 <- ncvar_get(nc1, var, start = c(1, 1, min(iyyyy)), count = c(-1, -1, length(iyyyy)))
+
+vec1 <- tmp1[123, 45, ]
+vec2 <- tmp2[123, 45, ]
+
+breaks1 <- seq(min(tmp1[123, 45, ]), max(tmp1[123, 45, ]), length.out = 50) # adjust the number of breaks as needed
+breaks2 <- seq(min(tmp2[123, 45, ]), max(tmp2[123, 45, ]), length.out = 50)
+
+
+
+library(squash)
+terst <- hist2(vec1, vec2, xbreaks = breaks1, ybreaks = breaks2, plot = FALSE)
+
+

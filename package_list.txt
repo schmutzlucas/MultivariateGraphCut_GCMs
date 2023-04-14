@@ -12,3 +12,5 @@ foreach
 doParallel
 iterators
 fst
+gplots
+squash

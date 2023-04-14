@@ -21,16 +21,16 @@
 #'
 #' @import ncdf4
 #' @export
-OpenAndKDE1D_new <- function (model_names, variables,
+OpenAndKDE2D <- function (model_names, variables,
                               year_present, year_future, period) {
 
   # Initialize data structures
-  pdf_matrix <- array(0, c(length(lon), length(lat), nbins1d,
-                           length(model_names), length(variables)))
-  # Initialize data structures
-  mids_matrix <- array(0, c(length(lon), length(lat), nbins1d,
-                            length(model_names), length(variables)))
-
+  pdf_matrix <- array(0, c(length(lon), length(lat), nbins1d^2,
+                           length(model_names)))
+  x_breaks <- array(0, c(length(lon), length(lat), nbins1d+1,
+                           length(model_names)))
+  y_breaks <- array(0, c(length(lon), length(lat), nbins1d+1,
+                           length(model_names)))
   range_var <- list()
 
 
@@ -79,50 +79,80 @@ OpenAndKDE1D_new <- function (model_names, variables,
     iyyyy2 <- which(yyyy2 %in% year_present)
 
     # Get the entire 2D-time model as array
-    tmp_grid_1 <- ncvar_get(nc2, variables[2], start = c(1, 1, min(iyyyy2)), count = c(-1, -1, length(iyyyy2)))
+    tmp_grid_2 <- ncvar_get(nc2, variables[2], start = c(1, 1, min(iyyyy2)), count = c(-1, -1, length(iyyyy2)))
 
     # For each grid point...
     for (i in seq_along(lon)) {
       for (j in seq_along(lat)) {
         if (i%%10 == 0 && j %% 100 == 0) {
-          print(c(v, var, m, model_name, i, j))
+          print(c(m, model_name, i, j))
         }
-        tmp <- tmp_grid[i, j, ]
+        tmp1 <- tmp_grid_1[i, j, ]
+        tmp2 <- tmp_grid_2[i, j, ]
 
-        if (var == 'pr') {
-          tmp <- log2((tmp * 86400) + 1)
+        if (variables[1] == 'pr') {
+          tmp1 <- log2((tmp1 * 86400) + 1)
+        }
+        if (variables[2] == 'pr') {
+          tmp2 <- log2((tmp2 * 86400) + 1)
         }
 
         if (m == 1) {
           if (i == 1 && j == 1) {
-            range_var[[var]] <- array(data = NA, dim = c(length(lon), length(lat), 2))
+            range_var[[variables[1]]] <- array(data = NA, dim = c(length(lon), length(lat), 2))
+            range_var[[variables[2]]] <- array(data = NA, dim = c(length(lon), length(lat), 2))
           }
-          if (var == 'pr') {
-            range_var[[var]][i, j, 1] <- 0
-            range_var[[var]][i, j, 2] <- range(tmp)[2] * 2
+          if (variables[1] == 'pr') {
+            range_var[[variables[1]]][i, j, 1] <- 0
+            range_var[[variables[1]]][i, j, 2] <- range(tmp1)[2] * 2
+
+            range_var[[variables[2]]][i, j, 1] <- range(tmp2)[1] - diff(range(tmp2)) * 0.3
+            range_var[[variables[2]]][i, j, 2] <- range(tmp2)[2] + diff(range(tmp2)) * 0.3
+          }
+          else if (variables[2] == 'pr') {
+            range_var[[variables[2]]][i, j, 1] <- 0
+            range_var[[variables[2]]][i, j, 2] <- range(tmp2)[2] * 2
+
+            range_var[[variables[1]]][i, j, 1] <- range(tmp1)[1] - diff(range(tmp1)) * 0.3
+            range_var[[variables[1]]][i, j, 2] <- range(tmp1)[2] + diff(range(tmp1)) * 0.3
           }
           else{
-            range_var[[var]][i, j, 1] <- range(tmp)[1] - diff(range(tmp)) * 0.3
-            range_var[[var]][i, j, 2] <- range(tmp)[2] + diff(range(tmp)) * 0.3
+            range_var[[variables[1]]][i, j, 1] <- range(tmp1)[1] - diff(range(tmp1)) * 0.3
+            range_var[[variables[1]]][i, j, 2] <- range(tmp1)[2] + diff(range(tmp1)) * 0.3
+
+            range_var[[variables[2]]][i, j, 1] <- range(tmp2)[1] - diff(range(tmp2)) * 0.3
+            range_var[[variables[2]]][i, j, 2] <- range(tmp2)[2] + diff(range(tmp2)) * 0.3
           }
+
         }
         # Compute the breaks
-        breaks <- seq(from = range_var[[var]][i, j, 1],
-                      to = range_var[[var]][i, j, 2],
-                      length.out = nbins1d + 1)
+        breaks1 <- seq(from = range_var[[variables[1]]][i, j, 1],
+                       to = range_var[[variables[1]]][i, j, 2],
+                       length.out = nbins1d + 1)
+
+        breaks2 <- seq(from = range_var[[variables[2]]][i, j, 1],
+                       to = range_var[[variables[2]]][i, j, 2],
+                       length.out = nbins1d + 1)
 
         # Replace values lower or higher than the range with min or max
-        min_range <- range_var[[var]][i, j, 1]
-        max_range <- range_var[[var]][i, j, 2]
-        tmp[tmp < min_range] <- min_range
-        tmp[tmp > max_range] <- max_range
+        min_range <- range_var[[variables[1]]][i, j, 1]
+        max_range <- range_var[[variables[1]]][i, j, 2]
+        tmp1[tmp1 < min_range] <- min_range
+        tmp1[tmp1 > max_range] <- max_range
+
+        # Replace values lower or higher than the range with min or max
+        min_range <- range_var[[variables[2]]][i, j, 1]
+        max_range <- range_var[[variables[2]]][i, j, 2]
+        tmp2[tmp2 < min_range] <- min_range
+        tmp2[tmp2 > max_range] <- max_range
 
         # Compute the histogram using the modified data
-        dens_tmp <- hist(tmp, breaks = breaks, plot = FALSE)
+        dens_tmp <- hist2(tmp1, tmp2, xbreaks = breaks1, ybreaks = breaks2, plot = FALSE)
+        dens_tmp$z <- replace(dens_tmp$z, is.nan(dens_tmp$z), 0)
 
-        pdf_matrix[i, j, , m, v] <- dens_tmp$counts / sum(dens_tmp$counts)
-        mids_matrix[i,j,,m,v] <- dens_tmp$mids
-
+        pdf_matrix[i, j, , m] <- c(dens_tmp$z / sum(dens_tmp$z))
+        x_breaks[i,j,,m] <- dens_tmp$x
+        y_breaks[i,j,,m] <- dens_tmp$y
       }
     }
 
@@ -158,7 +188,8 @@ OpenAndKDE1D_new <- function (model_names, variables,
     # data[['future']][[var]][[model_name]] <- tmp
 
     # Close the file
-    nc_close(nc)
+    nc_close(nc1)
+    nc_close(nc2)
     # Update counter for models
     m <- m + 1
   }

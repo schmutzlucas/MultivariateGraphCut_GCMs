@@ -25,7 +25,7 @@ year_future <<- 2000:2014
 data_dir <<- 'data/CMIP6/'
 
 # Bins for the kde
-nbins1d <<- 120
+nbins1d <<- 32
 
 # Period
 period <<- 'historical'
@@ -47,11 +47,8 @@ dir_path <- paste0('data/CMIP6/')
 model_names <- list.dirs(dir_path, recursive = FALSE)
 model_names <- basename(model_names)
 
-# Initialize data structures
-pdf_matrix <<- array(0, c(length(lon), length(lat), nbins1d,
-                          length(model_names), length(variables)))
 
-tmp <- OpenAndKDE1D_new(
+tmp <- OpenAndKDE2D(
   model_names, variables, year_present, year_future, period
 )
 
@@ -163,7 +160,7 @@ current_time <- Sys.time()
 formatted_time <- format(current_time, "%Y%m%d%H%M")
 
 # Create the filename with the formatted timestamp and "GC_results" at the end
-filename <- paste0(formatted_time, "_GC_results_hellinger.rds")
+filename <- paste0(formatted_time, "_GC_results_hellinger.rds", compress = FALSE)
 
 # Save the RDS file with the timestamped filename
 #saveRDS(GC_result, file = filename)
