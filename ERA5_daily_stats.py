@@ -22,8 +22,9 @@ def cds_api_call(variable, year, month, days, name):
             'time': time,
             'variable': variable,  # Variable name
         },
-    name
+        name
     )
+
 
 variables = ['2m_temperature','total_precipitation']
 
@@ -91,7 +92,7 @@ def main():
                             # Submit a job to the thread pool to download the
                             # data
                             var = [exe.submit(cds_api_call, variable, year,
-                                                month, days, name)]
+                                              month, days, name)]
                             #print(f'{variable}_{year}_{month}_{max(map(int,days))}')
                         finally:
                             pass
