@@ -64,8 +64,11 @@ tmp <- OpenAndKDE2D(
 
 
 pdf_matrix <- tmp[[1]]
-kde_models <- pdf_matrix[ , , , -2, ]
-kde_ref <- pdf_matrix[ , , , 2, ]
+kde_models <- pdf_matrix[ , , , -2]
+kde_ref <- pdf_matrix[ , , , 2]
+range_matrix <- tmp[[2]]
+x_breaks <- tmp[[3]]
+y_breaks <- tmp[[4]]
 
 # Choose the reference in the models
 reference_name <<- model_names[2]
@@ -134,7 +137,7 @@ MinBias_labels <- MinBiasOptimization(reference_matrix_nrm$present,
 
 # Graphcut hellinger labelling
 GC_result_hellinger <- list()
-GC_result_hellinger <- GraphCutHellinger(kde_ref = kde_ref,
+GC_result_hellinger <- GraphCutHellinger2D(kde_ref = kde_ref,
                                kde_models = kde_models,
                                models_smoothcost = models_matrix_nrm$future,
                                weight_data = 1,
