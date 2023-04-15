@@ -105,24 +105,24 @@ OpenAndKDE2D <- function (model_names, variables,
           }
           if (variables[1] == 'pr') {
             range_var[[variables[1]]][i, j, 1] <- 0
-            range_var[[variables[1]]][i, j, 2] <- range(tmp1)[2]
+            range_var[[variables[1]]][i, j, 2] <- range(tmp1)[2] * 1.2
 
-            range_var[[variables[2]]][i, j, 1] <- range(tmp2)[1] - diff(range(tmp2))
-            range_var[[variables[2]]][i, j, 2] <- range(tmp2)[2] + diff(range(tmp2))
+            range_var[[variables[2]]][i, j, 1] <- range(tmp2)[1] - diff(range(tmp2)) * 0.3
+            range_var[[variables[2]]][i, j, 2] <- range(tmp2)[2] + diff(range(tmp2)) * 0.3
           }
           else if (variables[2] == 'pr') {
             range_var[[variables[2]]][i, j, 1] <- 0
-            range_var[[variables[2]]][i, j, 2] <- range(tmp2)[2]
+            range_var[[variables[2]]][i, j, 2] <- range(tmp2)[2] * 1.2
 
-            range_var[[variables[1]]][i, j, 1] <- range(tmp1)[1] - diff(range(tmp1))
-            range_var[[variables[1]]][i, j, 2] <- range(tmp1)[2] + diff(range(tmp1))
+            range_var[[variables[1]]][i, j, 1] <- range(tmp1)[1] - diff(range(tmp1)) * 0.3
+            range_var[[variables[1]]][i, j, 2] <- range(tmp1)[2] + diff(range(tmp1)) * 0.3
           }
           else{
-            range_var[[variables[1]]][i, j, 1] <- range(tmp1)[1] - diff(range(tmp1))
-            range_var[[variables[1]]][i, j, 2] <- range(tmp1)[2] + diff(range(tmp1))
+            range_var[[variables[1]]][i, j, 1] <- range(tmp1)[1] - diff(range(tmp1)) * 0.3
+            range_var[[variables[1]]][i, j, 2] <- range(tmp1)[2] + diff(range(tmp1)) * 0.3
 
-            range_var[[variables[2]]][i, j, 1] <- range(tmp2)[1] - diff(range(tmp2))
-            range_var[[variables[2]]][i, j, 2] <- range(tmp2)[2] + diff(range(tmp2))
+            range_var[[variables[2]]][i, j, 1] <- range(tmp2)[1] - diff(range(tmp2)) * 0.3
+            range_var[[variables[2]]][i, j, 2] <- range(tmp2)[2] + diff(range(tmp2)) * 0.3
           }
 
         }

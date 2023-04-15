@@ -3,7 +3,7 @@ import cdsapi
 import os
 import calendar
 
-dir = r'/mnt/w/LucasSchmutz/MultivariateGraphCut_GCMs/data/ERA5'
+dir = r'/mnt/y/LucasSchmutz/MultivariateGraphCut_GCMs/data/ERA5'
 #dir = r'w:\LucasSchmutz\mHM\volta_data\raw_data\era5'
 os.chdir(dir)
 
@@ -22,7 +22,7 @@ def cds_api_call(variable, year, month, days, name):
             'time': time,
             'variable': variable,  # Variable name
         },
-    name
+        name
     )
 
 variables = ['total_precipitation']
@@ -35,7 +35,7 @@ months = list(map(str, months_int))
 
 month_31d = ['1','3','5','7','8','10','12']
 
-time = ['00:00','01:00','02:00','03:00','04:00','05:00','06:00','07:00','08:00','09:00','10:00','11:00', 
+time = ['00:00','01:00','02:00','03:00','04:00','05:00','06:00','07:00','08:00','09:00','10:00','11:00',
         '12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00','20:00','21:00','22:00','23:00']
 
 # Define the main function to run the data retrieval
@@ -80,7 +80,7 @@ def main():
                             # Submit a job to the thread pool to download the
                             # data
                             var = [exe.submit(cds_api_call, variable, year,
-                                                month, days, name)]
+                                              month, days, name)]
                             #print(f'{variable}_{year}_{month}_{max(map(int,days))}')
                         finally:
                             pass

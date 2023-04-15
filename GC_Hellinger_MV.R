@@ -62,7 +62,6 @@ tmp <- OpenAndKDE2D(
 # saveRDS(tmp, filename)
 
 
-
 pdf_matrix <- tmp[[1]]
 kde_models <- pdf_matrix[ , , , -2]
 kde_ref <- pdf_matrix[ , , , 2]
@@ -135,6 +134,7 @@ MinBias_labels <- MinBiasOptimization(reference_matrix_nrm$present,
 # }
 # remove(v,m)
 
+
 # Graphcut hellinger labelling
 GC_result_hellinger <- list()
 GC_result_hellinger <- GraphCutHellinger2D(kde_ref = kde_ref,
@@ -193,6 +193,3 @@ save.image(file = filename, compress = FALSE)
 #
 # pdf_max <- kde_models[i, j, , m, v]
 #
-#
-
-
