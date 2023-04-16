@@ -135,6 +135,7 @@ MinBias_labels <- MinBiasOptimization(reference_matrix_nrm$present,
 # remove(v,m)
 
 
+
 # Graphcut hellinger labelling
 GC_result_hellinger <- list()
 GC_result_hellinger <- GraphCutHellinger2D(kde_ref = kde_ref,
@@ -153,6 +154,16 @@ GC_result <- GraphCutOptimization(reference = reference_matrix_nrm$present,
                                   weight_data = 1,
                                   weight_smooth = 1,
                                   verbose = TRUE)
+
+# Graphcut labelling
+MinBiasHellinger <- list()
+MinBiasHellinger <- GraphCutHellinger2D(kde_ref = kde_ref,
+                               kde_models = kde_models,
+                               models_smoothcost = models_matrix_nrm$future,
+                               weight_data = 1,
+                               weight_smooth = 0,
+                               verbose = TRUE)
+
 
 
 # Get the current date and time
