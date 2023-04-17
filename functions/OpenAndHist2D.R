@@ -21,8 +21,8 @@
 #'
 #' @import ncdf4
 #' @export
-OpenAndKDE2D <- function (model_names, variables,
-                              year_present, year_future, period) {
+OpenAndHist2D <- function (model_names, variables,
+                              year_interest, period) {
 
   # Initialize data structures
   pdf_matrix <- array(0, c(length(lon), length(lat), nbins1d^2,
@@ -54,7 +54,7 @@ OpenAndKDE2D <- function (model_names, variables,
 
     # Extract and average data for present
     yyyy1 <- substr(as.character(nc.get.time.series(nc1)), 1, 4)
-    iyyyy1 <- which(yyyy1 %in% year_present)
+    iyyyy1 <- which(yyyy1 %in% year_interest)
 
     # Get the entire 2D-time model as array
     tmp_grid_1 <- ncvar_get(nc1, variables[1], start = c(1, 1, min(iyyyy1)), count = c(-1, -1, length(iyyyy1)))
@@ -76,7 +76,7 @@ OpenAndKDE2D <- function (model_names, variables,
 
     # Extract and average data for present
     yyyy2 <- substr(as.character(nc.get.time.series(nc2)), 1, 4)
-    iyyyy2 <- which(yyyy2 %in% year_present)
+    iyyyy2 <- which(yyyy2 %in% year_interest)
 
     # Get the entire 2D-time model as array
     tmp_grid_2 <- ncvar_get(nc2, variables[2], start = c(1, 1, min(iyyyy2)), count = c(-1, -1, length(iyyyy2)))
@@ -157,37 +157,6 @@ OpenAndKDE2D <- function (model_names, variables,
         y_breaks[i,j,,m] <- dens_tmp$y
       }
     }
-
-
-    # # Create dimensions and initialize matrices for present and future data if this is the first model and variable
-    # if(j == 1 && i == 1) {
-    #   lat <- ncvar_get(nc, "lat")
-    #   lon <- ncvar_get(nc, "lon")
-    #   data_matrix$present <- data_matrix$future <-
-    #     array(0, c(length(lon), length(lat),
-    #                length(model_names), length(variables)))
-    # }
-    #
-    # # Extract and average data for present
-    # yyyy <- substr(as.character(nc.get.time.series(nc)), 1, 4)
-    # iyyyy <- which(yyyy %in% year_present)
-    # tmp <- apply(
-    #   ncvar_get(nc, var, start = c(1, 1, min(iyyyy)), count = c(-1, -1, length(iyyyy))),
-    #   1:2,
-    #   mean
-    # )
-    # data_matrix$present[, , i, j] <- tmp
-    # data[['present']][[var]][[model_name]] <- tmp
-    #
-    # # Extract and average data for future
-    # iyyyy <- which(yyyy %in% year_future)
-    # tmp <- apply(
-    #   ncvar_get(nc, var, start = c(1, 1, min(iyyyy)), count = c(-1, -1, length(iyyyy))),
-    #   1:2,
-    #   mean
-    # )
-    # data_matrix$future [, , i, j] <- tmp
-    # data[['future']][[var]][[model_name]] <- tmp
 
     # Close the file
     nc_close(nc1)

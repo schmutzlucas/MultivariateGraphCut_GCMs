@@ -30,7 +30,6 @@ nbins1d <<- 32
 # Period
 period <<- 'historical'
 
-
 # List of the variable used
 # variables <- c('tas', 'tasmax',
 #                'tasmin', 'pr',
@@ -39,39 +38,35 @@ period <<- 'historical'
 # variables <- c('pr', 'tas', 'tasmin', 'tasmax')
 variables <- c('pr', 'tas')
 
+# Index of the reference
+ref_index <<- 1
 # Obtains the list of models from the model names or from a file
 # Method 1
-# TODO This needs ajustements to remove prefixes and suffixes
-dir_path <- paste0('data/CMIP6/')
-model_names <- list.dirs(dir_path, recursive = FALSE)
-model_names <- basename(model_names)
+# # TODO This needs ajustements to remove prefixes and suffixes
+# dir_path <- paste0('data/CMIP6/')
+# model_names <- list.dirs(dir_path, recursive = FALSE)
+# model_names <- basename(model_names)
+model_names <- c('GFDL-ESM4',
+                 'FGOALS-f3-L',
+                 'MPI-ESM1-2-HR',
+                 'ACCESS-CM2',
+                 'ACCESS-ESM1-5',
+                 'INM-CM5-0',
+                 'MIROC6')
 
 
-tmp <- OpenAndKDE2D(
-  model_names, variables, year_present, year_future, period
-)
-
-# # Get the current date and time
-# current_time <- Sys.time()
-#
-# # Format the date and time as yyyymmddhhmm
-# formatted_time <- format(current_time, "%Y%m%d%H%M")
-#
-# # Create the filename with the formatted timestamp and "GC_results" at the end
-# filename <- paste0(formatted_time, "_pdf1d_cmip6.rds")
-# saveRDS(tmp, filename)
-
+tmp <- OpenAndHist2D(model_names, variables, year_future , period )
 
 pdf_matrix <- tmp[[1]]
-kde_models <- pdf_matrix[ , , , -2]
-kde_ref <- pdf_matrix[ , , , 2]
+kde_models <- pdf_matrix[ , , , -ref_index]
+kde_ref <- pdf_matrix[ , , , ref_index]
 range_matrix <- tmp[[2]]
 x_breaks <- tmp[[3]]
 y_breaks <- tmp[[4]]
 
 # Choose the reference in the models
-reference_name <<- model_names[2]
-model_names <<- model_names[-2]
+reference_name <<- model_names[ref_index]
+model_names <<- model_names[-ref_index]
 
 
 # Open and average the models for the selected time periods
@@ -139,11 +134,11 @@ MinBias_labels <- MinBiasOptimization(reference_matrix_nrm$present,
 # Graphcut hellinger labelling
 GC_result_hellinger <- list()
 GC_result_hellinger <- GraphCutHellinger2D(kde_ref = kde_ref,
-                               kde_models = kde_models,
-                               models_smoothcost = models_matrix_nrm$future,
-                               weight_data = 1,
-                               weight_smooth = 1,
-                               verbose = TRUE)
+                                           kde_models = kde_models,
+                                           models_smoothcost = models_matrix_nrm$future,
+                                           weight_data = 1,
+                                           weight_smooth = 1,
+                                           verbose = TRUE)
 
 
 # Graphcut labelling
@@ -158,25 +153,25 @@ GC_result <- GraphCutOptimization(reference = reference_matrix_nrm$present,
 # Graphcut labelling
 MinBiasHellinger <- list()
 MinBiasHellinger <- GraphCutHellinger2D(kde_ref = kde_ref,
-                               kde_models = kde_models,
-                               models_smoothcost = models_matrix_nrm$future,
-                               weight_data = 1,
-                               weight_smooth = 0,
-                               verbose = TRUE)
+                                        kde_models = kde_models,
+                                        models_smoothcost = models_matrix_nrm$future,
+                                        weight_data = 1,
+                                        weight_smooth = 0,
+                                        verbose = TRUE)
 
 
 
-# Get the current date and time
-current_time <- Sys.time()
-
-# Format the date and time as yyyymmddhhmm
-formatted_time <- format(current_time, "%Y%m%d%H%M")
-
-# Create the filename with the formatted timestamp and "GC_results" at the end
-filename <- paste0(formatted_time, "_GC_results_hellinger.rds", compress = FALSE)
-
-# Save the RDS file with the timestamped filename
-#saveRDS(GC_result, file = filename)
+# # Get the current date and time
+# current_time <- Sys.time()
+#
+# # Format the date and time as yyyymmddhhmm
+# formatted_time <- format(current_time, "%Y%m%d%H%M")
+#
+# # Create the filename with the formatted timestamp and "GC_results" at the end
+# filename <- paste0(formatted_time, "_GC_results_hellinger.rds", compress = FALSE)
+#
+# # Save the RDS file with the timestamped filename
+# #saveRDS(GC_result, file = filename)
 
 
 # Get the current date and time
