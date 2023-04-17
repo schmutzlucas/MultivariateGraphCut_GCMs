@@ -1,10 +1,12 @@
 range_var <- list()
-
 range_var[[variables[1]]] <- array(data = NA, dim = c(length(lon), length(lat), 2, length(model_names)))
 range_var[[variables[2]]] <- array(data = NA, dim = c(length(lon), length(lat), 2, length(model_names)))
 
+range_var_final <- list()
 range_var_final[[variables[1]]] <- array(data = NA, dim = c(length(lon), length(lat), 2))
 range_var_final[[variables[2]]] <- array(data = NA, dim = c(length(lon), length(lat), 2))
+
+year_interest <- 1975:2014
 
 # Loop through variables and models
 m <- 1
@@ -102,6 +104,10 @@ for(model_name in model_names){
 # For each grid point...
 for (i in seq_along(lon)) {
   for (j in seq_along(lat)) {
+    range_var_final[[variables[1]]][i, j, 1] <- min(range_var[[variables[1]]][i,j,1,])
+    range_var_final[[variables[1]]][i, j, 2] <- max(range_var[[variables[1]]][i,j,1,])
 
+    range_var_final[[variables[2]]][i, j, 1] <- min(range_var[[variables[2]]][i,j,1,])
+    range_var_final[[variables[2]]][i, j, 2] <- max(range_var[[variables[2]]][i,j,1,])
   }
 }
