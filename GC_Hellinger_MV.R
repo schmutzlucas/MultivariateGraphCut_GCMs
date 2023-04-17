@@ -55,7 +55,7 @@ model_names <- c('GFDL-ESM4',
                  'MIROC6')
 
 
-tmp <- OpenAndHist2D(model_names, variables, year_future , period )
+tmp <- OpenAndHist2D_range(model_names, variables, year_present , period, range_var_final)
 
 pdf_matrix <- tmp[[1]]
 kde_models <- pdf_matrix[ , , , -ref_index]

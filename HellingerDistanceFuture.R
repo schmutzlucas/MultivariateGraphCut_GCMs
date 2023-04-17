@@ -31,9 +31,6 @@ nbins1d <<- 32
 # Period
 period <<- 'historical'
 
-ref_index <<- 2
-
-
 # List of the variable used
 # variables <- c('tas', 'tasmax',
 #                'tasmin', 'pr',
@@ -42,15 +39,24 @@ ref_index <<- 2
 # variables <- c('pr', 'tas', 'tasmin', 'tasmax')
 variables <- c('pr', 'tas')
 
+# Index of the reference
+ref_index <<- 1
 # Obtains the list of models from the model names or from a file
 # Method 1
 # # TODO This needs ajustements to remove prefixes and suffixes
 # dir_path <- paste0('data/CMIP6/')
 # model_names <- list.dirs(dir_path, recursive = FALSE)
 # model_names <- basename(model_names)
+model_names <- c('GFDL-ESM4',
+                 'FGOALS-f3-L',
+                 'MPI-ESM1-2-HR',
+                 'ACCESS-CM2',
+                 'ACCESS-ESM1-5',
+                 'INM-CM5-0',
+                 'MIROC6')
 
 
-tmp <- OpenAndHist2D(model_names, variables, year_future , period )
+tmp <- OpenAndHist2D_range(model_names, variables, year_future , period, range_var_final)
 
 pdf_matrix <- tmp[[1]]
 kde_models <- pdf_matrix[ , , , -ref_index]

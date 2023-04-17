@@ -21,7 +21,7 @@
 #'
 #' @import ncdf4
 #' @export
-OpenAndHist2D <- function (model_names, variables,
+OpenAndHist2D_range <- function (model_names, variables,
                               year_interest, period, range_var) {
 
   # Initialize data structures
@@ -31,7 +31,6 @@ OpenAndHist2D <- function (model_names, variables,
                            length(model_names)))
   y_breaks <- array(0, c(length(lon), length(lat), nbins1d+1,
                            length(model_names)))
-  range_var <- list()
 
 
 
