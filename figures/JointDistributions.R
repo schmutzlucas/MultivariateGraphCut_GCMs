@@ -110,8 +110,8 @@ ggplot(melted_data, aes(x = x, y = y, fill = value)) +
   pr_max <- max(125)
   pr_limit <- c(0, pr_max)
 
-  lon <- 18
-  lat <- 85
+  lon_interest <- 18
+  lat_interest <- 85
 
   #Color scale limits
   col_lim <- c(0,500)
@@ -124,11 +124,11 @@ ggplot(melted_data, aes(x = x, y = y, fill = value)) +
   year_present <- 1970:2014
   yyyy <- substr(as.character(nc.get.time.series(nc)), 1, 4)
   iyyyy <- which(yyyy %in% year_present)
-  tas <- ncvar_get(nc, var, start = c(lon, lat, min(iyyyy)), count = c(1, 1, length(iyyyy)))
+  tas <- ncvar_get(nc, var, start = c(lon_interest, lat_interest, min(iyyyy)), count = c(1, 1, length(iyyyy)))
 
   var <- 'pr'
   nc <- nc_open('data/CMIP6/IPSL-CM6A-LR/pr/pr_IPSL-CM6A-LR_historical_r1i1p1f1_19500101-20141230_merged_regridded_v20180803.nc')
-  pr <- ncvar_get(nc, var, start = c(lon, lat, min(iyyyy)), count = c(1, 1, length(iyyyy)))
+  pr <- ncvar_get(nc, var, start = c(lon_interest, lat_interest, min(iyyyy)), count = c(1, 1, length(iyyyy)))
   pr <- pr * 86400
 
 
@@ -172,11 +172,11 @@ ggplot(melted_data, aes(x = x, y = y, fill = value)) +
   year_present <- 1970:2014
   yyyy <- substr(as.character(nc.get.time.series(nc)), 1, 4)
   iyyyy <- which(yyyy %in% year_present)
-  tas <- ncvar_get(nc, var, start = c(lon, lat, min(iyyyy)), count = c(1, 1, length(iyyyy)))
+  tas <- ncvar_get(nc, var, start = c(lon_interest, lat_interest, min(iyyyy)), count = c(1, 1, length(iyyyy)))
 
   var <- 'pr'
   nc <- nc_open('data/CMIP6/MIROC6/pr/pr_MIROC6_historical_r1i1p1f1_19500101-20141230_merged_regridded_v20191016.nc')
-  pr <- ncvar_get(nc, var, start = c(lon, lat, min(iyyyy)), count = c(1, 1, length(iyyyy)))
+  pr <- ncvar_get(nc, var, start = c(lon_interest, lat_interest, min(iyyyy)), count = c(1, 1, length(iyyyy)))
   pr <- pr * 86400
 
 
@@ -217,11 +217,11 @@ ggplot(melted_data, aes(x = x, y = y, fill = value)) +
   year_present <- 1970:2014
   yyyy <- substr(as.character(nc.get.time.series(nc)), 1, 4)
   iyyyy <- which(yyyy %in% year_present)
-  tas <- ncvar_get(nc, var, start = c(lon, lat, min(iyyyy)), count = c(1, 1, length(iyyyy)))
+  tas <- ncvar_get(nc, var, start = c(lon_interest, lat_interest, min(iyyyy)), count = c(1, 1, length(iyyyy)))
 
   var <- 'pr'
   nc <- nc_open('data/CMIP6/NorESM2-MM/pr/pr_NorESM2-MM_historical_r1i1p1f1_19500101-20141230_merged_regridded_v20191108.nc')
-  pr <- ncvar_get(nc, var, start = c(lon, lat, min(iyyyy)), count = c(1, 1, length(iyyyy)))
+  pr <- ncvar_get(nc, var, start = c(lon_interest, lat_interest, min(iyyyy)), count = c(1, 1, length(iyyyy)))
   pr <- pr * 86400
 
 
@@ -262,11 +262,11 @@ ggplot(melted_data, aes(x = x, y = y, fill = value)) +
   year_present <- 1970:2014
   yyyy <- substr(as.character(nc.get.time.series(nc)), 1, 4)
   iyyyy <- which(yyyy %in% year_present)
-  tas <- ncvar_get(nc, var, start = c(lon, lat, min(iyyyy)), count = c(1, 1, length(iyyyy)))
+  tas <- ncvar_get(nc, var, start = c(lon_interest, lat_interest, min(iyyyy)), count = c(1, 1, length(iyyyy)))
 
   var <- 'pr'
   nc <- nc_open('data/CMIP6/UKESM1-0-LL/pr/pr_UKESM1-0-LL_historical_r1i1p1f2_19500101-20141230_merged_regridded_v20190627.nc')
-  pr <- ncvar_get(nc, var, start = c(lon, lat, min(iyyyy)), count = c(1, 1, length(iyyyy)))
+  pr <- ncvar_get(nc, var, start = c(lon_interest, lat_interest, min(iyyyy)), count = c(1, 1, length(iyyyy)))
   pr <- pr * 86400
 
 
@@ -336,7 +336,7 @@ ggplot(melted_data, aes(x = x, y = y, fill = value)) +
 
   final_plot_with_title
 
-  name <- paste0('figure/distrib_plot' , lon, lat )
+  name <- paste0('figure/distrib_plot' , lon_interest, lat_interest )
   ggsave(paste0(name, '.png'), plot = final_plot_with_title, width = 30, height = 21, units = "cm", dpi = 300)
   ggsave(paste0(name, '.pdf'), plot = final_plot_with_title, width = 30, height = 21, units = "cm", dpi = 300)
 }

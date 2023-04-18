@@ -89,6 +89,21 @@ for (model_name in model_names) {
   m <- m + 1
 }
 
+
+# Computing the sum of hellinger distances between models and reference --> used as datacost
+MMM_h_dist_future <- array(data = 0, dim = dim(MinBias_labels))
+
+# Loop through grip-points
+  for (i in 1:360) {
+    for (j in 1:181) {
+      # Compute Hellinger distance
+      h_dist_unchecked <- sqrt(sum((sqrt(MMM_KDE[i,j, ]) - sqrt(kde_ref[i, j, ]))^2)) / sqrt(2)
+
+      # Replace NaN with 0
+      MMM_h_dist_future[i, j] <- replace(h_dist_unchecked, is.nan(h_dist_unchecked), 0)
+    }
+  }
+
 # Get the current date and time
 current_time <- Sys.time()
 
@@ -96,7 +111,7 @@ current_time <- Sys.time()
 formatted_time <- format(current_time, "%Y%m%d%H%M")
 
 # Concatenate the formatted time string with your desired filename
-filename <- paste0(formatted_time, "_my_workspace_with_hdist_future.RData")
+filename <- paste0(formatted_time, "_my_workspace_with_hdist_future_mmm.RData")
 
 # Save the workspace using the generated filename
 save.image(file = filename, compress = FALSE)

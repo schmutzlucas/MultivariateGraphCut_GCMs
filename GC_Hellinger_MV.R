@@ -15,6 +15,8 @@ source_code_dir <- 'functions/' #The directory where all functions are saved.
 file_paths <- list.files(source_code_dir, full.names = T)
 for(path in file_paths){source(path)}
 
+range_var_final <- readRDS('ranges/range_var_final_7Models_1975-2014.rds')
+
 # Setting global variables
 lon <<- 0:359
 lat <<- -90:90
@@ -47,13 +49,13 @@ ref_index <<- 1
 # model_names <- basename(model_names)
 
 # Method 2
-model_names <- c('GFDL-ESM4',
-                 'FGOALS-f3-L',
-                 'MPI-ESM1-2-HR',
-                 'ACCESS-CM2',
-                 'ACCESS-ESM1-5',
-                 'INM-CM5-0',
-                 'MIROC6')
+model_names <- c(                 'MIROC6',
+                                  'GFDL-ESM4',
+                                  'FGOALS-f3-L',
+                                  'MPI-ESM1-2-HR',
+                                  'ACCESS-CM2',
+                                  'ACCESS-ESM1-5',
+                                  'INM-CM5-0')
 
 
 tmp <- OpenAndHist2D_range(model_names, variables, year_present , period, range_var_final)
@@ -61,6 +63,7 @@ tmp <- OpenAndHist2D_range(model_names, variables, year_present , period, range_
 pdf_matrix <- tmp[[1]]
 kde_models <- pdf_matrix[ , , , -ref_index]
 kde_ref <- pdf_matrix[ , , , ref_index]
+rm(pdf_matrix)
 range_matrix <- tmp[[2]]
 x_breaks <- tmp[[3]]
 y_breaks <- tmp[[4]]
@@ -162,6 +165,61 @@ MinBiasHellinger <- GraphCutHellinger2D(kde_ref = kde_ref,
 
 
 
+
+
+
+tmp <- OpenAndHist2D_range(model_names, variables, year_future , period, range_var_final)
+
+pdf_matrix <- tmp[[1]]
+kde_models <- pdf_matrix[ , , , -ref_index]
+kde_ref <- pdf_matrix[ , , , ref_index]
+range_matrix <- tmp[[2]]
+x_breaks <- tmp[[3]]
+y_breaks <- tmp[[4]]
+
+tm(tmp)
+
+# Choose the reference in the models
+reference_name <<- model_names[ref_index]
+model_names <<- model_names[-ref_index]
+
+
+# Computing the sum of hellinger distances between models and reference --> used as datacost
+h_dist_future <- array(data = 0, dim = c(length(lon), length(lat),
+                                         length(model_names)))
+
+# Loop through variables and models
+m <- 1
+for (model_name in model_names) {
+  for (i in seq_along(lon)) {
+    for (j in seq_along(lat)) {
+      # Compute Hellinger distance
+      h_dist_unchecked <- sqrt(sum((sqrt(kde_models[i, j, , m]) - sqrt(kde_ref[i, j, ]))^2)) / sqrt(2)
+
+      # Replace NaN with 0
+      h_dist_future[i, j, m] <- replace(h_dist_unchecked, is.nan(h_dist_unchecked), 0)
+    }
+  }
+  m <- m + 1
+}
+
+
+# Computing the sum of hellinger distances between models and reference --> used as datacost
+MMM_h_dist_future <- array(data = 0, dim = dim(MinBias_labels))
+
+# Loop through grip-points
+  for (i in 1:360) {
+    for (j in 1:181) {
+      # Compute Hellinger distance
+      h_dist_unchecked <- sqrt(sum((sqrt(MMM_KDE[i,j, ]) - sqrt(kde_ref[i, j, ]))^2)) / sqrt(2)
+
+      # Replace NaN with 0
+      MMM_h_dist_future[i, j] <- replace(h_dist_unchecked, is.nan(h_dist_unchecked), 0)
+    }
+  }
+
+
+
 MMM <- list()
 MMM$tas <- apply(models_matrix$future[,,,2], c(1, 2), mean)
 
@@ -178,6 +236,7 @@ for(var in variables){
 }
 GC_hellinger_projections$tas <- matrix(GC_hellinger_projections$tas, nrow = 360)
 GC_hellinger_projections$pr <- matrix(GC_hellinger_projections$pr * 86400, nrow = 360)
+
 
 
 
@@ -202,7 +261,7 @@ current_time <- Sys.time()
 formatted_time <- format(current_time, "%Y%m%d%H%M")
 
 # Concatenate the formatted time string with your desired filename
-filename <- paste0(formatted_time, "_my_workspace.RData")
+filename <- paste0(formatted_time, "_my_workspace_MIROC6.RData")
 
 # Save the workspace using the generated filename
 save.image(file = filename, compress = FALSE)
