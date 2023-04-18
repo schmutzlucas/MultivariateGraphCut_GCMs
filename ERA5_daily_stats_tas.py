@@ -13,7 +13,6 @@ def cds_api_call_new_api(variable, year, month, name):
         "tool.toolbox.orchestrator.workflow",
         params={
             "realm": "c3s",
-            "project": "reanalysis-era5-single-levels",
             "version": "master",
             "kwargs": {
                 "dataset": "reanalysis-era5-single-levels",

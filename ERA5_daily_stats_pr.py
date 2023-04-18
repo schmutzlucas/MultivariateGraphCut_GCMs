@@ -13,7 +13,6 @@ def cds_api_call_new_api(variable, year, month, name):
         "tool.toolbox.orchestrator.workflow",
         params={
             "realm": "c3s",
-            "project": "reanalysis-era5-single-levels",
             "version": "master",
             "kwargs": {
                 "dataset": "reanalysis-era5-single-levels",
@@ -32,7 +31,7 @@ def cds_api_call_new_api(variable, year, month, name):
     c.download(result, name)
 
 
-variables = ['2m_temperature']
+variables = ['total_precipitation']
 
 years_int = list(range(1975, 2015))
 years = list(map(str, years_int))
@@ -42,7 +41,7 @@ months = list(map(str, months_int))
 
 
 def main():
-    with ThreadPoolExecutor(max_workers=8) as exe:
+    with ThreadPoolExecutor(max_workers=2) as exe:
         for variable in variables:
             os.chdir(dir)
             var_dir = os.path.abspath(f"{variable}")
