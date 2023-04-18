@@ -10,25 +10,23 @@ c = cdsapi.Client()
 
 def cds_api_call_new_api(variable, year, month, name):
     result = c.service(
-        "tool.toolbox.orchestrator.workflow",
-        params={
-            "realm": "c3s",
-            "version": "master",
-            "kwargs": {
-                "dataset": "reanalysis-era5-single-levels",
-                "product_type": "reanalysis",
-                "variable": variable,
-                "statistic": "daily_mean",
-                "year": year,
-                "month": month,
-                "time_zone": "UTC+00:00",
-                "frequency": "1-hourly",
-                "grid": "1.00/1.00",
-                "area": {"lat": [-90, 90], "lon": [-180, 180]}
-            },
-            "workflow_name": "application"
-        })
-    c.download(result, name)
+        "tool.toolbox.orchestrator.run_workflow.user-apps.app-c3s-daily-era5-statistics",
+        kwargs={
+            "dataset": "reanalysis-era5-single-levels",
+            "product_type": "reanalysis",
+            "variable_e5sl": variable,
+            "statistic": "daily_mean",
+            "year_e5sl": year,
+            "month": month,
+            "time_zone": "UTC+00:00",
+            "frequency": "1-hourly",
+            "grid_e5": "3.0/3.0",
+            "pressure_level_e5sl": "-",
+            "area": {"lat": [-90, 90], "lon": [-180, 180]},
+        },
+        workflow_name="application",
+    )
+    c.download(result)
 
 
 variables = ['2m_temperature']
