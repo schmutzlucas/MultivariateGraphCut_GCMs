@@ -42,10 +42,11 @@ variables <- c('pr', 'tas')
 ref_index <<- 1
 # Obtains the list of models from the model names or from a file
 # Method 1
-# # TODO This needs ajustements to remove prefixes and suffixes
 # dir_path <- paste0('data/CMIP6/')
 # model_names <- list.dirs(dir_path, recursive = FALSE)
 # model_names <- basename(model_names)
+
+# Method 2
 model_names <- c('GFDL-ESM4',
                  'FGOALS-f3-L',
                  'MPI-ESM1-2-HR',
