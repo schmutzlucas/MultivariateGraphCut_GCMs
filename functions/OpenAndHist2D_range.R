@@ -21,8 +21,8 @@
 #'
 #' @import ncdf4
 #' @export
-OpenAndHist2D <- function (model_names, variables,
-                              year_interest, period) {
+OpenAndHist2D_range <- function (model_names, variables,
+                              year_interest, period, range_var) {
 
   # Initialize data structures
   pdf_matrix <- array(0, c(length(lon), length(lat), nbins1d^2,
@@ -31,7 +31,6 @@ OpenAndHist2D <- function (model_names, variables,
                            length(model_names)))
   y_breaks <- array(0, c(length(lon), length(lat), nbins1d+1,
                            length(model_names)))
-  range_var <- list()
 
 
 
@@ -97,35 +96,6 @@ OpenAndHist2D <- function (model_names, variables,
           tmp2 <- log2((tmp2 * 86400) + 1)
         }
 
-        if (m == 1) {
-
-          if (i == 1 && j == 1) {
-            range_var[[variables[1]]] <- array(data = NA, dim = c(length(lon), length(lat), 2))
-            range_var[[variables[2]]] <- array(data = NA, dim = c(length(lon), length(lat), 2))
-          }
-          if (variables[1] == 'pr') {
-            range_var[[variables[1]]][i, j, 1] <- 0
-            range_var[[variables[1]]][i, j, 2] <- range(tmp1)[2] * 1.2
-
-            range_var[[variables[2]]][i, j, 1] <- range(tmp2)[1] - diff(range(tmp2)) * 0.3
-            range_var[[variables[2]]][i, j, 2] <- range(tmp2)[2] + diff(range(tmp2)) * 0.3
-          }
-          else if (variables[2] == 'pr') {
-            range_var[[variables[2]]][i, j, 1] <- 0
-            range_var[[variables[2]]][i, j, 2] <- range(tmp2)[2] * 1.2
-
-            range_var[[variables[1]]][i, j, 1] <- range(tmp1)[1] - diff(range(tmp1)) * 0.3
-            range_var[[variables[1]]][i, j, 2] <- range(tmp1)[2] + diff(range(tmp1)) * 0.3
-          }
-          else{
-            range_var[[variables[1]]][i, j, 1] <- range(tmp1)[1] - diff(range(tmp1)) * 0.3
-            range_var[[variables[1]]][i, j, 2] <- range(tmp1)[2] + diff(range(tmp1)) * 0.3
-
-            range_var[[variables[2]]][i, j, 1] <- range(tmp2)[1] - diff(range(tmp2)) * 0.3
-            range_var[[variables[2]]][i, j, 2] <- range(tmp2)[2] + diff(range(tmp2)) * 0.3
-          }
-
-        }
         # Compute the breaks
         breaks1 <- seq(from = range_var[[variables[1]]][i, j, 1],
                        to = range_var[[variables[1]]][i, j, 2],
@@ -135,17 +105,6 @@ OpenAndHist2D <- function (model_names, variables,
                        to = range_var[[variables[2]]][i, j, 2],
                        length.out = nbins1d + 1)
 
-        # Replace values lower or higher than the range with min or max
-        min_range <- range_var[[variables[1]]][i, j, 1]
-        max_range <- range_var[[variables[1]]][i, j, 2]
-        tmp1[tmp1 < min_range] <- min_range
-        tmp1[tmp1 > max_range] <- max_range
-
-        # Replace values lower or higher than the range with min or max
-        min_range <- range_var[[variables[2]]][i, j, 1]
-        max_range <- range_var[[variables[2]]][i, j, 2]
-        tmp2[tmp2 < min_range] <- min_range
-        tmp2[tmp2 > max_range] <- max_range
 
         # Compute the histogram using the modified data
         dens_tmp <- hist2(tmp1, tmp2, xbreaks = breaks1, ybreaks = breaks2, plot = FALSE)

@@ -157,3 +157,30 @@ library(squash)
 terst <- hist2(vec1, vec2, xbreaks = breaks1, ybreaks = breaks2, plot = FALSE)
 
 
+
+
+
+  title <- 'IPSL-CM6A-LR'
+
+  df <- data.frame(x=tas, y=pr+1)
+
+  p1 <- ggplot(df, aes(x=x, y=y) ) +
+    geom_bin2d(bins = 64) +
+    scale_fill_gradientn(colors = viridis(64), name = 'count', limits = col_lim) +
+    labs(title = title) +
+    xlab('Temperature [K]')+
+    ylab('Precipitation [mm/day]') +
+    theme_bw()+
+    theme(legend.key.size = unit(0.5, 'cm'), #change legend key size
+          legend.key.height = unit(1, 'cm'), #change legend key height
+          legend.key.width = unit(0.25, 'cm'), #change legend key width
+          legend.title = element_text(size=9), #change legend title font size
+          legend.text = element_text(size=7)) + #change legend text font size
+    theme(plot.title = element_text(size=16),
+          axis.text=element_text(size=7),
+          axis.title=element_text(size=9),)+
+    scale_x_continuous(limits = c(tas_min, tas_max), expand = c(0, 0)) +
+    scale_y_log2(range = c(0, pr_max))+
+    easy_center_title()
+
+p1
