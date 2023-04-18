@@ -3,15 +3,15 @@
 {
 
 
-  tas_min <- min(250)
-  tas_max <- max(302)
+  tas_min <- min(290)
+  tas_max <- max(305)
   tas_limit <- c(tas_min, tas_max)
   pr_max <- max(log2(180))
   pr_limit <- c(0, pr_max)
 
-  #Vienna
-  lon <- 16
-  lat <- 138
+  # #Vienna
+  # lon <- 16
+  # lat <- 138
 
   # # Lausanne
   # lon <- 6
@@ -24,6 +24,10 @@
   #   # Idea 1
   # lon <- 95
   # lat <- 90 +27
+
+    #   # Idea 1
+   lon <- 114
+   lat <- 94
 
 
 

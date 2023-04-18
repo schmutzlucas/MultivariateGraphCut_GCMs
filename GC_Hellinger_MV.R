@@ -159,6 +159,8 @@ MinBiasHellinger <- GraphCutHellinger2D(kde_ref = kde_ref,
                                         weight_smooth = 0,
                                         verbose = TRUE)
 
+h_dist_present <- GC_result_hellinger$h_dist
+
 
 
 # # Get the current date and time
