@@ -1,4 +1,4 @@
-
+# new color : #004DAB
 h_dist_map <- array(NA, dim = dim(GC_result_hellinger$label_attribution))
 
 for(j in seq_along(variables)){
@@ -300,7 +300,7 @@ for (model_name in model_names){
     geom_tile(data=test_df, aes(x=lon, y=lat-90, fill=Bias))+
     labs(subtitle = 'Projection period : 1999 - 2014')+
     ggtitle(paste0(model_names[i], ': Mean Hellinger distance = ', round(mean(h_dist_map), 2)))+
-    scale_fill_gradient(low = "white", high = "#0072B2", limits = c(0.1, 0.70), oob = scales::squish)+
+    scale_fill_gradient(low = "white", high = "#015a8c", limits = c(0.1, 0.70), oob = scales::squish)+
     borders("world2", colour = 'black', lwd = 0.12) +
     scale_x_continuous(, expand = c(0, 0)) +
     scale_y_continuous(, expand = c(0,0))+
@@ -345,7 +345,7 @@ p1 <- ggplot() +
   geom_tile(data=test_df, aes(x=lon, y=lat-90, fill=Bias))+
   labs(subtitle = 'Projection period : 1999 - 2014')+
   ggtitle(paste0('GraphCut Result', ': Mean Hellinger distance = ', round(mean(h_dist_map), 2)))+
-  scale_fill_gradient(low = "white", high = "#0072B2", limits = c(0.1, 0.70), oob = scales::squish)+
+  scale_fill_gradient(low = "white", high = "#015a8c", limits = c(0.1, 0.70), oob = scales::squish)+
   borders("world2", colour = 'black', lwd = 0.12) +
   scale_x_continuous(, expand = c(0, 0)) +
   scale_y_continuous(, expand = c(0,0))+
@@ -391,7 +391,7 @@ p1 <- ggplot() +
   geom_tile(data=test_df, aes(x=lon, y=lat-90, fill=Bias))+
   labs(subtitle = 'Projection period : 1999 - 2014')+
   ggtitle(paste0('GraphCut Result', ': Mean Hellinger distance = ', round(mean(h_dist_map), 2)))+
-  scale_fill_gradient(low = "white", high = "#0072B2", limits = c(0.1, 0.70), oob = scales::squish)+
+  scale_fill_gradient(low = "white", high = "#015a8c", limits = c(0.1, 0.70), oob = scales::squish)+
   borders("world2", colour = 'black', lwd = 0.12) +
   scale_x_continuous(, expand = c(0, 0)) +
   scale_y_continuous(, expand = c(0,0))+

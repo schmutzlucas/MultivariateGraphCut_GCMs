@@ -99,7 +99,6 @@ GraphCutHellinger2D <- function(
       int numPix          = extraData["numPix"];
       float weight        = extraData["weight"];
       NumericVector data  = extraData["data"];
-      //std::cout << "Test: " << numPix << std::endl;
 
       return(weight * data[p + numPix * l]);
     }',

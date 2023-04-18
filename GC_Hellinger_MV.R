@@ -160,7 +160,25 @@ MinBiasHellinger <- GraphCutHellinger2D(kde_ref = kde_ref,
                                         weight_smooth = 0,
                                         verbose = TRUE)
 
-h_dist_present <- GC_result_hellinger$h_dist
+
+
+MMM <- list()
+MMM$tas <- apply(models_matrix$future[,,,2], c(1, 2), mean)
+
+MMM$pr <- apply(models_matrix$future[,,,1]*86400, c(1, 2), mean)
+
+GC_hellinger_projections <- list()
+j <- 1
+for(var in variables){
+  for(l in 0:(length(model_names))){
+    islabel <- which(GC_result_hellinger$label_attribution == l)
+    GC_hellinger_projections[[var]][islabel] <- models_matrix$future[,,(l),j][islabel]
+  }
+  j <- j + 1
+}
+GC_hellinger_projections$tas <- matrix(GC_hellinger_projections$tas, nrow = 360)
+GC_hellinger_projections$pr <- matrix(GC_hellinger_projections$pr * 86400, nrow = 360)
+
 
 
 
