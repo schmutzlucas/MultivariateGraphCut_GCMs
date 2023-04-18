@@ -3,7 +3,7 @@ import cdsapi
 import os
 import calendar
 
-dir = r'/mnt/y/LucasSchmutz/MultivariateGraphCut_GCMs/data/ERA5'
+dir = r'/mnt/w/LucasSchmutz/MultivariateGraphCut_GCMs/data/ERA5'
 #dir = r'w:\LucasSchmutz\mHM\volta_data\raw_data\era5'
 os.chdir(dir)
 

@@ -42,7 +42,7 @@ months = list(map(str, months_int))
 
 
 def main():
-    with ThreadPoolExecutor(max_workers=24) as exe:
+    with ThreadPoolExecutor(max_workers=8) as exe:
         for variable in variables:
             os.chdir(dir)
             var_dir = os.path.abspath(f"{variable}")

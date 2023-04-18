@@ -3,20 +3,20 @@ from multiprocessing import Pool
 import glob
 import os
 
-vars = ['pre','temp']
+vars = ['pr','tas']
 
 def process_variable(var):
     print(f'Processing variable: {var}...')
-    if var == 'pre':
-        inDir  = 'X:\\LoicGerber\\data\\raw_data\\era5\\total_precipitation\\'
-        outDir = 'X:\\LoicGerber\\data\\processed_data\\era5\\total_precipitation\\'
+    if var == 'pr':
+        inDir  = 'W:\LucasSchmutz\MultivariateGraphCut_GCMs\data'
+        outDir = 'W:\LucasSchmutz\MultivariateGraphCut_GCMs\data\ERA5'
         if not os.path.exists(outDir):
             os.makedirs(os.path.join(outDir,'daily'))
             print(f'Output directory for {var} created')
-    elif var == 'temp':
+    elif var == 'tas':
         # Define the directory where your netcdf files are located
-        inDir  = 'X:\\LoicGerber\\data\\raw_data\\era5\\2m_temperature\\'
-        outDir = 'X:\\LoicGerber\\data\\processed_data\\era5\\2m_temperature\\'
+        inDir  = 'W:\LucasSchmutz\MultivariateGraphCut_GCMs\data'
+        outDir = 'W:\LucasSchmutz\MultivariateGraphCut_GCMs\data\ERA5'
         if not os.path.exists(outDir):
             os.makedirs(os.path.join(outDir,'daily'))
             print(f'Output directory for {var} created')
@@ -42,15 +42,15 @@ def process_variable(var):
             name_tavg = name + '_daily_tavg'
             name_tmax = name + '_daily_tmax'
             name_tmin = name + '_daily_tmin'
-            daily_tavg = ds.resample(time='D').mean()-273.15
-            daily_tmax = ds.resample(time='D').max()-273.15
-            daily_tmin = ds.resample(time='D').min()-273.15
+            daily_tavg = ds.resample(time='D').mean()
+            daily_tmax = ds.resample(time='D').max()
+            daily_tmin = ds.resample(time='D').min()
             daily_tavg = daily_tavg.rename({var_name: 'tavg'})
             daily_tmax = daily_tmax.rename({var_name: 'tmax'})
             daily_tmin = daily_tmin.rename({var_name: 'tmin'})
-            daily_tavg['tavg'].attrs['units'] = '°C'
-            daily_tmax['tmax'].attrs['units'] = '°C'
-            daily_tmin['tmin'].attrs['units'] = '°C'
+            daily_tavg['tavg'].attrs['units'] = 'K'
+            daily_tmax['tmax'].attrs['units'] = 'K'
+            daily_tmin['tmin'].attrs['units'] = 'K'
             for data, file_name in zip([daily_tavg, daily_tmax, daily_tmin], [name_tavg, name_tmax, name_tmin]):
                 print(f'Saving {file_name}...')
                 data.to_netcdf(os.path.join(outDir, 'daily', f'{file_name}.nc'))
