@@ -3,7 +3,7 @@
 {
 
 
-  tas_min <- min(290)
+  tas_min <- min(292)
   tas_max <- max(305)
   tas_limit <- c(tas_min, tas_max)
   pr_max <- max(log2(180))
@@ -34,11 +34,11 @@
 
 
   #Color scale limits
-  col_lim <- c(0,60)
+  col_lim <- c(0,80)
 
   ## Model 1
 
-  nc <- nc_open('data/CMIP6/IPSL-CM6A-LR/tas/tas_IPSL-CM6A-LR_historical_r1i1p1f1_19500101-20141230_merged_regridded_v20190614.nc')
+  nc <- nc_open('data/CMIP6/FGOALS-f3-L/tas/tas_FGOALS-f3-L_historical_r1i1p1f1_19500101-20141230_merged_regridded_v20191019.nc')
   var <- 'tas'
   # Temporal ranges
   year_present <- 1970:2014
@@ -47,7 +47,7 @@
   tas <- ncvar_get(nc, var, start = c(lon, lat, min(iyyyy)), count = c(1, 1, length(iyyyy)))
 
   var <- 'pr'
-  nc <- nc_open('data/CMIP6/IPSL-CM6A-LR/pr/pr_IPSL-CM6A-LR_historical_r1i1p1f1_19500101-20141230_merged_regridded_v20180803.nc')
+  nc <- nc_open('data/CMIP6/FGOALS-f3-L/pr/pr_FGOALS-f3-L_historical_r1i1p1f1_19500101-20141230_merged_regridded_v20191019.nc')
   pr <- ncvar_get(nc, var, start = c(lon, lat, min(iyyyy)), count = c(1, 1, length(iyyyy)))
   pr <- log2(pr * 86400 + 1)
 
@@ -57,11 +57,11 @@
 
 
 
-  title <- 'IPSL-CM6A-LR'
+  title <- 'FGOALS-f3-L'
 
   df <- data.frame(x=tas, y=pr)
 
-  p1 <- ggplot(df, aes(x=x, y=y))+
+  p2 <- ggplot(df, aes(x=x, y=y))+
     geom_bin2d(bins = 64) +
     scale_fill_gradientn(colors = viridis(64), name = 'count', limits = col_lim, oob = scales::squish) +
     labs(title = title) +
@@ -81,7 +81,6 @@
     easy_center_title()
 
 
-  p1
 
 
 
@@ -109,7 +108,7 @@
 
   df <- data.frame(x=tas, y=pr)
 
-  p2 <- ggplot(df, aes(x=x, y=y) ) +
+  p1 <- ggplot(df, aes(x=x, y=y) ) +
     geom_bin2d(bins = 64) +
     scale_fill_gradientn(colors = viridis(64), name = 'count', limits = col_lim, oob = scales::squish) +
     labs(title = title) +
@@ -132,7 +131,7 @@
 
   ## Model 3
 
-  nc <- nc_open('data/CMIP6/NorESM2-MM/tas/tas_NorESM2-MM_historical_r1i1p1f1_19500101-20141230_merged_regridded_v20191108.nc')
+  nc <- nc_open('data/CMIP6/MPI-ESM1-2-HR/tas/tas_MPI-ESM1-2-HR_historical_r1i1p1f1_19500101-20141230_merged_regridded_v20190710.nc')
   var <- 'tas'
   # Temporal ranges
   year_present <- 1970:2014
@@ -141,7 +140,7 @@
   tas <- ncvar_get(nc, var, start = c(lon, lat, min(iyyyy)), count = c(1, 1, length(iyyyy)))
 
   var <- 'pr'
-  nc <- nc_open('data/CMIP6/NorESM2-MM/pr/pr_NorESM2-MM_historical_r1i1p1f1_19500101-20141230_merged_regridded_v20191108.nc')
+  nc <- nc_open('data/CMIP6/MPI-ESM1-2-HR/pr/pr_MPI-ESM1-2-HR_historical_r1i1p1f1_19500101-20141230_merged_regridded_v20190710.nc')
   pr <- ncvar_get(nc, var, start = c(lon, lat, min(iyyyy)), count = c(1, 1, length(iyyyy)))
   pr <- log2(pr * 86400 + 1)
 
@@ -149,7 +148,7 @@
 
   #############
 
-  title <- 'NorESM2-MM'
+  title <- 'MPI-ESM1-2-HR'
 
   df <- data.frame(x=tas, y=pr)
 
@@ -177,7 +176,7 @@
 
   ## Model 4
 
-  nc <- nc_open('data/CMIP6/UKESM1-0-LL/tas/tas_UKESM1-0-LL_historical_r1i1p1f2_19500101-20141230_merged_regridded_v20190627.nc')
+  nc <- nc_open('data/CMIP6/INM-CM5-0/tas/tas_INM-CM5-0_historical_r1i1p1f1_19500101-20141230_merged_regridded_v20190610.nc')
   var <- 'tas'
   # Temporal ranges
   year_present <- 1970:2014
@@ -186,7 +185,7 @@
   tas <- ncvar_get(nc, var, start = c(lon, lat, min(iyyyy)), count = c(1, 1, length(iyyyy)))
 
   var <- 'pr'
-  nc <- nc_open('data/CMIP6/UKESM1-0-LL/pr/pr_UKESM1-0-LL_historical_r1i1p1f2_19500101-20141230_merged_regridded_v20190627.nc')
+  nc <- nc_open('data/CMIP6/INM-CM5-0/pr/pr_INM-CM5-0_historical_r1i1p1f1_19500101-20141230_merged_regridded_v20190610.nc')
   pr <- ncvar_get(nc, var, start = c(lon, lat, min(iyyyy)), count = c(1, 1, length(iyyyy)))
   pr <- log2(pr * 86400 + 1)
 
@@ -195,7 +194,7 @@
   #############
 
 
-  title <- 'UKESM1-0-LL'
+  title <- 'INM-CM5-0'
 
   df <- data.frame(x=tas, y=pr)
 
@@ -267,3 +266,5 @@
   ggsave(paste0(name, '.png'), plot = final_plot_with_title, width = 30, height = 21, units = "cm", dpi = 300)
   ggsave(paste0(name, '.pdf'), plot = final_plot_with_title, width = 30, height = 21, units = "cm", dpi = 300)
 }
+
+final_plot_with_title

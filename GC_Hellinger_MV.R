@@ -50,11 +50,8 @@ ref_index <<- 1
 
 # Method 2
 model_names <- c(                 'MIROC6',
-                                  'GFDL-ESM4',
                                   'FGOALS-f3-L',
                                   'MPI-ESM1-2-HR',
-                                  'ACCESS-CM2',
-                                  'ACCESS-ESM1-5',
                                   'INM-CM5-0')
 
 
@@ -93,6 +90,20 @@ models_matrix_nrm <- NormalizeVariables(models_matrix, variables, 'StdSc')
 
 reference_matrix_nrm <- list()
 reference_matrix_nrm <- NormalizeVariables(reference_matrix, variables, 'StdSc')
+
+
+# Get the current date and time
+
+current_time <- Sys.time()
+
+# Format the date and time as a string in the format 'yyyymmddhhmm'
+formatted_time <- format(current_time, "%Y%m%d%H%M")
+
+# Concatenate the formatted time string with your desired filename
+filename <- paste0(formatted_time, "_my_workspace_MIROC6_3Models_beforeOptim.RData")
+
+# Save the workspace using the generated filename
+save.image(file = filename, compress = FALSE)
 
 
 
@@ -154,6 +165,20 @@ GC_result <- GraphCutOptimization(reference = reference_matrix_nrm$present,
                                   weight_smooth = 1,
                                   verbose = TRUE)
 
+# Get the current date and time
+current_time <- Sys.time()
+
+# Format the date and time as a string in the format 'yyyymmddhhmm'
+formatted_time <- format(current_time, "%Y%m%d%H%M")
+
+# Concatenate the formatted time string with your desired filename
+filename <- paste0(formatted_time, "_my_workspace_MIROC6_3models.RData")
+
+# Save the workspace using the generated filename
+save.image(file = filename, compress = FALSE)
+
+
+
 # Graphcut labelling
 MinBiasHellinger <- list()
 MinBiasHellinger <- GraphCutHellinger2D(kde_ref = kde_ref,
@@ -166,22 +191,42 @@ MinBiasHellinger <- GraphCutHellinger2D(kde_ref = kde_ref,
 
 
 
+model_names <- c(                 'MIROC6',
+                                  'FGOALS-f3-L',
+                                  'MPI-ESM1-2-HR',
+                                  'INM-CM5-0')
 
 
+#TODO Move to the data loading section
 tmp <- OpenAndHist2D_range(model_names, variables, year_future , period, range_var_final)
 
 pdf_matrix <- tmp[[1]]
-kde_models <- pdf_matrix[ , , , -ref_index]
-kde_ref <- pdf_matrix[ , , , ref_index]
-range_matrix <- tmp[[2]]
-x_breaks <- tmp[[3]]
-y_breaks <- tmp[[4]]
-
-tm(tmp)
+kde_models_future <- pdf_matrix[ , , , -ref_index]
+kde_ref_future <- pdf_matrix[ , , , ref_index]
+range_matrix_future <- tmp[[2]]
+x_breaks_future <- tmp[[3]]
+y_breaks_future <- tmp[[4]]
+rm(pdf_matrix)
+rm(tmp)
 
 # Choose the reference in the models
 reference_name <<- model_names[ref_index]
 model_names <<- model_names[-ref_index]
+
+
+# Get the current date and time
+
+current_time <- Sys.time()
+
+# Format the date and time as a string in the format 'yyyymmddhhmm'
+formatted_time <- format(current_time, "%Y%m%d%H%M")
+
+# Concatenate the formatted time string with your desired filename
+filename <- paste0(formatted_time, "_my_workspace_MIROC6_3_modelsKDE_present-future.RData")
+
+# Save the workspace using the generated filename
+save.image(file = filename, compress = FALSE)
+
 
 
 # Computing the sum of hellinger distances between models and reference --> used as datacost
@@ -194,7 +239,7 @@ for (model_name in model_names) {
   for (i in seq_along(lon)) {
     for (j in seq_along(lat)) {
       # Compute Hellinger distance
-      h_dist_unchecked <- sqrt(sum((sqrt(kde_models[i, j, , m]) - sqrt(kde_ref[i, j, ]))^2)) / sqrt(2)
+      h_dist_unchecked <- sqrt(sum((sqrt(kde_models_future[i, j, , m]) - sqrt(kde_ref_future[i, j, ]))^2)) / sqrt(2)
 
       # Replace NaN with 0
       h_dist_future[i, j, m] <- replace(h_dist_unchecked, is.nan(h_dist_unchecked), 0)
@@ -202,6 +247,22 @@ for (model_name in model_names) {
   }
   m <- m + 1
 }
+
+n1 <- dim(kde_models)[1]
+n2 <- dim(kde_models)[2]
+n3 <- dim(kde_models)[3]
+n4 <- dim(kde_models)[4]
+
+MMM_KDE_future <- array(0, dim = c(n1, n2, n3))
+
+for (i in 1:n1) {
+  for (j in 1:n2) {
+    for (k in 1:n3) {
+      MMM_KDE_future[i,j,k] <- mean(kde_models_future[i,j,k,])
+    }
+  }
+}
+
 
 
 # Computing the sum of hellinger distances between models and reference --> used as datacost
@@ -211,7 +272,7 @@ MMM_h_dist_future <- array(data = 0, dim = dim(MinBias_labels))
   for (i in 1:360) {
     for (j in 1:181) {
       # Compute Hellinger distance
-      h_dist_unchecked <- sqrt(sum((sqrt(MMM_KDE[i,j, ]) - sqrt(kde_ref[i, j, ]))^2)) / sqrt(2)
+      h_dist_unchecked <- sqrt(sum((sqrt(MMM_KDE_future[i,j, ]) - sqrt(kde_ref[i, j, ]))^2)) / sqrt(2)
 
       # Replace NaN with 0
       MMM_h_dist_future[i, j] <- replace(h_dist_unchecked, is.nan(h_dist_unchecked), 0)
@@ -239,21 +300,6 @@ GC_hellinger_projections$pr <- matrix(GC_hellinger_projections$pr * 86400, nrow 
 
 
 
-
-
-# # Get the current date and time
-# current_time <- Sys.time()
-#
-# # Format the date and time as yyyymmddhhmm
-# formatted_time <- format(current_time, "%Y%m%d%H%M")
-#
-# # Create the filename with the formatted timestamp and "GC_results" at the end
-# filename <- paste0(formatted_time, "_GC_results_hellinger.rds", compress = FALSE)
-#
-# # Save the RDS file with the timestamped filename
-# #saveRDS(GC_result, file = filename)
-
-
 # Get the current date and time
 current_time <- Sys.time()
 
@@ -261,7 +307,7 @@ current_time <- Sys.time()
 formatted_time <- format(current_time, "%Y%m%d%H%M")
 
 # Concatenate the formatted time string with your desired filename
-filename <- paste0(formatted_time, "_my_workspace_MIROC6.RData")
+filename <- paste0(formatted_time, "_my_workspace_MIROC6_final_3_models.RData")
 
 # Save the workspace using the generated filename
 save.image(file = filename, compress = FALSE)

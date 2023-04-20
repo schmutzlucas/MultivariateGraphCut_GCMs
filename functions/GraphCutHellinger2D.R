@@ -148,7 +148,6 @@ GraphCutHellinger2D <- function(
   for(i in seq_along(mae_list)){
     mae_list[[i]] <- mean(abs(h_dist[,,i]))
   }
-  print(mae_list)
   best_label <- which.min(mae_list)-1 # in C++ label indices start at 0
   print(best_label)
   for(z in 0:((width*height)-1)){
