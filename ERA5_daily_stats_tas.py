@@ -3,7 +3,7 @@ import cdsapi
 import os
 import calendar
 
-dir = dir = r'/mnt/y/LucasSchmutz/MultivariateGraphCut_GCMs/data/ERA5/raw'
+dir = dir = r'/mnt/w/LucasSchmutz/MultivariateGraphCut_GCMs/data/ERA5/raw'
 os.chdir(dir)
 
 c = cdsapi.Client()
