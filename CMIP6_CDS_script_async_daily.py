@@ -29,8 +29,7 @@ with open('model_list.txt', 'r') as file:
     model_list = file.read().splitlines()
 
 # Define the list of variables to retrieve
-variable_list = ['pr', 'tas', 'uas', 'vas',
-                 'tasmax', 'tasmin']
+variable_list = ['near_surface_wind_speed']
 
 # Define the list of experiments to retrieve data for
 experiment = ['historical', 'ssp5_8_5']

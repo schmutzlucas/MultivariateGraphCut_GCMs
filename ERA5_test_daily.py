@@ -33,4 +33,5 @@ for year in YEARS:
                 "workflow_name": "application"
             }
         )
-        result.retrieve()
+
+        c.download(result)
