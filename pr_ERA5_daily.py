@@ -54,7 +54,7 @@ variable_list = ['total_precipitation']
 
 # Define the list of years to retrieve data for
 # Define the list of years to retrieve data for
-YEARS = list(map(str, range(1960, 2024)))
+YEARS = list(map(str, range(1972, 1973)))
 
 
 # Define the list of months to retrieve data for
