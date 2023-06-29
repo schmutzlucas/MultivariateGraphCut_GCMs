@@ -52,7 +52,25 @@ calculate_ranges <- function(variable, model_names, data_dir, period, year_inter
   return(range_var)
 }
 
+
+model_names <- model_names <- c(  'ERA5',
+                                  'MIROC6',
+                                  'FGOALS-f3-L',
+                                  'MPI-ESM1-2-HR')
+
+# Setting global variables
+lon <- 0:359
+lat <- -90:90
+# Temporal ranges
 year_interest <- 1975:2014
+# data directory
+data_dir <- 'data/CMIP6/'
+
+# Period
+period <- 'historical'
+
+# List of variables
+variables <- c('pr', 'tas')
 
 # Calculate ranges for the first variable
 range_var_1 <- calculate_ranges(variables[1], model_names, data_dir, period, year_interest, lon, lat)
