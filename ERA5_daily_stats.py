@@ -54,7 +54,7 @@ variable_list = ['2m_temperature']
 
 # Define the list of years to retrieve data for
 # Define the list of years to retrieve data for
-YEARS = list(map(str, range(1963, 2024)))
+YEARS = list(map(str, range(1961, 1963)))
 
 
 # Define the list of months to retrieve data for
