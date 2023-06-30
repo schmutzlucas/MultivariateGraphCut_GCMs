@@ -54,7 +54,9 @@ for model_dir in os.listdir(root_dir):
             input_filename = os.path.basename(input_files[0])
             var = input_filename.split("_")[0]
             model = input_filename.split("_")[2]
-            output_filename = f"{var}_{model}_historical-ssp585_{start_date}-{end_date}_merged.nc"
+            ens = input_filename.split("_")[4]
+            version = input_filename.split("_")[-1].split(".")[0]
+            output_filename = f"{var}_{model}_{ens}_{start_date}-{end_date}_merged.nc"
 
             # Create output directory with model_dir and var_dir structure
             output_dir = os.path.join(output_base_dir, model_dir, var_dir)
@@ -62,8 +64,8 @@ for model_dir in os.listdir(root_dir):
             output_path = os.path.join(output_dir, output_filename)
 
             # Define CDO command
-            cdo_command = ["cdo", "-O", "-mergetime"] + input_files + [output_path]
+            cdo_command = ["cdo", "-O", "mergetime"] + input_files + [output_path]
 
-            # Execute the CDO command using subprocess
+            # Execute the CDO command using subprocess asynchronously
             subprocess.run(cdo_command)
 
