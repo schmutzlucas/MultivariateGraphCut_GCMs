@@ -15,7 +15,7 @@ source_code_dir <- 'functions/' #The directory where all functions are saved.
 file_paths <- list.files(source_code_dir, full.names = T)
 for(path in file_paths){source(path)}
 
-range_var_final <- readRDS('ranges/range_var_final_7Models_1975-2014.rds')
+range_var_final <- readRDS('ranges/range_var_final_7Models_1975-2022.rds')
 
 # Setting global variables
 lon <<- 0:359
@@ -24,13 +24,12 @@ lat <<- -90:90
 year_present <<- 1985:1999
 year_future <<- 2000:2014
 # data directory
-data_dir <<- 'data/CMIP6/'
+data_dir <<- 'data/CMIP6_merged/'
 
 # Bins for the kde
 nbins1d <<- 32
 
-# Period
-period <<- 'historical'
+
 
 # List of the variable used
 # variables <- c('tas', 'tasmax',
@@ -49,13 +48,14 @@ ref_index <<- 1
 # model_names <- basename(model_names)
 
 # Method 2
-model_names <- c(                 'MIROC6',
-                                  'FGOALS-f3-L',
-                                  'MPI-ESM1-2-HR',
-                                  'INM-CM5-0')
+model_names <- c(  'ERA5',
+                                  'MIROC6',
+                                  'IPSL-CM6A-LR',
+                                  'NorESM2-MM',
+                                  'UKESM1-0-LL')
 
 
-tmp <- OpenAndHist2D_range(model_names, variables, year_present , period, range_var_final)
+tmp <- OpenAndHist2D_range(model_names, variables, year_present, range_var_final)
 
 pdf_matrix <- tmp[[1]]
 kde_models <- pdf_matrix[ , , , -ref_index]
@@ -72,14 +72,14 @@ model_names <<- model_names[-ref_index]
 
 # Open and average the models for the selected time periods
 tmp <- OpenAndAverageCMIP6(
-  model_names, variables, year_present, year_future, period
+  model_names, variables, year_present, year_future
 )
 models_list <- tmp[[1]]
 models_matrix <- tmp[[2]]
 rm(tmp)
 
 tmp <- OpenAndAverageCMIP6(
-  reference_name, variables, year_present, year_future, period
+  reference_name, variables, year_present, year_future
 )
 reference_list <- tmp[[1]]
 reference_matrix <- tmp[[2]]
@@ -191,14 +191,15 @@ MinBiasHellinger <- GraphCutHellinger2D(kde_ref = kde_ref,
 
 
 
-model_names <- c(                 'MIROC6',
-                                  'FGOALS-f3-L',
-                                  'MPI-ESM1-2-HR',
-                                  'INM-CM5-0')
+model_names <- c(  'ERA5',
+                                  'MIROC6',
+                                  'IPSL-CM6A-LR',
+                                  'NorESM2-MM',
+                                  'UKESM1-0-LL')
 
 
 #TODO Move to the data loading section
-tmp <- OpenAndHist2D_range(model_names, variables, year_future , period, range_var_final)
+tmp <- OpenAndHist2D_range(model_names, variables, year_future , range_var_final)
 
 pdf_matrix <- tmp[[1]]
 kde_models_future <- pdf_matrix[ , , , -ref_index]

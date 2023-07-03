@@ -29,7 +29,7 @@
 #' @import ncdf4
 #'
 OpenAndAverageCMIP6 <- function (model_names, variables,
-                                 year_present, year_future, period) {
+                                 year_present, year_future) {
 
   # Initialize data structures
   data <- list()
@@ -40,9 +40,9 @@ OpenAndAverageCMIP6 <- function (model_names, variables,
   for(var in variables){
     i <- 1
     for(model_name in model_names){
-      dir_path <- paste0('data/CMIP6/', model_name, '/', var, '/')
+      dir_path <- paste0('data/CMIP6_merged/', model_name, '/', var, '/')
       # Create the pattern
-      pattern <- glob2rx(paste0(var, "_", model_name, "_", period, "*.nc"))
+      pattern <- glob2rx(paste0(var, "_", model_name, "*.nc"))
 
       # Get the filepath
       file_name <- list.files(path = dir_path,

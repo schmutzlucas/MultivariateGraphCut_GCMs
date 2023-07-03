@@ -22,7 +22,7 @@
 #' @import ncdf4
 #' @export
 OpenAndHist2D_range <- function (model_names, variables,
-                              year_interest, period, range_var) {
+                              year_interest, range_var) {
 
   # Initialize data structures
   pdf_matrix <- array(0, c(length(lon), length(lat), nbins1d^2,
@@ -40,7 +40,7 @@ OpenAndHist2D_range <- function (model_names, variables,
     # Variable 1
     dir_path <- paste0(data_dir, model_name, '/', variables[1], '/')
     # Create the pattern
-    pattern <- glob2rx(paste0(variables[1], "_", model_name, "_", period, "*.nc"))
+    pattern <- glob2rx(paste0(variables[1], "_", model_name, "*.nc"))
 
     # Get the filepath
     file_name <- list.files(path = dir_path,
@@ -62,7 +62,7 @@ OpenAndHist2D_range <- function (model_names, variables,
     # Variable 2
     dir_path <- paste0(data_dir, model_name, '/', variables[2], '/')
     # Create the pattern
-    pattern <- glob2rx(paste0(variables[2], "_", model_name, "_", period, "*.nc"))
+    pattern <- glob2rx(paste0(variables[2], "_", model_name, "*.nc"))
 
     # Get the filepath
     file_name <- list.files(path = dir_path,

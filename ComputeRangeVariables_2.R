@@ -1,5 +1,5 @@
 # Function to calculate ranges for a single variable
-calculate_ranges <- function(variable, model_names, data_dir, period, year_interest, lon, lat) {
+calculate_ranges <- function(variable, model_names, data_dir, year_interest, lon, lat) {
   range_var <- array(data = NA, dim = c(length(lon), length(lat), 2, length(model_names)))
 
   # Loop through models
@@ -8,7 +8,7 @@ calculate_ranges <- function(variable, model_names, data_dir, period, year_inter
     # Variable
     dir_path <- paste0(data_dir, model_name, '/', variable, '/')
     # Create the pattern
-    pattern <- glob2rx(paste0(variable, "_", model_name, "_", period, "*.nc"))
+    pattern <- glob2rx(paste0(variable, "_", model_name, "*.nc"))
 
     # Get the filepath
     file_name <- list.files(path = dir_path,
@@ -55,30 +55,29 @@ calculate_ranges <- function(variable, model_names, data_dir, period, year_inter
 
 model_names <- model_names <- c(  'ERA5',
                                   'MIROC6',
-                                  'FGOALS-f3-L',
-                                  'MPI-ESM1-2-HR')
+                                  'IPSL-CM6A-LR',
+                                  'NorESM2-MM',
+                                  'UKESM1-0-LL')
 
 # Setting global variables
 lon <- 0:359
 lat <- -90:90
 # Temporal ranges
-year_interest <- 1975:2014
+year_interest <- 1975:2022
 # data directory
-data_dir <- 'data/CMIP6/'
+data_dir <- 'data/CMIP6_merged/'
 
-# Period
-period <- 'historical'
 
 # List of variables
 variables <- c('pr', 'tas')
 
 # Calculate ranges for the first variable
-range_var_1 <- calculate_ranges(variables[1], model_names, data_dir, period, year_interest, lon, lat)
+range_var_1 <- calculate_ranges(variables[1], model_names, data_dir, year_interest, lon, lat)
 # Calculate ranges for the second variable
-range_var_2 <- calculate_ranges(variables[2], model_names, data_dir, period, year_interest, lon, lat)
+range_var_2 <- calculate_ranges(variables[2], model_names, data_dir, year_interest, lon, lat)
 
-saveRDS(range_var_1, 'ranges/pr_log_range_7Models_1975-2014.rds', compress = FALSE)
-saveRDS(range_var_2, 'ranges/tas_range_7Models_1975-2014.rds', compress = FALSE)
+saveRDS(range_var_1, 'ranges/pr_log_range_7Models_1975-2022.rds', compress = FALSE)
+saveRDS(range_var_2, 'ranges/tas_range_7Models_1975-2022.rds', compress = FALSE)
 range_var_final <- list()
 range_var_final[[variables[1]]] <- array(data = NA, dim = c(length(lon), length(lat), 2))
 range_var_final[[variables[2]]] <- array(data = NA, dim = c(length(lon), length(lat), 2))
@@ -94,4 +93,4 @@ for (i in seq_along(lon)) {
   }
 }
 
-saveRDS(range_var_final, 'ranges/range_var_final_7Models_1975-2014.rds', compress = FALSE)
+saveRDS(range_var_final, 'ranges/range_var_final_7Models_1975-2022.rds', compress = FALSE)

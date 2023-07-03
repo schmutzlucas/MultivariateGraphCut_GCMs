@@ -40,7 +40,8 @@ h
 
 # Define the color mapping for label_attribution
 # Define the color mapping for label_attribution
-color_mapping <- c("1" = "#4f6980", "2" = "#bfbb60", "3" = "#638b66")
+color_mapping <- c("1" = "#4f6980", "2" = "#bfbb60", "3" = "#638b66", "4" = "#b34f6a")
+
 
 
 # Add a new column in label_df with the corresponding colors
