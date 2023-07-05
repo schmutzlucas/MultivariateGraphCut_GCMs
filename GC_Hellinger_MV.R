@@ -2,7 +2,7 @@
 list_of_packages <- read.table("package_list.txt", sep="\n")$V1
 new.packages <- list_of_packages[!(list_of_packages %in% installed.packages()[,"Package"])]
 if(length(new.packages))
-  install.packages(new.packages, repos = "https://cran.us.r-project.org")
+  install.packages(new.packages, repos = "https://cloud.r-project.org")
 
 library(devtools)
 lapply(list_of_packages, library, character.only = TRUE)
@@ -10,7 +10,6 @@ install_github("thaos/gcoWrapR")
 
 
 # Loading local functions
-
 source_code_dir <- 'functions/' #The directory where all functions are saved.
 file_paths <- list.files(source_code_dir, full.names = T)
 for(path in file_paths){source(path)}
@@ -21,10 +20,10 @@ range_var_final <- readRDS('ranges/range_var_final_7Models_1975-2022.rds')
 lon <<- 0:359
 lat <<- -90:90
 # Temporal ranges
-year_present <<- 1985:1999
-year_future <<- 2000:2014
+year_present <<- 1977:1999
+year_future <<- 2000:2022
 # data directory
-data_dir <<- 'data/CMIP6_merged/'
+data_dir <<- 'data/CMIP6_merged_all/'
 
 # Bins for the kde
 nbins1d <<- 32
@@ -39,20 +38,24 @@ nbins1d <<- 32
 # variables <- c('pr', 'tas', 'tasmin', 'tasmax')
 variables <- c('pr', 'tas')
 
-# Index of the reference
-ref_index <<- 1
 # Obtains the list of models from the model names or from a file
-# Method 1
-# dir_path <- paste0('data/CMIP6/')
+# # Method 1
+# dir_path <- paste0('data/CMIP6_merged_all/')
 # model_names <- list.dirs(dir_path, recursive = FALSE)
 # model_names <- basename(model_names)
 
 # Method 2
-model_names <- c(  'ERA5',
-                                  'MIROC6',
-                                  'IPSL-CM6A-LR',
-                                  'NorESM2-MM',
-                                  'UKESM1-0-LL')
+# model_names <- c(  'ERA5',
+#                                   'MIROC6',
+#                                   'IPSL-CM6A-LR',
+#                                   'NorESM2-MM',
+#                                   'UKESM1-0-LL')
+
+# Method 3
+model_names <- read.table('model_names_long.txt')
+model_names <- as.list(model_names[['V1']])
+# Index of the reference
+ref_index <<- 1
 
 
 tmp <- OpenAndHist2D_range(model_names, variables, year_present, range_var_final)
@@ -64,6 +67,18 @@ rm(pdf_matrix)
 range_matrix <- tmp[[2]]
 x_breaks <- tmp[[3]]
 y_breaks <- tmp[[4]]
+
+
+tmp <- OpenAndHist2D_range(model_names, variables, year_future , range_var_final)
+
+pdf_matrix <- tmp[[1]]
+kde_models_future <- pdf_matrix[ , , , -ref_index]
+kde_ref_future <- pdf_matrix[ , , , ref_index]
+range_matrix_future <- tmp[[2]]
+x_breaks_future <- tmp[[3]]
+y_breaks_future <- tmp[[4]]
+rm(pdf_matrix)
+rm(tmp)
 
 # Choose the reference in the models
 reference_name <<- model_names[ref_index]
@@ -77,6 +92,7 @@ tmp <- OpenAndAverageCMIP6(
 models_list <- tmp[[1]]
 models_matrix <- tmp[[2]]
 rm(tmp)
+
 
 tmp <- OpenAndAverageCMIP6(
   reference_name, variables, year_present, year_future
@@ -100,7 +116,7 @@ current_time <- Sys.time()
 formatted_time <- format(current_time, "%Y%m%d%H%M")
 
 # Concatenate the formatted time string with your desired filename
-filename <- paste0(formatted_time, "_my_workspace_MIROC6_3Models_beforeOptim.RData")
+filename <- paste0(formatted_time, "_my_workspace_ERA5_allModels_beforeOptim.RData")
 
 # Save the workspace using the generated filename
 save.image(file = filename, compress = FALSE)
@@ -172,7 +188,7 @@ current_time <- Sys.time()
 formatted_time <- format(current_time, "%Y%m%d%H%M")
 
 # Concatenate the formatted time string with your desired filename
-filename <- paste0(formatted_time, "_my_workspace_MIROC6_3models.RData")
+filename <- paste0(formatted_time, "_my_workspace_ERA5_allmodels.RData")
 
 # Save the workspace using the generated filename
 save.image(file = filename, compress = FALSE)
@@ -190,31 +206,6 @@ MinBiasHellinger <- GraphCutHellinger2D(kde_ref = kde_ref,
 
 
 
-
-model_names <- c(  'ERA5',
-                                  'MIROC6',
-                                  'IPSL-CM6A-LR',
-                                  'NorESM2-MM',
-                                  'UKESM1-0-LL')
-
-
-#TODO Move to the data loading section
-tmp <- OpenAndHist2D_range(model_names, variables, year_future , range_var_final)
-
-pdf_matrix <- tmp[[1]]
-kde_models_future <- pdf_matrix[ , , , -ref_index]
-kde_ref_future <- pdf_matrix[ , , , ref_index]
-range_matrix_future <- tmp[[2]]
-x_breaks_future <- tmp[[3]]
-y_breaks_future <- tmp[[4]]
-rm(pdf_matrix)
-rm(tmp)
-
-# Choose the reference in the models
-reference_name <<- model_names[ref_index]
-model_names <<- model_names[-ref_index]
-
-
 # Get the current date and time
 
 current_time <- Sys.time()
@@ -223,7 +214,7 @@ current_time <- Sys.time()
 formatted_time <- format(current_time, "%Y%m%d%H%M")
 
 # Concatenate the formatted time string with your desired filename
-filename <- paste0(formatted_time, "_my_workspace_MIROC6_3_modelsKDE_present-future.RData")
+filename <- paste0(formatted_time, "_my_workspace_ERA5_allmodelsKDE_present-future.RData")
 
 # Save the workspace using the generated filename
 save.image(file = filename, compress = FALSE)
@@ -308,7 +299,7 @@ current_time <- Sys.time()
 formatted_time <- format(current_time, "%Y%m%d%H%M")
 
 # Concatenate the formatted time string with your desired filename
-filename <- paste0(formatted_time, "_my_workspace_MIROC6_final_3_models.RData")
+filename <- paste0(formatted_time, "_my_workspace_ERA5_final_allModels.RData")
 
 # Save the workspace using the generated filename
 save.image(file = filename, compress = FALSE)

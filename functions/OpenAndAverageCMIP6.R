@@ -40,7 +40,7 @@ OpenAndAverageCMIP6 <- function (model_names, variables,
   for(var in variables){
     i <- 1
     for(model_name in model_names){
-      dir_path <- paste0('data/CMIP6_merged/', model_name, '/', var, '/')
+      dir_path <- paste0('data/CMIP6_merged_all/', model_name, '/', var, '/')
       # Create the pattern
       pattern <- glob2rx(paste0(var, "_", model_name, "*.nc"))
 
