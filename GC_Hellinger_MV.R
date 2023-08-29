@@ -1,3 +1,4 @@
+
 # Install and load necessary libraries
 list_of_packages <- read.table("package_list.txt", sep="\n")$V1
 new.packages <- list_of_packages[!(list_of_packages %in% installed.packages()[,"Package"])]
@@ -304,16 +305,3 @@ filename <- paste0(formatted_time, "_my_workspace_ERA5_final_allModels.RData")
 # Save the workspace using the generated filename
 save.image(file = filename, compress = FALSE)
 
-
-#
-#
-# idx <- which.max(h_dist)
-# subscripts <- arrayInd(idx, dim(h_dist))
-#
-# i <- subscripts[1, 1]
-# j <- subscripts[1, 2]
-# m <- subscripts[1, 3]
-# v <- subscripts[1, 4]
-#
-# pdf_max <- kde_models[i, j, , m, v]
-#
