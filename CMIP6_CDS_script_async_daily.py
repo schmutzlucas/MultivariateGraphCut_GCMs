@@ -29,7 +29,7 @@ with open('model_list.txt', 'r') as file:
     model_list = file.read().splitlines()
 
 # Define the list of variables to retrieve
-variable_list = ['2m_temperature']
+variable_list = ['sea_level_pressure']
 
 # Define the list of experiments to retrieve data for
 experiment = ['historical', 'ssp5_8_5']
