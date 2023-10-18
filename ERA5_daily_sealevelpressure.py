@@ -50,11 +50,11 @@ def cds_api_call(year, month, variable, name):
         print("Could not find filename in API response")
 
 # Define the list of variables to retrieve
-variable_list = ['total_precipitation']
+variable_list = ['mean_sea_level_pressure']
 
 # Define the list of years to retrieve data for
 # Define the list of years to retrieve data for
-YEARS = list(map(str, range(1972, 1973)))
+YEARS = list(map(str, range(1950, 2024)))
 
 
 # Define the list of months to retrieve data for
@@ -67,7 +67,7 @@ code = "\nimport calendar\nimport datetime\nfrom functools import reduce\n\nimpo
 # Define the main function to run the data retrieval
 def main():
     # Ensure the necessary directory exists
-    os.makedirs('data/ERA5/pr/', exist_ok=True)
+    os.makedirs('data/ERA5/psl/', exist_ok=True)
     # create a thread pool with n worker threads
     with ThreadPoolExecutor(max_workers=10) as exe:
         for year in YEARS:
@@ -75,7 +75,7 @@ def main():
                 # Retrieve data for each variable
                 for variable in variable_list:
                     # Set the output filename for the downloaded file
-                    name = f"data/ERA5/pr/pr_ERA5_{year}{month}01-{year}{month}31.nc"
+                    name = f"data/ERA5/psl/psl_ERA5_{year}{month}01-{year}{month}31.nc"
                     # Check if the file already exists before downloading it
                     if not os.path.exists(name):
                         try:
