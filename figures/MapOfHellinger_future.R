@@ -368,7 +368,7 @@ p1 <- ggplot() +
   easy_center_title()
 p1
 
-name <- paste0('figure/H_dist_future_GCHellinger')
+name <- paste0('figure/H_dist_future_GCHellinger_26models')
 ggsave(paste0(name, '.pdf'), plot = p1, width = 35, height = 25, units = "cm", dpi = 300)
 ggsave(paste0(name, '.png'), plot = p1, width = 35, height = 25, units = "cm", dpi = 300)
 
@@ -414,7 +414,7 @@ p2 <- ggplot() +
   easy_center_title()
 p2
 
-name <- paste0('figure/H_dist_future_MinBias_result')
+name <- paste0('figure/H_dist_future_MinBias_result_26models')
 ggsave(paste0(name, '.pdf'), plot = p2, width = 35, height = 25, units = "cm", dpi = 300)
 ggsave(paste0(name, '.png'), plot = p2, width = 35, height = 25, units = "cm", dpi = 300)
 
@@ -450,7 +450,7 @@ p3 <- ggplot() +
   easy_center_title()
 p3
 
-name <- paste0('figure/H_dist_future_MMM')
+name <- paste0('figure/H_dist_future_MMM_26models')
 ggsave(paste0(name, '.pdf'), plot = p3, width = 35, height = 25, units = "cm", dpi = 300)
 ggsave(paste0(name, '.png'), plot = p3, width = 35, height = 25, units = "cm", dpi = 300)
 
@@ -485,7 +485,7 @@ p5 <- ggplot() +
   theme(legend.key.size = unit(1, 'cm'), #change legend key size
         legend.key.height = unit(1.4, 'cm'), #change legend key height
         legend.key.width = unit(0.4, 'cm'), #change legend key width
-        legend.title = element_text(size=16), #change legend title font size
+        legend.title = element_text(size=16), #change legend title font sizen
         legend.text = element_text(size=12))+ #change legend text font size
   theme(plot.title = element_text(size=24),
         plot.subtitle = element_text(size = 20,hjust=0.5),
@@ -494,6 +494,8 @@ p5 <- ggplot() +
   easy_center_title()
 p5
 
-name <- paste0('figure/H_dist_future_GC')
+name <- paste0('figure/H_dist_future_GC_26models')
 ggsave(paste0(name, '.pdf'), plot = p5, width = 35, height = 25, units = "cm", dpi = 300)
 ggsave(paste0(name, '.png'), plot = p5, width = 35, height = 25, units = "cm", dpi = 300)
+
+
