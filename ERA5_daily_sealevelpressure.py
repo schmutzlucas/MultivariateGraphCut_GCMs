@@ -1,6 +1,12 @@
 from concurrent.futures import ThreadPoolExecutor
 import cdsapi
 import os
+import logging
+from datetime import datetime
+
+# Set up logging
+logging.basicConfig(filename='errors.log', level=logging.ERROR,
+                    format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Create a CDS API client object
 c = cdsapi.Client()
@@ -48,6 +54,8 @@ def cds_api_call(year, month, variable, name):
         os.rename(temp_filename, name)
     else:
         print("Could not find filename in API response")
+        logging.error(
+            f"Error retrieving filename for {variable} in {year}-{month}. API response did not contain a filename.")
 
 # Define the list of variables to retrieve
 variable_list = ['mean_sea_level_pressure']
