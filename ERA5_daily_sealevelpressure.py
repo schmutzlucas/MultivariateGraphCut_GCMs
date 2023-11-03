@@ -5,7 +5,7 @@ import logging
 from datetime import datetime
 
 # Set up logging
-logging.basicConfig(filename='errors.log', level=logging.ERROR,
+logging.basicConfig(filename='psl_errors.log', level=logging.ERROR,
                     format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Create a CDS API client object
