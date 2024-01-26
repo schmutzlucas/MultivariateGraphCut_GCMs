@@ -1,60 +1,86 @@
 list.of.packages <- c("RcppXPtrUtils","devtools")
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
-if(length(new.packages)) install.packages(new.packages,repos = "http://cran.us.r-project.org")
+# if(length(new.packages)) install.packages(new.packages,repos = "http://cran.us.r-project.org")
 lapply(list.of.packages, library, character.only = TRUE)
 # install_github("thaos/gcoWrapR")
 library(gcoWrapR)
-# TODO documentation of gc
 #' Graph cut optimization
 #'
-#' @description This function produces a map of labels where each grid-point is affected to
-#' one model. It uses gcoWrapR (https://github.com/thaos/gcoWrapR) and c++ based
-#' gco-v3.0 (https://vision.cs.uwaterloo.ca/code/).
+#' This function performs graph cut optimization using the gco-v3.0 C++ library and gcoWrapR package.
+#' It produces a map of labels where each grid-point is assigned to one model.
 #'
-#' @param reference should be an array
-#' @param models_datacost should be an array
-#' @param models_smoothcost should be an array
-#' @param weight_data numeric value that sets the weight of the data
-#' @param weight_smooth numeric value that sets the weight of the smoothness
-#' @param verbose logical value to print debugging information
+#' @param kde_ref An array representing the kde_ref dataset for the optimization.
+#' @param models_datacost An array representing the models' data cost for the optimization.
+#' @param models_smoothcost An array representing the models' smooth cost for the optimization.
+#' @param weight_data A numeric value representing the weight for the data cost.
+#' @param weight_smooth A numeric value representing the weight for the smooth cost.
+#' @param verbose A logical value indicating whether or not to print information during the optimization process.
 #'
-#' @return returns the results of the graphcut as an array of labels
-GraphCutOptimization <- function(
-  reference,
-  models_datacost,
+#' @return A list containing the label attribution matrix, data and smooth cost, and execution time.
+#'
+#' @examples
+#' # Load example data
+#' data("example_data")
+#'
+#' # Perform graph cut optimization
+#' GC_result <- GraphCutOptimization(
+#' kde_ref = example_data$kde_ref,
+#' models_datacost = example_data$models_datacost,
+#' models_smoothcost = example_data$models_smoothcost,
+#' weight_data = 1,
+#' weight_smooth = 1,
+#' verbose = TRUE
+#' )
+#'
+#' # Print results
+#' print(GC_result)
+#'
+#' @references
+#' https://github.com/thaos/gcoWrapR
+#' https://vision.cs.uwaterloo.ca/code/
+#'
+#' @import gcoWrapR
+#' @export
+GraphCutHellinger2D <- function(
+  kde_ref,
+  kde_models,
   models_smoothcost,
   weight_data,
   weight_smooth,
   verbose
 ){
 
-  n_labs      <- length(models_datacost[1, 1, , 1])
-  n_variables <- length(reference[1, 1, 1, ])
-  width       <- ncol(reference)
-  height      <- nrow(reference)
-
-  cat(height)
-  cat(width)
-  cat(n_labs)
-  cat(n_variables)
-  print(dim(models_datacost))
-  print(dim(models_smoothcost))
+  n_labs      <- length(model_names)
+  width       <- ncol(kde_ref)
+  height      <- nrow(kde_ref)
+  n_variables <- 2
 
 
 
-  # Preparing the data to perform GraphCut
-  # TODO Test
-  bias <- array(0, c(height, width, n_labs))
-  for (i in 1:n_labs) {
-    for (j in 1:n_variables) {
-      bias[,,i] <- bias[,,i] + abs(models_datacost[,, i, j] - reference[[j]])
+  # Computing the sum of hellinger distances between models and reference --> used as datacost
+  h_dist <- array(data = 0, dim = c(length(lon), length(lat),
+                                    length(model_names)))
+
+  # Loop through variables and models
+  m <- 1
+  for (model_name in model_names) {
+    for (i in seq_along(lon)) {
+      for (j in seq_along(lat)) {
+        # Compute Hellinger distance
+        h_dist_unchecked <- sqrt(sum((sqrt(kde_models[i, j, , m]) - sqrt(kde_ref[i, j, ]))^2)) / sqrt(2)
+
+        # Replace NaN with 0
+        h_dist[i, j, m] <- replace(h_dist_unchecked, is.nan(h_dist_unchecked), 0)
+      }
     }
+    m <- m + 1
   }
 
+
   # Permuting longitude and latitude since the indexing isn't the same in R and in C++
-  # changed: c(aperm(bias, c(2, 1, 3))) call was redundant
+  # changed: c(aperm(sum_h_dist, c(2, 1, 3))) call was redundant
   # when go from matrix to vector
-  bias_cpp <- c(aperm(bias, c(2, 1, 3)))
+  h_dist_cpp <- c(aperm(h_dist, c(2, 1, 3)))
   smooth_cpp <- c(aperm(models_smoothcost, c(4, 2, 1, 3)))
 
 
@@ -69,25 +95,21 @@ GraphCutOptimization <- function(
   ptrDataCost <- cppXPtr(
     code = 'float dataFn(int p, int l, Rcpp::List extraData)
     {
-    /*
+
       int numPix          = extraData["numPix"];
       float weight        = extraData["weight"];
       NumericVector data  = extraData["data"];
 
       return(weight * data[p + numPix * l]);
-      */
-      float test = 0;
-      return(test);
     }',
-    includes = c("#include <math.h>", "#include <Rcpp.h>"),
-    rebuild = FALSE, showOutput = FALSE, verbose = FALSE
+    includes = c("#include <math.h>", "#include <Rcpp.h>", "#include <iostream>"),
+    rebuild = TRUE, showOutput = FALSE, verbose = FALSE
   )
 
   cat("Creating SmoothCost function...  ")
-  #TODO sortie dans un fichier
   ptrSmoothCost <- cppXPtr(
     code = 'float smoothFn(int p1, int p2, int l1, int l2, Rcpp::List extraData)
-    {/*
+    {
       int nbVariables        = extraData["n_variables"];
       int numPix             = extraData["numPix"];
       float weight           = extraData["weight"];
@@ -102,19 +124,17 @@ GraphCutOptimization <- function(
                 std::abs(data[k + (p2 * nbVariables + totPix * l1)] -
                 data[k + (p2 * nbVariables + totPix * l2)]);
       }
-      */
-      //return(weight * cost);
-      float test = 0;
-      return(test);
+
+      return(weight * cost);
     }',
     includes = c("#include <math.h>", "#include <Rcpp.h>"),
-    rebuild = FALSE, showOutput = FALSE, verbose = FALSE
+    rebuild = TRUE, showOutput = FALSE, verbose = FALSE
   )
 
 
   # Creation of the data and smooth cost
   gco$setDataCost(ptrDataCost, list(numPix = width * height,
-                                    data = bias_cpp,
+                                    data = h_dist_cpp,
                                     weight = weight_data))
 
   gco$setSmoothCost(ptrSmoothCost, list(numPix  = width * height,
@@ -122,16 +142,24 @@ GraphCutOptimization <- function(
                                         weight = weight_smooth,
                                         n_variables = n_variables))
 
-  # Creating the initialization matrix based on the best model (bias)
-  # TODO Implement random version?
+  # Creating the initialization matrix based on the best model (sum_h_dist)
+  # # TODO Implement random version?
   mae_list <- numeric(n_labs)
   for(i in seq_along(mae_list)){
-    mae_list[[i]] <- mean(abs(bias[,,i]))
+    mae_list[[i]] <- mean(abs(h_dist[,,i]))
   }
   best_label <- which.min(mae_list)-1 # in C++ label indices start at 0
-  for(z in 0:(length(reference)-1)){
+  print(best_label)
+  for(z in 0:((width*height)-1)){
     gco$setLabel(z, best_label)
+    #  gco$setLabel(z, sample(0:(n_labs-1), 1))
+    #   # gco$setLabel(z, -1)
+    #   gco$setLabel(z, 1)
   }
+
+  # for(z in 0:(length(width*height)-1)){
+  #  gco$setLabel(z, 7)
+  # }
 
   # Optimizing the MRF energy with alpha-beta swap
   # -1 refers to the optimization until convergence
@@ -153,8 +181,10 @@ GraphCutOptimization <- function(
     }
   }
 
+  label_attribution <- label_attribution + 1
+
   # gc_result <- vector("list",length=2)
-  gc_result <- list("label_attribution" = label_attribution, "Data and smooth cost" = data_smooth_list)
+  gc_result <- list("label_attribution" = label_attribution, "Data and smooth cost" = data_smooth_list, 'h_dist' = h_dist)
 
   return(gc_result)
 }

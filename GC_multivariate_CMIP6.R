@@ -1,20 +1,15 @@
 # Install and load necessary libraries
-list.of.packages <- read.table("package_list.txt", sep="\n")$V1
-new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
+list_of_packages <- read.table("package_list.txt", sep="\n")$V1
+new.packages <- list_of_packages[!(list_of_packages %in% installed.packages()[,"Package"])]
 if(length(new.packages))
   install.packages(new.packages, repos = "https://cran.us.r-project.org")
 
 library(devtools)
-lapply(list.of.packages, library, character.only = TRUE)
+lapply(list_of_packages, library, character.only = TRUE)
 install_github("thaos/gcoWrapR")
 
 # Import libraries
-library(gcoWrapR)
-library(ncdf4)
-library(ncdf4.helpers)
-library(abind)
-library(roxygen2)
-library(ggplot2)
+#library(c(list_of_packages))
 
 
 # Loading local functions
@@ -23,53 +18,45 @@ source_code_dir <- 'functions/' #The directory where all functions are saved.
 file_paths <- list.files(source_code_dir, full.names = T)
 for(path in file_paths){source(path)}
 
-
 # Temporal ranges
-year_present <- 1979:1998
-year_future <- 1999:2019
+year_present <- 1971:1990
+year_future <- 1991:2010
 
 # List of the variable used
 # variables <- c('tas', 'tasmax',
 #                'tasmin', 'pr',
 #                'psl', 'hur',
 #                'huss')
-variables <- c('tas', 'pr', 'tas')
+variables <- c('tas', 'pr', 'tasmax')
 
+period <- c('historical')
 
-# TODO choose the method for the list of model names
-# Selected models
-selected_models <- c(
-  2,34,16,9,8,28
-)
 # Obtains the list of models from the model names or from a file
 # Method 1
 # TODO This needs ajustements to remove prefixes and suffixes
-tmp <- 'pr'
-model_names <- list.files(paste0('data/CMIP5/', tmp))[selected_models]
-model_names <- sub(paste0(tmp, '_'), '', model_names)
-model_names <- sub('.nc', '', model_names)
-rm(tmp)
-reference_names <- c('era5')
+dir_path <- paste0('data/CMIP6/')
+model_names <- list.dirs(dir_path, recursive = FALSE)
+model_names <- basename(model_names)
 
+# Choose the reference in the models
+reference_name <- model_names[1]
+model_names <- model_names[-1]
 
-# #Method2
-# # TODO : test if it works
-#model_names <- read.table("model_list.txt", sep="\n")$V1
 
 # Open and average the models for the selected time periods
-tmp <- OpenAndAverageModels(
-  model_names, variables, year_present, year_future
+tmp <- OpenAndAverageCMIP6(
+  model_names, variables, year_present, year_future, period
 )
 models_list <- tmp[[1]]
 models_matrix <- tmp[[2]]
 rm(tmp)
 
-# Open and average the refeences for the selected time periods
-tmp <- OpenAndAverageModels(
-  reference_names, variables, year_present, year_future
+tmp <- OpenAndAverageCMIP6(
+  reference_name, variables, year_present, year_future, period
 )
 reference_list <- tmp[[1]]
 reference_matrix <- tmp[[2]]
+rm(tmp)
 
 models_matrix_nrm <- list()
 models_matrix_nrm <- NormalizeVariables(models_matrix, variables, 'StdSc')
