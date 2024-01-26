@@ -10,7 +10,7 @@ install_github("thaos/gcoWrapR")
 
 
 # Loading local functions
-
+#test commit
 source_code_dir <- 'functions/' #The directory where all functions are saved.
 file_paths <- list.files(source_code_dir, full.names = T)
 for(path in file_paths){source(path)}
