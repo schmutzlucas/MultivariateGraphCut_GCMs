@@ -37,8 +37,8 @@ def process_group(input_files, grid_file, output_base_dir):
     # Execute the CDO command using subprocess
     subprocess.run(cdo_command)
 
-root_dir = '/home/lschmutz1/LucasSchmutz/MultivariateGraphCut_GCMs/download_day_unzip/'
-output_base_dir = '/home/lschmutz1/LucasSchmutz/MultivariateGraphCut_GCMs/merged_regridded_par/'
+root_dir = '/home/lschmutz1/LucasSchmutz/MultivariateGraphCut_GCMs/download_day_unzip_new/'
+output_base_dir = '/home/lschmutz1/LucasSchmutz/MultivariateGraphCut_GCMs/merged_regridded_par_new/'
 grid_file = '/home/lschmutz1/LucasSchmutz/MultivariateGraphCut_GCMs/my_grid.txt'
 
 # Prepare a list to store the tasks
@@ -69,7 +69,7 @@ for model_dir in os.listdir(root_dir):
             tasks.append(task)
 
 # Define the number of workers
-num_workers = 4
+num_workers = 32
 
 # Run tasks concurrently using ThreadPoolExecutor
 with ThreadPoolExecutor(max_workers=num_workers) as executor:
