@@ -69,7 +69,7 @@ for model_dir in os.listdir(root_dir):
             tasks.append(task)
 
 # Define the number of workers
-num_workers = 32
+num_workers = 8
 
 # Run tasks concurrently using ThreadPoolExecutor
 with ThreadPoolExecutor(max_workers=num_workers) as executor:

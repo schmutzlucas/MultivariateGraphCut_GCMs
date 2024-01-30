@@ -2,8 +2,8 @@ import os
 import subprocess
 import glob
 
-root_dir = '/mnt/y/LucasSchmutz/MultivariateGraphCut_GCMs/merged_regridded_par/'
-output_base_dir = '/mnt/y/LucasSchmutz/MultivariateGraphCut_GCMs/data/CMIP6_merged_all/'
+root_dir = '/mnt/y/LucasSchmutz/MultivariateGraphCut_GCMs/merged_regridded_par_new/'
+output_base_dir = '/mnt/y/LucasSchmutz/MultivariateGraphCut_GCMs/data/CMIP6_merged_all_new/'
 
 # Helper function to extract date range from filename
 def extract_dates(filename):
