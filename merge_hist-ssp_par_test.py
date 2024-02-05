@@ -3,7 +3,9 @@ import subprocess
 import glob
 from concurrent.futures import ThreadPoolExecutor
 
-# Helper function to extract date range from filename
+# Setup logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(threadName)s - %(message)s')
+
 def extract_dates(filename):
     parts = filename.split("_")[::-1]
     for part in parts:
@@ -14,6 +16,9 @@ def extract_dates(filename):
     return None, None
 
 def process_group(model_dir, var_dir, input_files, output_base_dir):
+    thread_name = threading.current_thread().name
+    logging.info(f"{thread_name}: Starting task for {model_dir}/{var_dir} with {len(input_files)} files")
+
     if len(input_files) > 1:
         dates = [extract_dates(file) for file in input_files]
         start_date = min(date[0] for date in dates if date[0] is not None)
@@ -29,8 +34,10 @@ def process_group(model_dir, var_dir, input_files, output_base_dir):
 
         cdo_command = ["cdo", "-O", "mergetime"] + input_files + [output_path]
         subprocess.run(cdo_command)
+        logging.info(f"{thread_name}: Finished task for {model_dir}/{var_dir}")
     else:
-        print(f"Skipping merging for {model_dir}/{var_dir}. Only one file found.")
+        logging.info(f"{thread_name}: Skipping merging for {model_dir}/{var_dir}. Only one file found.")
+
 
 root_dir = '/mnt/y/LucasSchmutz/MultivariateGraphCut_GCMs/merged_regridded_par_new/'
 output_base_dir = '/mnt/y/LucasSchmutz/MultivariateGraphCut_GCMs/data/CMIP6_merged_all_new/'
