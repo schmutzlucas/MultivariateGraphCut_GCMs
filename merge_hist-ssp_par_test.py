@@ -64,7 +64,7 @@ for model_dir in os.listdir(root_dir):
             for key, input_files in grouped_files.items():
                 tasks.append((model_dir, var_dir, input_files, output_base_dir))
 
-num_workers = 22  # Adjust based on your system capabilities
+num_workers = 12  # Adjust based on your system capabilities
 
 with ThreadPoolExecutor(max_workers=num_workers) as executor:
     futures = [executor.submit(process_group, *task) for task in tasks]
