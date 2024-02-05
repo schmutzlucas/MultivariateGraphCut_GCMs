@@ -38,7 +38,7 @@ def process_group(input_files, grid_file, output_base_dir):
     subprocess.run(cdo_command)
 
 root_dir = '/home/lschmutz1/LucasSchmutz/MultivariateGraphCut_GCMs/download_day_unzip_new/'
-output_base_dir = '/home/lschmutz1/LucasSchmutz/MultivariateGraphCut_GCMs/merged_regridded_par_new/'
+output_base_dir = '/home/lschmutz1/LucasSchmutz/MultivariateGraphCut_GCMs/merged_regridded_par_new_2/'
 grid_file = '/home/lschmutz1/LucasSchmutz/MultivariateGraphCut_GCMs/my_grid.txt'
 
 # Prepare a list to store the tasks

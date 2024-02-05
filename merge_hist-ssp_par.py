@@ -3,8 +3,8 @@ import os
 import glob
 from multiprocessing import Pool
 
-root_dir = '/mnt/y/LucasSchmutz/MultivariateGraphCut_GCMs/data/CMIP6/'
-output_base_dir = '/mnt/y/LucasSchmutz/MultivariateGraphCut_GCMs/data/CMIP6_merged/'
+root_dir = '/mnt/y/LucasSchmutz/MultivariateGraphCut_GCMs/merged_regridded_par_new'
+output_base_dir = '/mnt/y/LucasSchmutz/MultivariateGraphCut_GCMs/data/CMIP6_merged_new/'
 
 # Helper function to extract date range from filename
 def extract_dates(filename):
