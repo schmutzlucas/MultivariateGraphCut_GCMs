@@ -41,8 +41,8 @@ def process_group(model_dir, var_dir, input_files, output_base_dir):
         logging.info(f"{thread_name}: Skipping merging for {model_dir}/{var_dir}. Only one file found.")
 
 
-root_dir = '/mnt/y/LucasSchmutz/MultivariateGraphCut_GCMs/merged_regridded_par_new/'
-output_base_dir = '/mnt/y/LucasSchmutz/MultivariateGraphCut_GCMs/data/CMIP6_merged_all_new/'
+root_dir = '/home/lschmutz1/LucasSchmutz/MultivariateGraphCut_GCMs/merged_regridded_par_new/'
+output_base_dir = '/home/lschmutz1/LucasSchmutz/MultivariateGraphCut_GCMs/data/CMIP6_merged_all_new/'
 
 tasks = []
 
@@ -64,7 +64,7 @@ for model_dir in os.listdir(root_dir):
             for key, input_files in grouped_files.items():
                 tasks.append((model_dir, var_dir, input_files, output_base_dir))
 
-num_workers = 12  # Adjust based on your system capabilities
+num_workers = 32  # Adjust based on your system capabilities
 
 with ThreadPoolExecutor(max_workers=num_workers) as executor:
     futures = [executor.submit(process_group, *task) for task in tasks]
