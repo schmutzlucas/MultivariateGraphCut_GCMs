@@ -1,6 +1,8 @@
 from concurrent.futures import ThreadPoolExecutor
 import cdsapi
 import os
+import time
+
 
 # Create a CDS API client object
 c = cdsapi.Client()
@@ -20,7 +22,7 @@ def cds_api_call(year, month, variable, name):
                 },
                 "dataset": "reanalysis-era5-single-levels",
                 "frequency": "1-hourly",
-                "grid_e5": "1.0,1.0",
+                "grid_e5": "1.0/1.0",
                 "month": month,
                 "pressure_level_e5sl": "-",
                 "product_type": "reanalysis",
@@ -51,12 +53,18 @@ def cds_api_call(year, month, variable, name):
     else:
         print("Could not find filename in API response")
 
+
 # Define the list of variables to retrieve
-VARIABLES = ['2m_temperature', 'total_precipitation', 'mean_sea_level_pressure']
+# Map ERA5 variables to CMIP6
+variable_map = {
+    '2m_temperature': 'tas',
+    'total_precipitation': 'pr',
+    # 'mean_sea_level_pressure': 'psl'
+}
 
 # Define the list of years to retrieve data for
 # Define the list of years to retrieve data for
-YEARS = list(map(str, range(1950, 1955)))
+YEARS = list(map(str, range(1950, 1960)))
 
 
 # Define the list of months to retrieve data for
@@ -68,21 +76,25 @@ MONTHS = [
 # Define the main function to run the data retrieval
 def main():
     # Ensure the necessary directory exists
-    os.makedirs('data/ERA5/1950-1955/', exist_ok=True)
+    os.makedirs('data/ERA5_test/1950-1959/', exist_ok=True)
     # create a thread pool with n worker threads
-    with ThreadPoolExecutor(max_workers=10) as exe:
+    with ThreadPoolExecutor(max_workers=32) as exe:
         for year in YEARS:
             for month in MONTHS:
                 # Retrieve data for each variable
-                for variable in VARIABLES:
+                for era5_var, cmip6_var in variable_map.items():
+                    # Wait 1 second before the next API call
+                    # Needed because faster calls timeout the threads
+                    time.sleep(1)
                     # Set the output filename for the downloaded file
-                    name = f"data/ERA5/1950-1955/{variable}_ERA5_{year}{month}01-{year}{month}31.nc"
+                    os.makedirs(f'data/ERA5_test/1950-1959/{cmip6_var}/', exist_ok=True)
+                    name = f"data/ERA5_test/1950-1959/{cmip6_var}/{cmip6_var}_ERA5_{year}{month}01-{year}{month}31.nc"
                     # Check if the file already exists before downloading it
                     if not os.path.exists(name):
                         try:
                             # Submit a job to the thread pool to download the
                             # data
-                            exe.submit(cds_api_call, year, month, variable, name)
+                            exe.submit(cds_api_call, year, month, era5_var, name)
                         finally:
                             pass
     print('finished')
