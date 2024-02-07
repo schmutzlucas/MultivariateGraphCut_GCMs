@@ -56,7 +56,7 @@ VARIABLES = ['2m_temperature', 'total_precipitation', 'mean_sea_level_pressure']
 
 # Define the list of years to retrieve data for
 # Define the list of years to retrieve data for
-YEARS = list(map(str, range(1950, 2025)))
+YEARS = list(map(str, range(1950, 1955)))
 
 
 # Define the list of months to retrieve data for
