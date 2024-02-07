@@ -50,11 +50,11 @@ def cds_api_call(year, month, variable, name):
         print("Could not find filename in API response")
 
 # Define the list of variables to retrieve
-variable_list = ['2m_temperature']
+VARIABLES = ['2m_temperature', 'total_precipitation', 'mean_sea_level_pressure']
 
 # Define the list of years to retrieve data for
 # Define the list of years to retrieve data for
-YEARS = list(map(str, range(1961, 1963)))
+YEARS = list(map(str, range(1950, 1955)))
 
 
 # Define the list of months to retrieve data for
@@ -69,11 +69,11 @@ def main():
     # Ensure the necessary directory exists
     os.makedirs('data/ERA5/tas_test/', exist_ok=True)
     # create a thread pool with n worker threads
-    with ThreadPoolExecutor(max_workers=1) as exe:
+    with ThreadPoolExecutor(max_workers=10) as exe:
         for year in YEARS:
             for month in MONTHS:
                 # Retrieve data for each variable
-                for variable in variable_list:
+                for variable in VARIABLES:
                     # Set the output filename for the downloaded file
                     name = f"data/ERA5/tas_test/tas_ERA5_{year}{month}01-{year}{month}31.nc"
                     # Check if the file already exists before downloading it

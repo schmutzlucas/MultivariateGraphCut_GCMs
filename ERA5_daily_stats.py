@@ -20,7 +20,7 @@ def cds_api_call(year, month, variable, name):
                 },
                 "dataset": "reanalysis-era5-single-levels",
                 "frequency": "1-hourly",
-                "grid_e5": "1.0/1.0",
+                "grid_e5": "1.0,1.0",
                 "month": month,
                 "pressure_level_e5sl": "-",
                 "product_type": "reanalysis",
@@ -68,7 +68,7 @@ MONTHS = [
 # Define the main function to run the data retrieval
 def main():
     # Ensure the necessary directory exists
-    os.makedirs('data/ERA5_new/', exist_ok=True)
+    os.makedirs('data/ERA5/1950-1955/', exist_ok=True)
     # create a thread pool with n worker threads
     with ThreadPoolExecutor(max_workers=10) as exe:
         for year in YEARS:
@@ -76,7 +76,7 @@ def main():
                 # Retrieve data for each variable
                 for variable in VARIABLES:
                     # Set the output filename for the downloaded file
-                    name = f"data/ERA5/tas_test/{variable}_ERA5_{year}{month}01-{year}{month}31.nc"
+                    name = f"data/ERA5/1950-1955/{variable}_ERA5_{year}{month}01-{year}{month}31.nc"
                     # Check if the file already exists before downloading it
                     if not os.path.exists(name):
                         try:
