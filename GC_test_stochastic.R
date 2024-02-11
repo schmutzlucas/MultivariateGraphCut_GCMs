@@ -153,3 +153,18 @@ if (length(errors[!sapply(errors, is.null)]) > 0) {
 # Stop the parallel backend
 stopImplicitCluster()
 
+
+
+
+
+########################################################################################################################
+
+GC_result_hellinger <- vector("list", N_IT)
+GC_result_hellinger[[i]] <- GraphCutHellinger2D_stoch(kde_ref = kde_ref,
+                                                      kde_models = kde_models,
+                                                      models_smoothcost = models_matrix_nrm$future,
+                                                      weight_data = 1,
+                                                      weight_smooth = 1,
+                                                      N_IT = N_IT,
+                                                      verbose = TRUE)
+
