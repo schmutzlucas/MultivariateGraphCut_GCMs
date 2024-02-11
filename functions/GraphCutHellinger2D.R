@@ -151,8 +151,10 @@ GraphCutHellinger2D <- function(
   best_label <- which.min(mae_list)-1 # in C++ label indices start at 0
   print(best_label)
   for(z in 0:((width*height)-1)){
-    gco$setLabel(z, best_label)
-    #  gco$setLabel(z, sample(0:(n_labs-1), 1))
+    # gco$setLabel(z, best_label)
+
+    random_label <- sample(0:(n_labs-1), 1) # Sample a random index uniformly
+    gco$setLabel(z, random_label)
     #   # gco$setLabel(z, -1)
     #   gco$setLabel(z, 1)
   }
