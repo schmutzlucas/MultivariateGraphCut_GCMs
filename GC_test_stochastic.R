@@ -112,7 +112,7 @@ N_IT <- 10  # Number of iterations
 
 # Register parallel backend to use multiple cores
 no_cores <- detectCores() - 1  # Reserve one core for system processes
-registerDoParallel(cores=2)
+registerDoParallel(no_cores)
 
 # Prepare to store results and errors
 results <- vector("list", N_IT)
