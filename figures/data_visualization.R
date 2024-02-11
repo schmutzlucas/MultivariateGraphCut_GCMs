@@ -72,9 +72,9 @@ h <- ggplot() +
         axis.title=element_text(size=9),)+
   easy_center_title()
 h
-  name <- paste0('figure/labelling' , lon, lat )
-  ggsave(paste0(name, '.png'), plot = h, width = 30, height = 21, units = "cm", dpi = 300)
-  ggsave(paste0(name, '.pdf'), plot = h, width = 30, height = 21, units = "cm", dpi = 300)
+name <- paste0('figure/labelling' , lon, lat )
+ggsave(paste0(name, '.png'), plot = h, width = 30, height = 21, units = "cm", dpi = 300)
+ggsave(paste0(name, '.pdf'), plot = h, width = 30, height = 21, units = "cm", dpi = 300)
 
 
 
@@ -84,6 +84,8 @@ GC_labels <- GC_result$label_attribution
 label_df <-melt(GC_labels, c("lon", "lat"),
                 value.name = "label_attribution")
 label_df$lat <- label_df$lat -91
+
+
 p <- ggplot() +
   geom_tile(data=label_df, aes(x=lon, y=lat, fill= factor(label_attribution)),)+
   scale_fill_hue(na.value=NA,
@@ -117,7 +119,6 @@ p <- ggplot() +
         axis.text=element_text(size=7),
         axis.title=element_text(size=9),)+
   easy_center_title()
-p
 
 
 label_df <-melt(MinBias_labels, c("lon", "lat"),
