@@ -43,8 +43,8 @@ if(length(failed_iterations) > 0) {
 }
 
 
-for(i in 1:N_IT) {
-  hist(GC_result_hellinger[[i]]$label_attribution)
+for(i in 1:25) {
+  hist(GC_result_hellinger[[i]]$label_attribution, nclass = length(model_names))
 }
 
 
@@ -164,6 +164,5 @@ GC_result_hellinger <- GraphCutHellinger2D_stoch(kde_ref = kde_ref,
                                                       models_smoothcost = models_matrix_nrm$future,
                                                       weight_data = 1,
                                                       weight_smooth = 1,
-                                                      N_IT = N_IT,
+                                                      N_IT = 25,
                                                       verbose = TRUE)
-
