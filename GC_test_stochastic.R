@@ -1,6 +1,12 @@
 # Stochastic Graph cuts tests
 
-N_IT <- 100  # Number of iterations
+
+# Loading local functions
+source_code_dir <- 'functions/' #The directory where all functions are saved.
+file_paths <- list.files(source_code_dir, full.names = T)
+for(path in file_paths){source(path)}
+
+N_IT <- 5  # Number of iterations
 
 # Initialize the list to store results outside the loop
 GC_result_hellinger <- vector("list", N_IT)
@@ -35,3 +41,59 @@ if(length(failed_iterations) > 0) {
 } else {
   cat("All iterations completed successfully.\n")
 }
+
+
+
+
+########################################################################################################################
+
+
+# Can it be parrallelized?
+library(foreach)
+library(doParallel)
+
+N_IT <- 10  # Number of iterations
+
+# Register parallel backend to use multiple cores
+no_cores <- detectCores() - 1  # Reserve one core for system processes
+registerDoParallel(cores=2)
+
+# Prepare to store results and errors
+results <- vector("list", N_IT)
+errors <- vector("list", N_IT)
+
+# Parallel loop using foreach
+results <- foreach(i = 1:N_IT, .errorhandling = "pass") %dopar% {
+  tryCatch({
+    # Your function call
+    GraphCutHellinger2D(kde_ref = kde_ref,
+                        kde_models = kde_models,
+                        models_smoothcost = models_matrix_nrm$future,
+                        weight_data = 1,
+                        weight_smooth = 1,
+                        verbose = TRUE)
+  }, error = function(e) {
+    # Error handling
+    list(error = paste("Error in iteration", i, ":", e$message))
+  })
+}
+
+# Optionally process results and errors after the loop
+for (i in seq_along(results)) {
+  if (is.list(results[[i]]) && !is.null(results[[i]]$error)) {
+    errors[[i]] <- results[[i]]$error
+    results[[i]] <- NULL
+  }
+}
+
+# Check errors
+if (length(errors[!sapply(errors, is.null)]) > 0) {
+  cat("Errors occurred in the following iterations:\n")
+  print(errors[!sapply(errors, is.null)])
+} else {
+  cat("All iterations completed without errors.\n")
+}
+
+# Stop the parallel backend
+stopImplicitCluster()
+

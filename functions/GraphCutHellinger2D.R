@@ -151,12 +151,13 @@ GraphCutHellinger2D <- function(
   best_label <- which.min(mae_list)-1 # in C++ label indices start at 0
   print(best_label)
   for(z in 0:((width*height)-1)){
+    # Label is set as the best average model
     # gco$setLabel(z, best_label)
 
     random_label <- sample(0:(n_labs-1), 1) # Sample a random index uniformly
     gco$setLabel(z, random_label)
-    #   # gco$setLabel(z, -1)
-    #   gco$setLabel(z, 1)
+    # #   # gco$setLabel(z, -1)
+    # #   gco$setLabel(z, 1)
   }
 
   # for(z in 0:(length(width*height)-1)){
@@ -192,53 +193,3 @@ GraphCutHellinger2D <- function(
 }
 
 
-
-
-# Can it be parrallelized?
-library(foreach)
-library(doParallel)
-
-N_IT <- 100  # Number of iterations
-
-# Register parallel backend to use multiple cores
-no_cores <- detectCores() - 1  # Reserve one core for system processes
-registerDoParallel(cores=no_cores)
-
-# Prepare to store results and errors
-results <- vector("list", N_IT)
-errors <- vector("list", N_IT)
-
-# Parallel loop using foreach
-results <- foreach(i = 1:N_IT, .packages = c("YourPackageName"), .errorhandling = "pass") %dopar% {
-  tryCatch({
-    # Your function call
-    GraphCutHellinger2D(kde_ref = kde_ref,
-                        kde_models = kde_models,
-                        models_smoothcost = models_matrix_nrm$future,
-                        weight_data = 1,
-                        weight_smooth = 1,
-                        verbose = TRUE)
-  }, error = function(e) {
-    # Error handling
-    list(error = paste("Error in iteration", i, ":", e$message))
-  })
-}
-
-# Optionally process results and errors after the loop
-for (i in seq_along(results)) {
-  if (is.list(results[[i]]) && !is.null(results[[i]]$error)) {
-    errors[[i]] <- results[[i]]$error
-    results[[i]] <- NULL
-  }
-}
-
-# Check errors
-if (length(errors[!sapply(errors, is.null)]) > 0) {
-  cat("Errors occurred in the following iterations:\n")
-  print(errors[!sapply(errors, is.null)])
-} else {
-  cat("All iterations completed without errors.\n")
-}
-
-# Stop the parallel backend
-stopImplicitCluster()
