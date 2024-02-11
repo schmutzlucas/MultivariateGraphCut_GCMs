@@ -159,8 +159,7 @@ stopImplicitCluster()
 
 ########################################################################################################################
 
-GC_result_hellinger <- vector("list", N_IT)
-GC_result_hellinger[[i]] <- GraphCutHellinger2D_stoch(kde_ref = kde_ref,
+GC_result_hellinger <- GraphCutHellinger2D_stoch(kde_ref = kde_ref,
                                                       kde_models = kde_models,
                                                       models_smoothcost = models_matrix_nrm$future,
                                                       weight_data = 1,
