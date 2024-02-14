@@ -158,12 +158,204 @@ stopImplicitCluster()
 
 
 ########################################################################################################################
+N_IT <- 500
 
-GC_result_hellinger <- GraphCutHellinger2D_stoch(kde_ref = kde_ref,
+GC_result_hellinger_500 <- GraphCutHellinger2D_stoch(kde_ref = kde_ref,
                                                  kde_models = kde_models,
                                                  models_smoothcost = models_matrix_nrm$future,
                                                  weight_data = 1,
                                                  weight_smooth = 1,
-                                                 N_IT = 25,
+                                                 N_IT = N_IT,
                                                  verbose = TRUE)
+
+GC_result_matrix_500 <- array(dim = c(length(lon), length(lat), N_IT))
+
+for(i in 1:N_IT) {
+  GC_result_matrix_500[,,i] <- GC_result_hellinger_500[[i]]$label_attribution
+}
+
+
+# Get the current date and time
+current_time <- Sys.time()
+
+# Format the date and time as a string in the format 'yyyymmddhhmm'
+formatted_time <- format(current_time, "%Y%m%d%H%M")
+
+# Concatenate the formatted time string with your desired filename
+filename <- paste0(formatted_time, "_my_workspace_ERA5_stochastic_500.RData")
+
+# Save the workspace using the generated filename
+save.image(file = filename, compress = FALSE)
+
+
+
+# Calculate the maximum value for the x-axis limit
+max_value <- max(GC_result_matrix_500)
+
+# Create a sequence of breaks at every half unit starting from -0.5
+breaks <- seq(-0.5, max_value + 0.5, by = 1)
+
+# Generate the histogram with specified breaks
+hist(GC_result_matrix_500, breaks = breaks, xlim = c(0, max_value), xaxt = 'n', freq = FALSE)
+
+# Add custom x-axis ticks centered on the bars
+axis(1, at = seq(0, max_value, by = 1), labels = seq(0, max_value, by = 1))
+
+hist(GC_result_matrix_500)
+
+
+
+# Initialize the matrix to store entropy values
+entropy_matrix <- array(NaN, c(length(lon), length(lat)))
+
+# Loop over each pixel location
+for (i in 1:360) {
+ for (j in 1:181) {
+   # Extract labels for the current pixel across all realizations
+   labels <- GC_result_matrix_500[i, j, ]
+
+   # Calculate the frequency distribution of the labels
+   label_freq <- table(labels) / length(labels)
+
+   # Compute entropy
+   entropy <- -sum(label_freq * log2(label_freq))
+
+   # Assign the computed entropy to the entropy matrix
+   entropy_matrix[i, j] <- entropy
+ }
+}
+
+
+test_df <- melt(entropy_matrix, c("lon", "lat"), value.name = "Entropy")
+
+p1 <- ggplot() +
+  geom_tile(data=test_df, aes(x=lon, y=lat-90, fill=Entropy))+
+  ggtitle(paste0('Entropy of 500 graph cut runs ', 'Average Entropy = ', round(mean(entropy_matrix), 2)))+
+  scale_fill_gradient(low = "white", high = "#0072B2",
+                      limits = c(0, max(entropy_matrix)))+
+  # guide = guide_colourbar(
+  #   barwidth = 0.4,
+  #   ticks.colour = 'black',
+  #   ticks.linewidth = 1,
+  #   frame.colour = 'black',
+  #   draw.ulim = TRUE,
+  #   draw.llim = TRUE),)
+  borders("world2", colour = 'black', lwd = 0.12) +
+  scale_x_continuous(, expand = c(0, 0)) +
+  scale_y_continuous(, expand = c(0,0))+
+  theme(legend.position = 'bottom')+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  theme(panel.background = element_blank())+
+  xlab('Longitude')+
+  ylab('Latitude') +
+  labs(fill='H')+
+  theme_bw()+
+  theme(legend.key.size = unit(0.5, 'cm'), #change legend key size
+        legend.key.height = unit(0.7, 'cm'), #change legend key height
+        legend.key.width = unit(0.2, 'cm'), #change legend key width
+        legend.title = element_text(size=9), #change legend title font size
+        legend.text = element_text(size=7))+ #change legend text font size
+  theme(plot.title = element_text(size=16),
+        axis.text=element_text(size=7),
+        axis.title=element_text(size=9),)+
+  easy_center_title()
+p1
+
+name <- paste0('figure/entropy_map_500')
+ggsave(paste0(name, '.pdf'), plot = p1, width = 35, height = 25, units = "cm", dpi = 300)
+ggsave(paste0(name, '.png'), plot = p1, width = 35, height = 25, units = "cm", dpi = 300)
+
+
+
+
+
+# Initialize the matrix to store the count of unique models
+unique_model_count_matrix <- array(NA, c(length(lon), length(lat)))
+
+# Loop over each pixel location
+for (i in 1:360) {
+  for (j in 1:181) {
+    # Extract labels for the current pixel across all realizations
+    labels <- GC_result_matrix_500[i, j, ]
+
+    # Count the number of unique labels (models)
+    unique_models <- length(unique(labels))
+
+    # Assign the count of unique models to the matrix
+    unique_model_count_matrix[i, j] <- unique_models
+  }
+}
+
+# Calculate the maximum value for the x-axis limit
+max_value <- max(unique_model_count_matrix)
+
+# Create a sequence of breaks at every half unit starting from -0.5
+breaks <- seq(-0.5, max_value + 0.5, by = 1)
+
+# Generate the histogram with specified breaks
+hist(unique_model_count_matrix, breaks = breaks, xlim = c(0, max_value), xaxt = 'n')
+
+# Add custom x-axis ticks centered on the bars
+axis(1, at = seq(0, max_value, by = 1), labels = seq(0, max_value, by = 1))
+
+
+min(unique_model_count_matrix)
+max(unique_model_count_matrix)
+
+
+
+unique_model_count_df <- melt(unique_model_count_matrix, c("lon", "lat"), value.name = "Count")
+
+# Get a color palette with colorRampPalette function
+color_palette <- colorRampPalette(c("white", "blue", "#0072B2", "darkblue", "black"))
+
+# Determine the number of unique counts to decide on the number of colors to use
+num_colors <- length(unique(unique_model_count_df$Count))
+
+p1 <- ggplot() +
+  geom_tile(data=unique_model_count_df, aes(x=lon, y=lat-90, fill=Count))+
+  ggtitle(paste0('Per grid-point model count for 500 Graph cut runs'))+
+  scale_fill_viridis_c(option = "plasma", limits = c(0, max(unique_model_count_matrix, na.rm = TRUE)))+
+  # guide = guide_colourbar(
+  #   barwidth = 0.4,
+  #   ticks.colour = 'black',
+  #   ticks.linewidth = 1,
+  #   frame.colour = 'black',
+  #   draw.ulim = TRUE,
+  #   draw.llim = TRUE),)
+  borders("world2", colour = 'black', lwd = 0.12) +
+  scale_x_continuous(, expand = c(0, 0)) +
+  scale_y_continuous(, expand = c(0,0))+
+  theme(legend.position = 'bottom')+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  theme(panel.background = element_blank())+
+  xlab('Longitude')+
+  ylab('Latitude') +
+  labs(fill='H')+
+  theme_bw()+
+  theme(legend.key.size = unit(0.5, 'cm'), #change legend key size
+        legend.key.height = unit(0.7, 'cm'), #change legend key height
+        legend.key.width = unit(0.2, 'cm'), #change legend key width
+        legend.title = element_text(size=9), #change legend title font size
+        legend.text = element_text(size=7))+ #change legend text font size
+  theme(plot.title = element_text(size=16),
+        axis.text=element_text(size=7),
+        axis.title=element_text(size=9),)+
+  easy_center_title()
+p1
+
+name <- paste0('figure/unique_model_count_map_500')
+ggsave(paste0(name, '.pdf'), plot = p1, width = 35, height = 25, units = "cm", dpi = 300)
+ggsave(paste0(name, '.png'), plot = p1, width = 35, height = 25, units = "cm", dpi = 300)
+
+
+# Choose one of the following lines and replace it with the # Insert one of the scale_fill lines here in the above code
+# For Viridis palette:
+# scale_fill_viridis_c(option = "C", limits = c(0, max(unique_model_count_matrix, na.rm = TRUE)))
+# For Spectral palette:
+# scale_fill_gradientn(colors = RColorBrewer::brewer.pal(11, "Spectral"), limits = c(0, max(unique_model_count_matrix, na.rm = TRUE)))
+# For Plasma palette:
+# scale_fill_viridis_c(option = "plasma", limits = c(0, max(unique_model_count_matrix, na.rm = TRUE)))
+
+
 

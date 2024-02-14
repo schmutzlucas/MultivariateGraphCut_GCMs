@@ -65,7 +65,7 @@ variable_map = {
 
 # Define the list of years to retrieve data for
 # Define the list of years to retrieve data for
-YEARS = list(map(str, range(1952, 1970)))
+YEARS = list(map(str, range(1958, 1970)))
 
 
 # Define the list of months to retrieve data for
@@ -79,7 +79,7 @@ def main():
     # Ensure the necessary directory exists
     os.makedirs('data/ERA5_land/', exist_ok=True)
     # create a thread pool with n worker threads
-    with ThreadPoolExecutor(max_workers=16) as exe:
+    with ThreadPoolExecutor(max_workers=10) as exe:
         for year in YEARS:
             for month in MONTHS:
                 # Retrieve data for each variable
