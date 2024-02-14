@@ -79,7 +79,7 @@ def main():
     # Ensure the necessary directory exists
     os.makedirs('data/ERA5_land/', exist_ok=True)
     # create a thread pool with n worker threads
-    with ThreadPoolExecutor(max_workers=10) as exe:
+    with ThreadPoolExecutor(max_workers=16) as exe:
         for year in YEARS:
             for month in MONTHS:
                 # Retrieve data for each variable
