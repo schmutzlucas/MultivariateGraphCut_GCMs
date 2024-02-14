@@ -133,7 +133,7 @@ GraphCutHellinger2D_stoch <- function(
 
   for(k in 1:N_IT) {
 
-    cat(paste0("Itération : ", k))
+    cat(paste0("Iteration : ", k))
     # Instanciation of the GraphCut environment
 
     gco <- new(GCoptimizationGridGraph, width, height, n_labs)

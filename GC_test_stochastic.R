@@ -158,9 +158,15 @@ stopImplicitCluster()
 
 
 ########################################################################################################################
-N_IT <- 500
+# Loading local functions
+source_code_dir <- 'functions/' #The directory where all functions are saved.
+file_paths <- list.files(source_code_dir, full.names = T)
+for(path in file_paths){source(path)}
 
-GC_result_hellinger_500 <- GraphCutHellinger2D_stoch(kde_ref = kde_ref,
+
+N_IT <- 1000
+
+GC_result_hellinger_1000 <- GraphCutHellinger2D_stoch(kde_ref = kde_ref,
                                                  kde_models = kde_models,
                                                  models_smoothcost = models_matrix_nrm$future,
                                                  weight_data = 1,
@@ -168,10 +174,10 @@ GC_result_hellinger_500 <- GraphCutHellinger2D_stoch(kde_ref = kde_ref,
                                                  N_IT = N_IT,
                                                  verbose = TRUE)
 
-GC_result_matrix_500 <- array(dim = c(length(lon), length(lat), N_IT))
+GC_result_matrix_1000 <- array(dim = c(length(lon), length(lat), N_IT))
 
 for(i in 1:N_IT) {
-  GC_result_matrix_500[,,i] <- GC_result_hellinger_500[[i]]$label_attribution
+  GC_result_matrix_1000[,,i] <- GC_result_hellinger_500[[i]]$label_attribution
 }
 
 

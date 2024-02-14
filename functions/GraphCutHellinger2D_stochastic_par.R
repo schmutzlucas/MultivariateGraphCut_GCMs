@@ -43,7 +43,7 @@ library(doParallel)
 #'
 #' @import gcoWrapR
 #' @export
-GraphCutHellinger2D_stoch <- function(
+GraphCutHellinger2D_stoch_par <- function(
   kde_ref,
   kde_models,
   models_smoothcost,
@@ -87,13 +87,22 @@ GraphCutHellinger2D_stoch <- function(
   smooth_cpp <- c(aperm(models_smoothcost, c(4, 2, 1, 3)))
 
 
+  # Register the parallel backend with the specified number of threads
+  no_cores <- detectCores() - 1  # Leaving one core free is typically a good practice
+  registerDoParallel(cores = 16)
 
-  # Preparing the DataCost and SmoothCost functions of the GraphCut in C++
 
-  cat("Creating DataCost function...  ")
+  results <- vector("list", N_IT)
+  errors <- vector("list", N_IT)
 
-  ptrDataCost <- cppXPtr(
-    code = 'float dataFn(int p, int l, Rcpp::List extraData)
+  results <- foreach(k = 1:N_IT, .packages = c("gcoWrapR", "RcppXPtrUtils")) %dopar% {
+
+    # Preparing the DataCost and SmoothCost functions of the GraphCut in C++
+
+    cat("Creating DataCost function...  ")
+
+    ptrDataCost <- cppXPtr(
+      code = 'float dataFn(int p, int l, Rcpp::List extraData)
     {
 
       int numPix          = extraData["numPix"];
@@ -102,13 +111,13 @@ GraphCutHellinger2D_stoch <- function(
 
       return(weight * data[p + numPix * l]);
     }',
-    includes = c("#include <math.h>", "#include <Rcpp.h>", "#include <iostream>"),
-    rebuild = TRUE, showOutput = FALSE, verbose = FALSE
-  )
+      includes = c("#include <math.h>", "#include <Rcpp.h>", "#include <iostream>"),
+      rebuild = TRUE, showOutput = FALSE, verbose = FALSE
+    )
 
-  cat("Creating SmoothCost function...  ")
-  ptrSmoothCost <- cppXPtr(
-    code = 'float smoothFn(int p1, int p2, int l1, int l2, Rcpp::List extraData)
+    cat("Creating SmoothCost function...  ")
+    ptrSmoothCost <- cppXPtr(
+      code = 'float smoothFn(int p1, int p2, int l1, int l2, Rcpp::List extraData)
     {
       int nbVariables        = extraData["n_variables"];
       int numPix             = extraData["numPix"];
@@ -127,19 +136,10 @@ GraphCutHellinger2D_stoch <- function(
 
       return(weight * cost);
     }',
-    includes = c("#include <math.h>", "#include <Rcpp.h>"),
-    rebuild = TRUE, showOutput = FALSE, verbose = FALSE
-  )
+      includes = c("#include <math.h>", "#include <Rcpp.h>"),
+      rebuild = TRUE, showOutput = FALSE, verbose = FALSE
+    )
 
-  # Register the parallel backend with the specified number of threads
-  no_cores <- detectCores() - 1  # Leaving one core free is typically a good practice
-  registerDoParallel(cores = 16)
-
-
-  results <- vector("list", N_IT)
-  errors <- vector("list", N_IT)
-
-  results <- foreach(k = 1:N_IT, .packages = c("gcoWrapR")) %dopar% {
     tryCatch({
       cat(paste0("Itération : ", k))
       # Instanciation of the GraphCut environment
@@ -165,31 +165,31 @@ GraphCutHellinger2D_stoch <- function(
       print(best_label)
       for(z in 0:((width*height)-1)){
         # Label is set as the best average model
-        # gco$setLabel(z, best_label)
+        # gco[[k]]$setLabel(z, best_label)
 
         random_label <- sample(0:(n_labs-1), 1) # Sample a random index uniformly
-        gco$setLabel(z, random_label)
-        # #   # gco$setLabel(z, -1)
-        # #   gco$setLabel(z, 1)
+        gco[[k]]$setLabel(z, random_label)
+        # #   # gco[[k]]$setLabel(z, -1)
+        # #   gco[[k]]$setLabel(z, 1)
       }
 
       # Optimizing the MRF energy with alpha-beta swap
       # -1 refers to the optimization until convergence
       cat("Starting GraphCut optimization...  ")
       begin <- Sys.time()
-      gco$swap(-1)
+      gco[[k]]$swap(-1)
       time_spent <- Sys.time()-begin
       cat("GraphCut optimization done :  ")
       print(time_spent)
 
-      data_cost         <- gco$giveDataEnergy()
-      smooth_cost       <- gco$giveSmoothEnergy()
+      data_cost         <- gco[[k]]$giveDataEnergy()
+      smooth_cost       <- gco[[k]]$giveSmoothEnergy()
       data_smooth_list  <- list("Data cost" = data_cost, "Smooth cost" = smooth_cost)
 
       label_attribution <- matrix(0,nrow = height,ncol = width)
       for(j in 1:height){
         for(i in 1:width){
-          label_attribution[j,i] <- gco$whatLabel((i - 1) + width * (j - 1)) ### Permuting from the C++ indexing to the R indexing
+          label_attribution[j,i] <- gco[[k]]$whatLabel((i - 1) + width * (j - 1)) ### Permuting from the C++ indexing to the R indexing
         }
       }
 
