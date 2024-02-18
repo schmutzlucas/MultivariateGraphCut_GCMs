@@ -25,7 +25,7 @@ def cds_api_call(experiment, model, year, month, day, variable, name):
 
 
 # Read the list of models from a file
-with open('model_list.txt', 'r') as file:
+with open('../model_list.txt', 'r') as file:
     model_list = file.read().splitlines()
 
 # Define the list of variables to retrieve
