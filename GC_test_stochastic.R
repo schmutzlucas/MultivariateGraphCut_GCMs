@@ -282,7 +282,7 @@ unique_model_count_matrix <- array(NA, c(length(lon), length(lat)))
 for (i in 1:360) {
   for (j in 1:181) {
     # Extract labels for the current pixel across all realizations
-    labels <- GC_result_matrix_500[i, j, ]
+    labels <- GC_result_matrix_1000[i, j, ]
 
     # Count the number of unique labels (models)
     unique_models <- length(unique(labels))
