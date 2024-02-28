@@ -177,7 +177,7 @@ GC_result_hellinger_1000 <- GraphCutHellinger2D_stoch(kde_ref = kde_ref,
 GC_result_matrix_1000 <- array(dim = c(length(lon), length(lat), N_IT))
 
 for(i in 1:N_IT) {
-  GC_result_matrix_1000[,,i] <- GC_result_hellinger_500[[i]]$label_attribution
+  GC_result_matrix_1000[,,i] <- GC_result_hellinger_1000[[i]]$label_attribution
 }
 
 
@@ -196,18 +196,18 @@ save.image(file = filename, compress = FALSE)
 
 
 # Calculate the maximum value for the x-axis limit
-max_value <- max(GC_result_matrix_500)
+max_value <- max(GC_result_matrix_1000)
 
 # Create a sequence of breaks at every half unit starting from -0.5
 breaks <- seq(-0.5, max_value + 0.5, by = 1)
 
 # Generate the histogram with specified breaks
-hist(GC_result_matrix_500, breaks = breaks, xlim = c(0, max_value), xaxt = 'n', freq = FALSE)
+hist(GC_result_matrix_1000, breaks = breaks, xlim = c(0, max_value), xaxt = 'n', freq = FALSE)
 
 # Add custom x-axis ticks centered on the bars
 axis(1, at = seq(0, max_value, by = 1), labels = seq(0, max_value, by = 1))
 
-hist(GC_result_matrix_500)
+hist(GC_result_matrix_1000)
 
 
 
@@ -218,7 +218,7 @@ entropy_matrix <- array(NaN, c(length(lon), length(lat)))
 for (i in 1:360) {
  for (j in 1:181) {
    # Extract labels for the current pixel across all realizations
-   labels <- GC_result_matrix_500[i, j, ]
+   labels <- GC_result_matrix_1000[i, j, ]
 
    # Calculate the frequency distribution of the labels
    label_freq <- table(labels) / length(labels)
