@@ -11,26 +11,30 @@ h <- ggplot() +
   scale_fill_manual(values = as.vector(color_palette), na.value = NA, guide = FALSE) +  # guide = FALSE to remove legend
   ggtitle('Label attribution for GC hybrid') +
   borders("world2", colour = 'black', lwd = 0.12) +
-  scale_x_continuous(expand = c(0, 0)) +
-  scale_y_continuous(expand = c(0, 0)) +
-  theme(legend.position = 'none') +
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
-  theme(panel.background = element_blank()) +
-  xlab('Longitude') +
+  scale_x_continuous(, expand = c(0, 0)) +
+  scale_y_continuous(, expand = c(0,0))+
+  theme(legend.position = 'bottom')+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  theme(panel.background = element_blank())+
+  xlab('Longitude')+
   ylab('Latitude') +
-  labs(fill = '[mm/day]') +
-  theme_bw() +
-  theme(
-    plot.title = element_text(size = 16),
-    axis.text = element_text(size = 7),
-    axis.title = element_text(size = 9)
-  ) +
+  labs(fill='Hellinger \nDistance')+
+  theme_bw()+
+  theme(legend.key.size = unit(1, 'cm'), #change legend key size
+        legend.key.height = unit(1.4, 'cm'), #change legend key height
+        legend.key.width = unit(0.4, 'cm'), #change legend key width
+        legend.title = element_text(size=16), #change legend title font size
+        legend.text = element_text(size=12))+ #change legend text font size
+  theme(plot.title = element_text(size=24),
+        plot.subtitle = element_text(size = 20,hjust=0.5),
+        axis.text=element_text(size=14),
+        axis.title=element_text(size=16),)+
   easy_center_title()
 
 h
 
 
-name <- paste0('figure/labelling')
+name <- paste0('figure/labelling_2')
 ggsave(paste0(name, '.pdf'), plot = h, width = 35, height = 25, units = "cm", dpi = 300)
 ggsave(paste0(name, '.png'), plot = h, width = 35, height = 25, units = "cm", dpi = 300)
 
