@@ -209,7 +209,7 @@ test_df <- melt(gradient_error_GC_pr, c("lon", "lat"), value.name = "Bias")
 
 p1 <- ggplot() +
   geom_tile(data=test_df, aes(x=lon, y=lat-90, fill=Bias),)+
-  ggtitle(paste0('GraphCut Temperature Gradient Error'))+
+  ggtitle(paste0('GraphCut Precipitation Gradient Error'))+
   labs(subtitle = paste0('Average Error [mm/day] : ', round(mean(abs(gradient_error_GC_pr)), 2)))+
   scale_fill_gradientn(colors = c("white", "red"),
                        breaks = v_limits,
@@ -269,7 +269,7 @@ test_df <- melt(gradient_error_GC_pr, c("lon", "lat"), value.name = "Bias")
 
 p1 <- ggplot() +
   geom_tile(data=test_df, aes(x=lon, y=lat-90, fill=Bias),)+
-   ggtitle(paste0('MMM Temperature Gradient Error'))+
+   ggtitle(paste0('MMM Precipitation Gradient Error'))+
   labs(subtitle = paste0('Average Error [mm/day] : ', round(mean(abs(gradient_error_GC_pr)), 2)))+
   scale_fill_gradientn(colors = c("white", "red"),
                        breaks = v_limits,
