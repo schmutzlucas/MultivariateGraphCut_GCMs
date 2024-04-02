@@ -343,7 +343,7 @@ test_df <- melt(h_dist_map, c("lon", "lat"), value.name = "Bias")
 
 p1 <- ggplot() +
   geom_tile(data=test_df, aes(x=lon, y=lat-90, fill=Bias))+
-  labs(subtitle = 'Projection period : 1999 - 2014')+
+  labs(subtitle = 'Projection period : 2000 - 2022')+
   ggtitle(paste0('GraphCut Hellinger', ': Mean Hellinger distance = ', round(mean(h_dist_map), 2)))+
   scale_fill_gradient(low = "white", high = "#015a8c", limits = c(0.1, 0.70), oob = scales::squish)+
   borders("world2", colour = 'black', lwd = 0.12) +
@@ -368,7 +368,7 @@ p1 <- ggplot() +
   easy_center_title()
 p1
 
-name <- paste0('figure/H_dist_future_GCHellinger_26models')
+name <- paste0('figure/H_dist_future_GCHellinger_26models_new')
 ggsave(paste0(name, '.pdf'), plot = p1, width = 35, height = 25, units = "cm", dpi = 300)
 ggsave(paste0(name, '.png'), plot = p1, width = 35, height = 25, units = "cm", dpi = 300)
 
@@ -425,7 +425,7 @@ test_df <- melt(MMM_h_dist_future, c("lon", "lat"), value.name = "Bias")
 
 p3 <- ggplot() +
   geom_tile(data=test_df, aes(x=lon, y=lat-90, fill=Bias))+
-  labs(subtitle = 'Projection period : 1999 - 2014')+
+  labs(subtitle = 'Projection period : 2000 - 2022')+
   ggtitle(paste0('Multi Model Mean', ': Mean Hellinger distance = ', round(mean(MMM_h_dist_future), 2)))+
   scale_fill_gradient(low = "white", high = "#015a8c", limits = c(0.1, 0.70), oob = scales::squish)+
   borders("world2", colour = 'black', lwd = 0.12) +
@@ -450,7 +450,7 @@ p3 <- ggplot() +
   easy_center_title()
 p3
 
-name <- paste0('figure/H_dist_future_MMM_26models')
+name <- paste0('figure/H_dist_future_MMM_26models_new')
 ggsave(paste0(name, '.pdf'), plot = p3, width = 35, height = 25, units = "cm", dpi = 300)
 ggsave(paste0(name, '.png'), plot = p3, width = 35, height = 25, units = "cm", dpi = 300)
 

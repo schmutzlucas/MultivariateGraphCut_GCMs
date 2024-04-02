@@ -207,7 +207,10 @@ hist(GC_result_matrix_1000, breaks = breaks, xlim = c(0, max_value), xaxt = 'n',
 # Add custom x-axis ticks centered on the bars
 axis(1, at = seq(0, max_value, by = 1), labels = seq(0, max_value, by = 1))
 
-hist(GC_result_matrix_1000)
+
+name <- paste0('figure/H_dist_future_GCHellinger_26models_new')
+ggsave(paste0(name, '.pdf'), plot = p1, width = 35, height = 25, units = "cm", dpi = 300)
+ggsave(paste0(name, '.png'), plot = p1, width = 35, height = 25, units = "cm", dpi = 300)
 
 
 
@@ -236,16 +239,8 @@ test_df <- melt(entropy_matrix, c("lon", "lat"), value.name = "Entropy")
 
 p1 <- ggplot() +
   geom_tile(data=test_df, aes(x=lon, y=lat-90, fill=Entropy))+
-  ggtitle(paste0('Entropy of 500 graph cut runs ', 'Average Entropy = ', round(mean(entropy_matrix), 2)))+
-  scale_fill_gradient(low = "white", high = "#0072B2",
-                      limits = c(0, max(entropy_matrix)))+
-  # guide = guide_colourbar(
-  #   barwidth = 0.4,
-  #   ticks.colour = 'black',
-  #   ticks.linewidth = 1,
-  #   frame.colour = 'black',
-  #   draw.ulim = TRUE,
-  #   draw.llim = TRUE),)
+  ggtitle(paste0('Entropy of 1000 graph cut ', 'Average Entropy = ', round(mean(entropy_matrix), 2)))+
+  scale_fill_viridis_c(option = "plasma", limits = c(0, max(entropy_matrix, na.rm = TRUE)))+
   borders("world2", colour = 'black', lwd = 0.12) +
   scale_x_continuous(, expand = c(0, 0)) +
   scale_y_continuous(, expand = c(0,0))+
@@ -254,20 +249,21 @@ p1 <- ggplot() +
   theme(panel.background = element_blank())+
   xlab('Longitude')+
   ylab('Latitude') +
-  labs(fill='H')+
+  labs(fill = expression(H[2]))+
   theme_bw()+
-  theme(legend.key.size = unit(0.5, 'cm'), #change legend key size
-        legend.key.height = unit(0.7, 'cm'), #change legend key height
-        legend.key.width = unit(0.2, 'cm'), #change legend key width
-        legend.title = element_text(size=9), #change legend title font size
-        legend.text = element_text(size=7))+ #change legend text font size
-  theme(plot.title = element_text(size=16),
-        axis.text=element_text(size=7),
-        axis.title=element_text(size=9),)+
+  theme(legend.key.size = unit(1, 'cm'), #change legend key size
+        legend.key.height = unit(1.4, 'cm'), #change legend key height
+        legend.key.width = unit(0.4, 'cm'), #change legend key width
+        legend.title = element_text(size=16), #change legend title font size
+        legend.text = element_text(size=12))+ #change legend text font size
+  theme(plot.title = element_text(size=24),
+        plot.subtitle = element_text(size = 20,hjust=0.5),
+        axis.text=element_text(size=14),
+        axis.title=element_text(size=16),)+
   easy_center_title()
 p1
 
-name <- paste0('figure/entropy_map_500')
+name <- paste0('figure/entropy_map_1000')
 ggsave(paste0(name, '.pdf'), plot = p1, width = 35, height = 25, units = "cm", dpi = 300)
 ggsave(paste0(name, '.png'), plot = p1, width = 35, height = 25, units = "cm", dpi = 300)
 
@@ -282,7 +278,7 @@ unique_model_count_matrix <- array(NA, c(length(lon), length(lat)))
 for (i in 1:360) {
   for (j in 1:181) {
     # Extract labels for the current pixel across all realizations
-    labels <- GC_result_matrix_500[i, j, ]
+    labels <- GC_result_matrix_1000[i, j, ]
 
     # Count the number of unique labels (models)
     unique_models <- length(unique(labels))
@@ -299,7 +295,7 @@ max_value <- max(unique_model_count_matrix)
 breaks <- seq(-0.5, max_value + 0.5, by = 1)
 
 # Generate the histogram with specified breaks
-hist(unique_model_count_matrix, breaks = breaks, xlim = c(0, max_value), xaxt = 'n')
+hist(unique_model_count_matrix, breaks = breaks, xlim = c(0, max_value), xaxt = 'n', freq = FALSE, main = "Number of models per grid point", xlab = "", ylab = "")
 
 # Add custom x-axis ticks centered on the bars
 axis(1, at = seq(0, max_value, by = 1), labels = seq(0, max_value, by = 1))
@@ -320,7 +316,7 @@ num_colors <- length(unique(unique_model_count_df$Count))
 
 p1 <- ggplot() +
   geom_tile(data=unique_model_count_df, aes(x=lon, y=lat-90, fill=Count))+
-  ggtitle(paste0('Per grid-point model count for 500 Graph cut runs'))+
+  ggtitle(paste0('Per grid-point model count'))+
   scale_fill_viridis_c(option = "plasma", limits = c(0, max(unique_model_count_matrix, na.rm = TRUE)))+
   # guide = guide_colourbar(
   #   barwidth = 0.4,
@@ -337,20 +333,21 @@ p1 <- ggplot() +
   theme(panel.background = element_blank())+
   xlab('Longitude')+
   ylab('Latitude') +
-  labs(fill='H')+
+  labs(fill='#M')+
   theme_bw()+
-  theme(legend.key.size = unit(0.5, 'cm'), #change legend key size
-        legend.key.height = unit(0.7, 'cm'), #change legend key height
-        legend.key.width = unit(0.2, 'cm'), #change legend key width
-        legend.title = element_text(size=9), #change legend title font size
-        legend.text = element_text(size=7))+ #change legend text font size
-  theme(plot.title = element_text(size=16),
-        axis.text=element_text(size=7),
-        axis.title=element_text(size=9),)+
+  theme(legend.key.size = unit(1, 'cm'), #change legend key size
+        legend.key.height = unit(1.4, 'cm'), #change legend key height
+        legend.key.width = unit(0.4, 'cm'), #change legend key width
+        legend.title = element_text(size=16), #change legend title font size
+        legend.text = element_text(size=12))+ #change legend text font size
+  theme(plot.title = element_text(size=24),
+        plot.subtitle = element_text(size = 20,hjust=0.5),
+        axis.text=element_text(size=14),
+        axis.title=element_text(size=16),)+
   easy_center_title()
 p1
 
-name <- paste0('figure/unique_model_count_map_500')
+name <- paste0('figure/unique_model_count_map_1000')
 ggsave(paste0(name, '.pdf'), plot = p1, width = 35, height = 25, units = "cm", dpi = 300)
 ggsave(paste0(name, '.png'), plot = p1, width = 35, height = 25, units = "cm", dpi = 300)
 
@@ -362,6 +359,11 @@ ggsave(paste0(name, '.png'), plot = p1, width = 35, height = 25, units = "cm", d
 # scale_fill_gradientn(colors = RColorBrewer::brewer.pal(11, "Spectral"), limits = c(0, max(unique_model_count_matrix, na.rm = TRUE)))
 # For Plasma palette:
 # scale_fill_viridis_c(option = "plasma", limits = c(0, max(unique_model_count_matrix, na.rm = TRUE)))
+
+
+
+
+
 
 
 

@@ -1,27 +1,31 @@
 
 # Map of the bias that works
 # Creating the dataframe
-# For tas
-bias_tmp <- MMM$tas - reference_list$future$tas[[1]]
+# For pr
+bias_tmp <- MMM$pr - reference_list$future$pr[[1]]*86400
+
+# Ensure you are removing NA values in the computation
+avg_bias <- round(mean(abs(bias_tmp), na.rm = TRUE), 2)
+
+# Settings the limits
+limit <- c(-10, 10)
+
+# Settings the limits
+
+v_limits <- as.numeric(format(seq(min(limit), max(limit), len=5), digits = 3))
+bias_tmp[bias_tmp < min(limit)] <- min(limit)
+bias_tmp[bias_tmp > max(limit)] <- max(limit)
 
 test_df <- melt(bias_tmp, c("lon", "lat"), value.name = "Bias")
 
-# Settings the limits
-# limit <- max(abs(c(min(test_df$Bias), max(test_df$Bias))))
-# limit <- round_any(limit, 10, floor)
-limit <- 8
-limits <- c(-8, 8)
-v_limits <- as.numeric(format(seq(-limit, limit, len=6), digits = 3))
-test_df$Bias[test_df$Bias < -limit] <- -limit
-test_df$Bias[test_df$Bias > limit] <- limit
 
-p <- ggplot() +
+p <- ggplot()+
   geom_tile(data=test_df, aes(x=lon, y=lat, fill=Bias),)+
   ggtitle(paste0('Multi-Model Mean'))+
-  labs(subtitle = paste0('Average Bias : ', round(mean(abs(bias_tmp)), 2)))+
+  labs(subtitle = paste0('Average Bias : ', avg_bias))+
   scale_fill_gradientn(colours = rev(RColorBrewer::brewer.pal(11, "RdBu")),
                        breaks = v_limits,
-                       limits = limits)+
+                       limits = limit)+
   # guide = guide_colourbar(
   #   barwidth = 0.4,
   #   ticks.colour = 'black',
@@ -37,7 +41,7 @@ p <- ggplot() +
   theme(panel.background = element_blank())+
   xlab('Longitude')+
   ylab('Latitude') +
-  labs(fill='Bias [K]')+
+  labs(fill='[mm/day]')+
   theme_bw()+
   theme(legend.key.size = unit(1, 'cm'), #change legend key size
         legend.key.height = unit(1.4, 'cm'), #change legend key height
@@ -52,32 +56,38 @@ p <- ggplot() +
 p
 mean(abs(bias_tmp))
 
-name <- paste0('figure/MMM_bias_tas_26models_new')
+name <- paste0('figure/MMM_bias_pr_26models_new')
 ggsave(paste0(name, '.pdf'), plot = p, width = 35, height = 25, units = "cm", dpi = 300)
 ggsave(paste0(name, '.png'), plot = p, width = 35, height = 25, units = "cm", dpi = 300)
 
 
 # Map of the bias that works
 # Creating the dataframe
-# For tas
-bias_tmp <- GC_hellinger_projections$tas - reference_list$future$tas[[1]]
+# For pr
+bias_tmp <- GC_hellinger_projections$pr - reference_list$future$pr[[1]]*86400
 
-test_df <- melt(bias_tmp, c("lon", "lat"), value.name = "Bias")
+# Ensure you are removing NA values in the computation
+rm(avg_bias)
+avg_bias <- round(mean(abs(bias_tmp), na.rm = TRUE), 2)
 
 # Settings the limits
-# limit <- max(abs(c(min(test_df$Bias), max(test_df$Bias))))
-# limit <- round_any(limit, 10, floor)
+limit <- c(-10, 10)
 
-test_df$Bias[test_df$Bias < -limit] <- -limit
-test_df$Bias[test_df$Bias > limit] <- limit
+# Settings the limits
+
+v_limits <- as.numeric(format(seq(min(limit), max(limit), len=5), digits = 3))
+bias_tmp[bias_tmp < min(limit)] <- min(limit)
+bias_tmp[bias_tmp > max(limit)] <- max(limit)
+
+test_df <- melt(bias_tmp, c("lon", "lat"), value.name = "Bias")
 
 p <- ggplot() +
   geom_tile(data=test_df, aes(x=lon, y=lat-90, fill=Bias),)+
   ggtitle(paste0('GraphCut Hellinger'))+
-  labs(subtitle = paste0('Average Bias : ', round(mean(abs(bias_tmp)), 2)))+
+  labs(subtitle = paste0('Average Bias : ', avg_bias))+
   scale_fill_gradientn(colours = rev(RColorBrewer::brewer.pal(11, "RdBu")),
                        breaks = v_limits,
-                       limits = limits)+
+                       limits = limit)+
   # guide = guide_colourbar(
   #   barwidth = 0.4,
   #   ticks.colour = 'black',
@@ -93,7 +103,7 @@ p <- ggplot() +
   theme(panel.background = element_blank())+
   xlab('Longitude')+
   ylab('Latitude') +
-  labs(fill='Bias [K]')+
+  labs(fill='[mm/day]')+
   theme_bw()+
   theme(legend.key.size = unit(1, 'cm'), #change legend key size
         legend.key.height = unit(1.4, 'cm'), #change legend key height
@@ -108,7 +118,7 @@ p <- ggplot() +
 p
 mean(abs(bias_tmp))
 
-name <- paste0('figure/GC_Hellinger_bias_tas_26models_new')
+name <- paste0('figure/GC_Hellinger_bias_pr_26models_new')
 ggsave(paste0(name, '.pdf'), plot = p, width = 35, height = 25, units = "cm", dpi = 300)
 ggsave(paste0(name, '.png'), plot = p, width = 35, height = 25, units = "cm", dpi = 300)
 
@@ -119,7 +129,7 @@ ggsave(paste0(name, '.png'), plot = p, width = 35, height = 25, units = "cm", dp
 
 # Map of the bias that works
 # Creating the dataframe
-# For tas
+# For pr
 bias_tmp <- mmcombi$gc_hybrid$Bias
 
 test_df <- melt(bias_tmp, c("lon", "lat"), value.name = "Bias")
@@ -180,25 +190,27 @@ ggsave(paste0(name, '.png'), plot = p1, width = 35, height = 25, units = "cm", d
 
 # Map of the bias that works
 # Creating the dataframe
-# For tas
+# For pr
 
-gradient_error_GC_tas <- gradient_mae(reference_list$future$tas$ERA5, GC_hellinger_projections$tas)
+gradient_error_GC_pr <- gradient_mae(reference_list$future$pr$ERA5, GC_hellinger_projections$pr)
+limit <- 2
+limits <- c(0, 2)
+v_limits <- as.numeric(format(seq(-limit, limit, len=6), digits = 3))
+gradient_error_GC_pr[gradient_error_GC_pr < -limit] <- -limit
+gradient_error_GC_pr[gradient_error_GC_pr > limit] <- limit
 
-test_df <- melt(gradient_error_GC_tas, c("lon", "lat"), value.name = "Bias")
+
+test_df <- melt(gradient_error_GC_pr, c("lon", "lat"), value.name = "Bias")
 
 # Settings the limits
 # limit <- max(abs(c(min(test_df$Bias), max(test_df$Bias))))
 # limit <- round_any(limit, 10, floor)
-limit <- 4
-limits <- c(0, 4)
-v_limits <- as.numeric(format(seq(-limit, limit, len=6), digits = 3))
-test_df$Bias[test_df$Bias < -limit] <- -limit
-test_df$Bias[test_df$Bias > limit] <- limit
+
 
 p1 <- ggplot() +
   geom_tile(data=test_df, aes(x=lon, y=lat-90, fill=Bias),)+
-  ggtitle(paste0('GraphCut Temperature Gradient Error'))+
-  labs(subtitle = paste0('Average Error [K] : ', round(mean(abs(gradient_error_GC_tas)), 2)))+
+  ggtitle(paste0('GraphCut Precipitation Gradient Error'))+
+  labs(subtitle = paste0('Average Error [mm/day] : ', round(mean(abs(gradient_error_GC_pr)), 2)))+
   scale_fill_gradientn(colors = c("white", "red"),
                        breaks = v_limits,
                        limits = limits)+
@@ -217,7 +229,7 @@ p1 <- ggplot() +
   theme(panel.background = element_blank())+
   xlab('Longitude')+
   ylab('Latitude') +
-  labs(fill='Error \n[K]')+
+  labs(fill='Error \n[mm/day]')+
   theme_bw()+
   theme(legend.key.size = unit(1, 'cm'), #change legend key size
         legend.key.height = unit(1.4, 'cm'), #change legend key height
@@ -233,7 +245,7 @@ p1
 
 
 
-name <- paste0('figure/t_gradient_GCMV_new')
+name <- paste0('figure/pr_gradient_GCMV_new')
 ggsave(paste0(name, '.pdf'), plot = p1, width = 35, height = 25, units = "cm", dpi = 300)
 ggsave(paste0(name, '.png'), plot = p1, width = 35, height = 25, units = "cm", dpi = 300)
 
@@ -242,25 +254,23 @@ ggsave(paste0(name, '.png'), plot = p1, width = 35, height = 25, units = "cm", d
 
 # Map of the bias that works
 # Creating the dataframe
-# For tas
+# For pr
 
-gradient_error_GC_tas <- gradient_mae(reference_list$future$tas$ERA5, MMM$tas)
-
-test_df <- melt(gradient_error_GC_tas, c("lon", "lat"), value.name = "Bias")
-
-# Settings the limits
-# limit <- max(abs(c(min(test_df$Bias), max(test_df$Bias))))
-# limit <- round_any(limit, 10, floor)
-limit <- 4
-limits <- c(0, 4)
+gradient_error_GC_pr <- gradient_mae(reference_list$future$pr$ERA5, MMM$pr)
+limit <- 2
+limits <- c(0, 2)
 v_limits <- as.numeric(format(seq(-limit, limit, len=6), digits = 3))
-test_df$Bias[test_df$Bias < -limit] <- -limit
-test_df$Bias[test_df$Bias > limit] <- limit
+gradient_error_GC_pr[gradient_error_GC_pr < -limit] <- -limit
+gradient_error_GC_pr[gradient_error_GC_pr > limit] <- limit
+
+test_df <- melt(gradient_error_GC_pr, c("lon", "lat"), value.name = "Bias")
+
+
 
 p1 <- ggplot() +
   geom_tile(data=test_df, aes(x=lon, y=lat-90, fill=Bias),)+
-   ggtitle(paste0('MMM Temperature Gradient Error'))+
-  labs(subtitle = paste0('Average Error [K] : ', round(mean(abs(gradient_error_GC_tas)), 2)))+
+   ggtitle(paste0('MMM Precipitation Gradient Error'))+
+  labs(subtitle = paste0('Average Error [mm/day] : ', round(mean(abs(gradient_error_GC_pr)), 2)))+
   scale_fill_gradientn(colors = c("white", "red"),
                        breaks = v_limits,
                        limits = limits)+
@@ -279,7 +289,7 @@ p1 <- ggplot() +
   theme(panel.background = element_blank())+
   xlab('Longitude')+
   ylab('Latitude') +
-  labs(fill='Error \n[K]')+
+  labs(fill='Error \n[mm/day]')+
   theme_bw()+
   theme(legend.key.size = unit(1, 'cm'), #change legend key size
         legend.key.height = unit(1.4, 'cm'), #change legend key height
@@ -295,7 +305,7 @@ p1
 
 
 
-name <- paste0('figure/t_gradient_MMM_new')
+name <- paste0('figure/pr_gradient_MMM_new')
 ggsave(paste0(name, '.pdf'), plot = p1, width = 35, height = 25, units = "cm", dpi = 300)
 ggsave(paste0(name, '.png'), plot = p1, width = 35, height = 25, units = "cm", dpi = 300)
 
