@@ -164,9 +164,9 @@ file_paths <- list.files(source_code_dir, full.names = T)
 for(path in file_paths){source(path)}
 
 
-N_IT <- 1000
+N_IT <- 1
 
-GC_result_hellinger_1000 <- GraphCutHellinger2D_stoch(kde_ref = kde_ref,
+GC_result_hellinger_new <- GraphCutHellinger2D_stoch_new(kde_ref = kde_ref,
                                                  kde_models = kde_models,
                                                  models_smoothcost = models_matrix_nrm$future,
                                                  weight_data = 1,
@@ -174,10 +174,10 @@ GC_result_hellinger_1000 <- GraphCutHellinger2D_stoch(kde_ref = kde_ref,
                                                  N_IT = N_IT,
                                                  verbose = TRUE)
 
-GC_result_matrix_1000 <- array(dim = c(length(lon), length(lat), N_IT))
+GC_result_matrix_new <- array(dim = c(length(lon), length(lat), N_IT))
 
 for(i in 1:N_IT) {
-  GC_result_matrix_1000[,,i] <- GC_result_hellinger_1000[[i]]$label_attribution
+  GC_result_matrix_new[,,i] <- GC_result_hellinger_new[[i]]$label_attribution
 }
 
 
@@ -239,7 +239,7 @@ test_df <- melt(entropy_matrix, c("lon", "lat"), value.name = "Entropy")
 
 p1 <- ggplot() +
   geom_tile(data=test_df, aes(x=lon, y=lat-90, fill=Entropy))+
-  ggtitle(paste0('Entropy of 1000 graph cut ', 'Average Entropy = ', round(mean(entropy_matrix), 2)))+
+  ggtitle(paste0("Entropy of 1000 GC runs | ", 'Avg', " = ", round(mean(entropy_matrix), 2)))+
   scale_fill_viridis_c(option = "plasma", limits = c(0, max(entropy_matrix, na.rm = TRUE)))+
   borders("world2", colour = 'black', lwd = 0.12) +
   scale_x_continuous(, expand = c(0, 0)) +
