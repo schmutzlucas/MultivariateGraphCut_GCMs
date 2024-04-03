@@ -61,20 +61,37 @@ GraphCutHellinger2D <- function(
   h_dist <- array(data = 0, dim = c(length(lon), length(lat),
                                     length(model_names)))
 
-  # Loop through variables and models
-  m <- 1
-  for (model_name in model_names) {
+  # Assuming kde_models and kde_ref are your input 3D arrays
+
+  # Pre-compute the square roots if applicable
+  sqrt_kde_models <- sqrt(kde_models)
+  sqrt_kde_ref <- sqrt(kde_ref)
+
+  # Define a function to compute Hellinger distance for a given cell across all models
+  compute_hellinger <- function(m, i, j) {
+    # Compute Hellinger distance
+    sqrt(sum((sqrt_kde_models[i, j, , m] - sqrt_kde_ref[i, j, ])^2)) / sqrt(2)
+  }
+  cat("Starting Hellinger distance computation...  ")
+  begin <- Sys.time()
+
+  # Apply this function across all dimensions appropriately
+  # This is a conceptual approach; you might need to adjust indices and dimensions
+  h_dist <- array(dim = c(length(lon), length(lat), length(model_names)))
+  for (m in seq_along(model_names)) {
     for (i in seq_along(lon)) {
       for (j in seq_along(lat)) {
-        # Compute Hellinger distance
-        h_dist_unchecked <- sqrt(sum((sqrt(kde_models[i, j, , m]) - sqrt(kde_ref[i, j, ]))^2)) / sqrt(2)
-
-        # Replace NaN with 0
-        h_dist[i, j, m] <- replace(h_dist_unchecked, is.nan(h_dist_unchecked), 0)
+        h_dist[i, j, m] <- compute_hellinger(m, i, j)
       }
     }
-    m <- m + 1
   }
+
+  # Replace NaN values in h_dist
+  h_dist[is.nan(h_dist)] <- 0
+
+  time_spent <- Sys.time()-begin
+  cat("Hellinger distance computation done in :  ")
+  print(time_spent)
 
 
   # Permuting longitude and latitude since the indexing isn't the same in R and in C++

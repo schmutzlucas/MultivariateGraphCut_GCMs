@@ -41,7 +41,7 @@ library(gcoWrapR)
 #'
 #' @import gcoWrapR
 #' @export
-GraphCutHellinger2D_new <- function(
+GraphCutHellinger2D_new2 <- function(
   kde_ref,
   kde_models,
   models_smoothcost,
@@ -82,6 +82,7 @@ GraphCutHellinger2D_new <- function(
   # when go from matrix to vector
   h_dist_cpp <- c(aperm(h_dist, c(2, 1, 3)))
   smooth_cpp <- c(aperm(models_smoothcost, c(4, 2, 1, 3)))
+  kde_cpp <- c(aperm(kde_models, c(4, 2, 1, 3)))
 
 
   # Instanciation of the GraphCut environment

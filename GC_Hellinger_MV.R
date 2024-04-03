@@ -173,7 +173,7 @@ GC_result_hellinger <- GraphCutHellinger2D(kde_ref = kde_ref,
 
 # Graphcut hellinger labelling
 GC_result_hellinger_new <- list()
-GC_result_hellinger_new <- GraphCutHellinger2D_new(kde_ref = kde_ref,
+GC_result_hellinger_new <- GraphCutHellinger2D_new2(kde_ref = kde_ref,
                                            kde_models = kde_models,
                                            models_smoothcost = models_matrix_nrm$future,
                                            weight_data = 1,
