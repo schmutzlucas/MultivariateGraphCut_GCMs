@@ -499,3 +499,48 @@ ggsave(paste0(name, '.pdf'), plot = p5, width = 35, height = 25, units = "cm", d
 ggsave(paste0(name, '.png'), plot = p5, width = 35, height = 25, units = "cm", dpi = 300)
 
 
+
+
+
+h_dist_map <- array(NA, dim = dim(GC_result_hellinger_new$label_attribution))
+
+for(j in seq_along(variables)){
+  for(l in 0:(length(model_names))){
+    islabel <- which(GC_result_hellinger_new$label_attribution == l)
+    h_dist_map[islabel] <- h_dist_future[,,(l)][islabel]
+  }
+}
+
+test_df <- melt(h_dist_map, c("lon", "lat"), value.name = "Bias")
+
+p5 <- ggplot() +
+  geom_tile(data=test_df, aes(x=lon, y=lat-90, fill=Bias))+
+  labs(subtitle = 'Projection period : 1999 - 2014')+
+  ggtitle(paste0('GraphCut Hellinger', ': Mean Hellinger distance = ', round(mean(h_dist_map), 2)))+
+  scale_fill_gradient(low = "white", high = "#015a8c", limits = c(0.1, 0.70), oob = scales::squish)+
+  borders("world2", colour = 'black', lwd = 0.12) +
+  scale_x_continuous(, expand = c(0, 0)) +
+  scale_y_continuous(, expand = c(0,0))+
+  theme(legend.position = 'bottom')+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  theme(panel.background = element_blank())+
+  xlab('Longitude')+
+  ylab('Latitude') +
+  labs(fill='Hellinger \nDistance')+
+  theme_bw()+
+  theme(legend.key.size = unit(1, 'cm'), #change legend key size
+        legend.key.height = unit(1.4, 'cm'), #change legend key height
+        legend.key.width = unit(0.4, 'cm'), #change legend key width
+        legend.title = element_text(size=16), #change legend title font sizen
+        legend.text = element_text(size=12))+ #change legend text font size
+  theme(plot.title = element_text(size=24),
+        plot.subtitle = element_text(size = 20,hjust=0.5),
+        axis.text=element_text(size=14),
+        axis.title=element_text(size=16),)+
+  easy_center_title()
+p5
+
+name <- paste0('figure/H_dist_future_GC_hellinger_new_26models')
+ggsave(paste0(name, '.pdf'), plot = p5, width = 35, height = 25, units = "cm", dpi = 300)
+ggsave(paste0(name, '.png'), plot = p5, width = 35, height = 25, units = "cm", dpi = 300)
+

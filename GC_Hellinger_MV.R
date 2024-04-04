@@ -174,11 +174,22 @@ GC_result_hellinger <- GraphCutHellinger2D(kde_ref = kde_ref,
 # Graphcut hellinger labelling
 GC_result_hellinger_new <- list()
 GC_result_hellinger_new <- GraphCutHellinger2D_new2(kde_ref = kde_ref,
-                                           kde_models = kde_models,
-                                           models_smoothcost = models_matrix_nrm$future,
-                                           weight_data = 1,
-                                           weight_smooth = 1,
-                                           verbose = TRUE)
+                                                    kde_models = kde_models,
+                                                    kde_models_future = kde_models_future ,
+                                                    weight_data = 1,
+                                                    weight_smooth = 1,
+                                                    nBins = nbins1d^2,
+                                                    verbose = TRUE)
+
+# Graphcut hellinger labelling
+GC_result_hellinger_new <- list()
+GC_result_hellinger_new <- GraphCutHellinger2D_new2(kde_ref = kde_ref,
+                                                    kde_models = kde_models,
+                                                    kde_models_future = kde_models_future ,
+                                                    weight_data = 0.9,
+                                                    weight_smooth = 0.1,
+                                                    nBins = nbins1d^2,
+                                                    verbose = TRUE)
 
 
 # Graphcut labelling
@@ -197,7 +208,7 @@ current_time <- Sys.time()
 formatted_time <- format(current_time, "%Y%m%d%H%M")
 
 # Concatenate the formatted time string with your desired filename
-filename <- paste0(formatted_time, "_my_workspace_ERA5_allmodels.RData")
+filename <- paste0(formatted_time, "_my_workspace_ERA5_allmodels_new.RData")
 
 # Save the workspace using the generated filename
 save.image(file = filename, compress = FALSE)
@@ -298,6 +309,20 @@ for(var in variables){
 }
 GC_hellinger_projections$tas <- matrix(GC_hellinger_projections$tas, nrow = 360)
 GC_hellinger_projections$pr <- matrix(GC_hellinger_projections$pr * 86400, nrow = 360)
+
+
+
+GC_hellinger_projections_new <- list()
+j <- 1
+for(var in variables){
+  for(l in 0:(length(model_names))){
+    islabel <- which(GC_result_hellinger_new$label_attribution == l)
+    GC_hellinger_projections_new[[var]][islabel] <- models_matrix$future[,,(l),j][islabel]
+  }
+  j <- j + 1
+}
+GC_hellinger_projections_new$tas <- matrix(GC_hellinger_projections_new$tas, nrow = 360)
+GC_hellinger_projections_new$pr <- matrix(GC_hellinger_projections_new$pr * 86400, nrow = 360)
 
 
 

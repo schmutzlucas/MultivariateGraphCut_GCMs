@@ -44,9 +44,10 @@ library(gcoWrapR)
 GraphCutHellinger2D_new2 <- function(
   kde_ref,
   kde_models,
-  models_smoothcost,
+  kde_models_future,
   weight_data,
   weight_smooth,
+  nBins,
   verbose
 ){
 
@@ -61,28 +62,43 @@ GraphCutHellinger2D_new2 <- function(
   h_dist <- array(data = 0, dim = c(length(lon), length(lat),
                                     length(model_names)))
 
-  # Loop through variables and models
-  m <- 1
-  for (model_name in model_names) {
+
+  # Pre-compute the square roots if applicable
+  sqrt_kde_models <- sqrt(kde_models)
+  sqrt_kde_ref <- sqrt(kde_ref)
+
+  # Define a function to compute Hellinger distance for a given cell across all models
+  compute_hellinger <- function(m, i, j) {
+    # Compute Hellinger distance
+    sqrt(sum((sqrt_kde_models[i, j, , m] - sqrt_kde_ref[i, j, ])^2)) / sqrt(2)
+  }
+  cat("Starting Hellinger distance computation...  ")
+  begin <- Sys.time()
+
+  # Apply this function across all dimensions appropriately
+  # This is a conceptual approach; you might need to adjust indices and dimensions
+  h_dist <- array(dim = c(length(lon), length(lat), length(model_names)))
+  for (m in seq_along(model_names)) {
     for (i in seq_along(lon)) {
       for (j in seq_along(lat)) {
-        # Compute Hellinger distance
-        h_dist_unchecked <- sqrt(sum((sqrt(kde_models[i, j, , m]) - sqrt(kde_ref[i, j, ]))^2)) / sqrt(2)
-
-        # Replace NaN with 0
-        h_dist[i, j, m] <- replace(h_dist_unchecked, is.nan(h_dist_unchecked), 0)
+        h_dist[i, j, m] <- compute_hellinger(m, i, j)
       }
     }
-    m <- m + 1
   }
+
+  # Replace NaN values in h_dist
+  h_dist[is.nan(h_dist)] <- 0
+
+  time_spent <- Sys.time()-begin
+  cat("Hellinger distance computation done in :  ")
+  print(time_spent)
 
 
   # Permuting longitude and latitude since the indexing isn't the same in R and in C++
   # changed: c(aperm(sum_h_dist, c(2, 1, 3))) call was redundant
   # when go from matrix to vector
   h_dist_cpp <- c(aperm(h_dist, c(2, 1, 3)))
-  smooth_cpp <- c(aperm(models_smoothcost, c(4, 2, 1, 3)))
-  kde_cpp <- c(aperm(kde_models, c(4, 2, 1, 3)))
+  kde_models_cpp <- c(aperm(kde_models_future, c(4, 2, 1, 3)))
 
 
   # Instanciation of the GraphCut environment
@@ -107,24 +123,50 @@ GraphCutHellinger2D_new2 <- function(
     rebuild = TRUE, showOutput = FALSE, verbose = FALSE
   )
 
-  cat("Creating SmoothCost function...  ")
+  # cat("Creating SmoothCost function...  ")
+  # ptrSmoothCost <- cppXPtr(
+  #   code = 'float smoothFn(int p1, int p2, int l1, int l2, Rcpp::List extraData)
+  #   {
+  #     int nbVariables = extraData["n_variables"];
+  #     int numPix = extraData["numPix"];
+  #     float weight = extraData["weight"];
+  #     NumericVector data = extraData["data"];
+  #     int totPix = numPix;
+  #
+  #     float cost = 0;
+  #
+  #     for (int k = 0; k < nbVariables; k++) {
+  #       cost += std::abs(data[k + (p1 * nbVariables + totPix * l1)] - data[k + (p2 * nbVariables + totPix * l2)]);
+  #     }
+  #
+  #     return(weight * cost);
+  #   }',
+  #   includes = c("#include <math.h>", "#include <Rcpp.h>"),
+  #   rebuild = TRUE, showOutput = FALSE, verbose = FALSE
+  # )
+
+    cat("Creating SmoothCost function...  ")
   ptrSmoothCost <- cppXPtr(
-    code = 'float smoothFn(int p1, int p2, int l1, int l2, Rcpp::List extraData) {
-  int nbVariables = extraData["n_variables"];
-  int numPix = extraData["numPix"];
-  float weight = extraData["weight"];
-  NumericVector data = extraData["data"];
-  int totPix = numPix * nbVariables;
+    code = 'float smoothFn(int p1, int p2, int l1, int l2, Rcpp::List extraData)
+    {
+      int numPix = extraData["numPix"];
+      float weight = extraData["weight"];
+      NumericVector data = extraData["data"];
+      int nBins = extraData["nBins"];
 
-  float cost = 0;
+      float cost  = 0;
+      float tmp1  = 0;
+      float tmp2  = 0;
 
-  for (int k = 0; k < nbVariables; k++) {
-    cost += std::abs(data[k + (p1 * nbVariables + totPix * l1)] - data[k + (p2 * nbVariables + totPix * l2)]);
-  }
+      for (int i = 0; i < nBins; i++) {
+        tmp1 += pow((sqrt(data[(p1 + numPix * l1) * nBins + i]) - sqrt(data[(p1 + numPix * l2) * nBins + i])), 2);
+        tmp2 += pow((sqrt(data[(p2 + numPix * l1) * nBins + i]) - sqrt(data[(p2 + numPix * l2) * nBins + i])), 2);
+      }
 
-  return(weight * cost);
-}
-',
+      cost = sqrt(tmp1)/sqrt(2) + sqrt(tmp2)/sqrt(2);
+
+      return(weight * cost);
+    }',
     includes = c("#include <math.h>", "#include <Rcpp.h>"),
     rebuild = TRUE, showOutput = FALSE, verbose = FALSE
   )
@@ -133,14 +175,14 @@ GraphCutHellinger2D_new2 <- function(
 
 
   # Creation of the data and smooth cost
-  gco$setDataCost(ptrDataCost, list(numPix = width * height,
-                                    data = h_dist_cpp,
-                                    weight = weight_data))
+  gco$setDataCost(ptrDataCost, list(numPix  = width * height,
+                                    data    = h_dist_cpp,
+                                    weight  = weight_data))
 
   gco$setSmoothCost(ptrSmoothCost, list(numPix  = width * height,
-                                        data = smooth_cpp,
-                                        weight = weight_smooth,
-                                        n_variables = n_variables))
+                                        data    = kde_models_cpp,
+                                        weight  = weight_smooth,
+                                        nBins   = nBins))
 
   # Creating the initialization matrix based on the best model (sum_h_dist)
   # # TODO Implement random version?
@@ -152,10 +194,10 @@ GraphCutHellinger2D_new2 <- function(
   print(best_label)
   for(z in 0:((width*height)-1)){
     # Label is set as the best average model
-    # gco$setLabel(z, best_label)
+    gco$setLabel(z, best_label)
 
-    random_label <- sample(0:(n_labs-1), 1) # Sample a random index uniformly
-    gco$setLabel(z, random_label)
+    # random_label <- sample(0:(n_labs-1), 1) # Sample a random index uniformly
+    # gco$setLabel(z, random_label)
     # #   # gco$setLabel(z, -1)
     # #   gco$setLabel(z, 1)
   }

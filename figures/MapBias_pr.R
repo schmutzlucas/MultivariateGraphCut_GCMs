@@ -124,6 +124,71 @@ ggsave(paste0(name, '.png'), plot = p, width = 35, height = 25, units = "cm", dp
 
 
 
+
+# Map of the bias that works
+# Creating the dataframe
+# For pr
+bias_tmp <- GC_hellinger_projections_new$pr - reference_list$future$pr[[1]]*86400
+
+# Ensure you are removing NA values in the computation
+rm(avg_bias)
+avg_bias <- round(mean(abs(bias_tmp), na.rm = TRUE), 2)
+
+# Settings the limits
+limit <- c(-10, 10)
+
+# Settings the limits
+
+v_limits <- as.numeric(format(seq(min(limit), max(limit), len=5), digits = 3))
+bias_tmp[bias_tmp < min(limit)] <- min(limit)
+bias_tmp[bias_tmp > max(limit)] <- max(limit)
+
+test_df <- melt(bias_tmp, c("lon", "lat"), value.name = "Bias")
+
+p <- ggplot() +
+  geom_tile(data=test_df, aes(x=lon, y=lat-90, fill=Bias),)+
+  ggtitle(paste0('GraphCut Hellinger'))+
+  labs(subtitle = paste0('Average Bias : ', avg_bias))+
+  scale_fill_gradientn(colours = rev(RColorBrewer::brewer.pal(11, "RdBu")),
+                       breaks = v_limits,
+                       limits = limit)+
+  # guide = guide_colourbar(
+  #   barwidth = 0.4,
+  #   ticks.colour = 'black',
+  #   ticks.linewidth = 1,
+  #   frame.colour = 'black',
+  #   draw.ulim = TRUE,
+  #   draw.llim = TRUE),)
+  borders("world2", colour = 'black', lwd = 0.12) +
+  scale_x_continuous(, expand = c(0, 0)) +
+  scale_y_continuous(, expand = c(0,0))+
+  theme(legend.position = 'bottom')+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  theme(panel.background = element_blank())+
+  xlab('Longitude')+
+  ylab('Latitude') +
+  labs(fill='[mm/day]')+
+  theme_bw()+
+  theme(legend.key.size = unit(1, 'cm'), #change legend key size
+        legend.key.height = unit(1.4, 'cm'), #change legend key height
+        legend.key.width = unit(0.4, 'cm'), #change legend key width
+        legend.title = element_text(size=16), #change legend title font size
+        legend.text = element_text(size=12))+ #change legend text font size
+  theme(plot.title = element_text(size=24),
+        plot.subtitle = element_text(size = 20,hjust=0.5),
+        axis.text=element_text(size=14),
+        axis.title=element_text(size=16),)+
+  easy_center_title()
+p
+mean(abs(bias_tmp))
+
+name <- paste0('figure/GC_Hellinger_new_bias_pr_26models_new')
+ggsave(paste0(name, '.pdf'), plot = p, width = 35, height = 25, units = "cm", dpi = 300)
+ggsave(paste0(name, '.png'), plot = p, width = 35, height = 25, units = "cm", dpi = 300)
+
+
+
+
 ##### GC_hybrid
 
 

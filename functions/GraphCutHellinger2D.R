@@ -61,7 +61,6 @@ GraphCutHellinger2D <- function(
   h_dist <- array(data = 0, dim = c(length(lon), length(lat),
                                     length(model_names)))
 
-  # Assuming kde_models and kde_ref are your input 3D arrays
 
   # Pre-compute the square roots if applicable
   sqrt_kde_models <- sqrt(kde_models)
