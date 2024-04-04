@@ -1,0 +1,158 @@
+#load('202404031541_my_workspace_ERA5_allmodels_new.RData')
+
+# Install and load necessary libraries
+list_of_packages <- read.table("package_list.txt", sep="\n")$V1
+new.packages <- list_of_packages[!(list_of_packages %in% installed.packages()[,"Package"])]
+if(length(new.packages))
+  install.packages(new.packages, repos = "https://cloud.r-project.org")
+
+library(devtools)
+lapply(list_of_packages, library, character.only = TRUE)
+install_github("thaos/gcoWrapR")
+
+
+# Loading local functions
+source_code_dir <- 'functions/' #The directory where all functions are saved.
+file_paths <- list.files(source_code_dir, full.names = T)
+for(path in file_paths){source(path)}
+
+
+
+lambda <- c(0, 0.01, 0.05, 0.1, 0.2, 0.3, 0.5)
+
+# Precompute h_dist for all models
+cat("Starting Hellinger distance computation...  ")
+begin <- Sys.time()
+
+# Check if h_dist already exists in the global environment
+if (!exists("h_dist")) {
+  cat("h_dist does not exist. Starting Hellinger distance computation...  ")
+
+  # Pre-compute the square roots if applicable
+  sqrt_kde_models <- sqrt(kde_models)
+  sqrt_kde_ref <- sqrt(kde_ref)
+
+  # Initialize h_dist array
+  h_dist <- array(data = 0, dim = c(length(lon), length(lat), length(model_names)))
+
+  # Loop to compute Hellinger distance for each cell across all models
+  for (m in seq_along(model_names)) {
+    for (i in seq_along(lon)) {
+      for (j in seq_along(lat)) {
+        # Define a function to compute Hellinger distance for a given cell across all models
+        compute_hellinger <- function(m, i, j) {
+          sqrt(sum((sqrt_kde_models[i, j, , m] - sqrt_kde_ref[i, j, ])^2)) / sqrt(2)
+        }
+
+        # Compute Hellinger distance and store in h_dist
+        h_dist[i, j, m] <- compute_hellinger(m, i, j)
+      }
+    }
+  }
+
+  # Replace NaN values in h_dist
+  h_dist[is.nan(h_dist)] <- 0
+
+  cat("Hellinger distance computation completed in", Sys.time() - begin, "\n")
+} else {
+  cat("h_dist already exists. Skipping computation.\n")
+}
+time_spent <- Sys.time()-begin
+cat("Hellinger distance computation done in :  ")
+print(time_spent)
+
+# Initialize an empty list to store the results
+GC_result_hellinger_new <- list()
+
+# Loop over each lambda value
+for (i in seq_along(lambda)) {
+  # Compute the weights based on the current lambda
+  weight_data <- 1 - lambda[i]
+  weight_smooth <- lambda[i]
+
+  # Call the GraphCutHellinger2D_new2 function and store the result
+  GC_result_hellinger_new[[i]] <- GraphCutHellinger2D_new2(kde_ref = kde_ref,
+                                                           kde_models = kde_models,
+                                                           kde_models_future = kde_models_future,
+                                                           h_dist = h_dist,
+                                                           weight_data = weight_data,
+                                                           weight_smooth = weight_smooth,
+                                                           nBins = nbins1d^2,
+                                                           verbose = TRUE)
+
+  # Optionally, name each element of the list by its corresponding lambda value for easier reference
+  names(GC_result_hellinger_new)[i] <- as.character(lambda[i])
+}
+
+avg_h_dist <- list()
+data_cost <- c()
+smooth_cost <- c()
+for (i in seq_along(lambda)) {
+  avg_h_dist[[i]] <- mean(GC_result_hellinger_new[[i]]$h_dist)
+  data_cost[i]    <- GC_result_hellinger_new[[i]]$`Data and smooth cost`$`Data cost`
+  smooth_cost[i]  <- GC_result_hellinger_new[[i]]$`Data and smooth cost`$`Smooth cost`
+}
+
+# Generate the polychrome color palette with 26 colors
+color_palette <- pals::glasbey(26)
+
+GC_labels <- GC_result_hellinger_new[[7]]$label_attribution
+
+label_df <- melt(GC_labels, c("lon", "lat"), value.name = "label_attribution")
+label_df$lat <- label_df$lat - 91
+
+h <- ggplot() +
+  geom_tile(data = label_df, aes(x = lon, y = lat, fill = factor(label_attribution))) +
+  scale_fill_manual(values = as.vector(color_palette), na.value = NA, guide = FALSE) +  # guide = FALSE to remove legend
+  ggtitle('Label attribution for GC hybrid') +
+  borders("world2", colour = 'black', lwd = 0.12) +
+  scale_x_continuous(, expand = c(0, 0)) +
+  scale_y_continuous(, expand = c(0,0))+
+  theme(legend.position = 'bottom')+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  theme(panel.background = element_blank())+
+  xlab('Longitude')+
+  ylab('Latitude') +
+  labs(fill='Hellinger \nDistance')+
+  theme_bw()+
+  theme(legend.key.size = unit(1, 'cm'), #change legend key size
+        legend.key.height = unit(1.4, 'cm'), #change legend key height
+        legend.key.width = unit(0.4, 'cm'), #change legend key width
+        legend.title = element_text(size=16), #change legend title font size
+        legend.text = element_text(size=12))+ #change legend text font size
+  theme(plot.title = element_text(size=24),
+        plot.subtitle = element_text(size = 20,hjust=0.5),
+        axis.text=element_text(size=14),
+        axis.title=element_text(size=16),)+
+  easy_center_title()
+
+h
+
+
+
+
+h_dist_future_lambda <- array(NA, dim = c(dim(GC_result_hellinger_new[[1]]$label_attribution), length(lambda)))
+for (i in seq_along(lambda)) {
+  for(j in seq_along(variables)){
+    for(l in 0:(length(model_names))){
+      islabel <- which(GC_result_hellinger_new[[i]]$label_attribution == l)
+      h_dist_future_lambda[islabel] <- h_dist_future[,,(l)][islabel]
+    }
+  }
+}
+
+GC_hellinger_projections_new <- list()
+j <- 1
+for (i in seq_along(lambda)) {
+  for(var in variables){
+    for(l in 0:(length(model_names))){
+      islabel <- which(GC_result_hellinger_new[[i]]$label_attribution == l)
+      GC_hellinger_projections_new[[var]][islabel] <- models_matrix$future[,,(l),j][islabel]
+    }
+    j <- j + 1
+  }
+  GC_hellinger_projections_new$tas <- matrix(GC_hellinger_projections_new$tas, nrow = 360)
+  GC_hellinger_projections_new$pr <- matrix(GC_hellinger_projections_new$pr * 86400, nrow = 360)
+}
+
+
