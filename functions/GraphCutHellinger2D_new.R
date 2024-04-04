@@ -49,54 +49,13 @@ GraphCutHellinger2D_new2 <- function(
   weight_data,
   weight_smooth,
   nBins,
-  verbose
+  verbose,
+  rebuild
 ){
 
   n_labs      <- length(model_names)
   width       <- ncol(kde_ref)
   height      <- nrow(kde_ref)
-  n_variables <- 2
-
-  cat("Starting Hellinger distance computation...  ")
-  begin <- Sys.time()
-
-  # Check if h_dist already exists in the global environment
-  if (!exists("h_dist")) {
-    cat("h_dist does not exist. Starting Hellinger distance computation...  ")
-    begin <- Sys.time()
-
-    # Pre-compute the square roots if applicable
-    sqrt_kde_models <- sqrt(kde_models)
-    sqrt_kde_ref <- sqrt(kde_ref)
-
-    # Initialize h_dist array
-    h_dist <- array(data = 0, dim = c(length(lon), length(lat), length(model_names)))
-
-    # Loop to compute Hellinger distance for each cell across all models
-    for (m in seq_along(model_names)) {
-      for (i in seq_along(lon)) {
-        for (j in seq_along(lat)) {
-          # Define a function to compute Hellinger distance for a given cell across all models
-          compute_hellinger <- function(m, i, j) {
-            sqrt(sum((sqrt_kde_models[i, j, , m] - sqrt_kde_ref[i, j, ])^2)) / sqrt(2)
-          }
-
-          # Compute Hellinger distance and store in h_dist
-          h_dist[i, j, m] <- compute_hellinger(m, i, j)
-        }
-      }
-    }
-
-    # Replace NaN values in h_dist
-    h_dist[is.nan(h_dist)] <- 0
-
-    cat("Hellinger distance computation completed in", Sys.time() - begin, "\n")
-  } else {
-    cat("h_dist already exists. Skipping computation.\n")
-  }
-
-  cat("Hellinger distance computation done in :  ")
-  print(time_spent)
 
 
   # Permuting longitude and latitude since the indexing isn't the same in R and in C++
@@ -125,7 +84,7 @@ GraphCutHellinger2D_new2 <- function(
       return(weight * data[p + numPix * l]);
     }',
     includes = c("#include <math.h>", "#include <Rcpp.h>", "#include <iostream>"),
-    rebuild = TRUE, showOutput = FALSE, verbose = FALSE
+    rebuild = rebuild, showOutput = FALSE, verbose = FALSE
   )
 
   # cat("Creating SmoothCost function...  ")
@@ -173,10 +132,8 @@ GraphCutHellinger2D_new2 <- function(
       return(weight * cost);
     }',
     includes = c("#include <math.h>", "#include <Rcpp.h>"),
-    rebuild = TRUE, showOutput = FALSE, verbose = FALSE
+    rebuild = rebuild, showOutput = FALSE, verbose = FALSE
   )
-
-
 
 
   # Creation of the data and smooth cost
@@ -189,8 +146,8 @@ GraphCutHellinger2D_new2 <- function(
                                         weight  = weight_smooth,
                                         nBins   = nBins))
 
-  # Creating the initialization matrix based on the best model (sum_h_dist)
-  # # TODO Implement random version?
+
+  # Initialization matrix based on the best model (h_dist)
   mae_list <- numeric(n_labs)
   for(i in seq_along(mae_list)){
     mae_list[[i]] <- mean(abs(h_dist[,,i]))
@@ -200,12 +157,13 @@ GraphCutHellinger2D_new2 <- function(
   for(z in 0:((width*height)-1)){
     # Label is set as the best average model
     gco$setLabel(z, best_label)
-
-    # random_label <- sample(0:(n_labs-1), 1) # Sample a random index uniformly
-    # gco$setLabel(z, random_label)
-    # #   # gco$setLabel(z, -1)
-    # #   gco$setLabel(z, 1)
   }
+
+  # # Initializing randomly
+  # for(z in 0:((width*height)-1)){
+  #   random_label <- sample(0:(n_labs-1), 1) # Sample a random index uniformly
+  #   gco$setLabel(z, random_label)
+  # }
 
   # for(z in 0:(length(width*height)-1)){
   #  gco$setLabel(z, 7)
@@ -214,9 +172,11 @@ GraphCutHellinger2D_new2 <- function(
   # Optimizing the MRF energy with alpha-beta swap
   # -1 refers to the optimization until convergence
   cat("Starting GraphCut optimization...  ")
+  print(format(Sys.time(), "%Y-%m-%d %H:%M:%S"))
   begin <- Sys.time()
   gco$swap(-1)
   time_spent <- Sys.time()-begin
+  print(format(Sys.time(), "%Y-%m-%d %H:%M:%S"))
   cat("GraphCut optimization done :  ")
   print(time_spent)
 

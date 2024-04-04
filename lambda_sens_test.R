@@ -17,7 +17,7 @@ file_paths <- list.files(source_code_dir, full.names = T)
 for(path in file_paths){source(path)}
 
 
-
+# Hyperparameters
 lambda <- c(0, 0.01, 0.05, 0.1, 0.2, 0.3, 0.5)
 
 # Precompute h_dist for all models
@@ -78,7 +78,8 @@ for (i in seq_along(lambda)) {
                                                            weight_data = weight_data,
                                                            weight_smooth = weight_smooth,
                                                            nBins = nbins1d^2,
-                                                           verbose = TRUE)
+                                                           verbose = TRUE,
+                                                           rebuilt = FALSE)
 
   # Optionally, name each element of the list by its corresponding lambda value for easier reference
   names(GC_result_hellinger_new)[i] <- as.character(lambda[i])
