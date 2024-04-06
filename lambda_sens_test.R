@@ -1,4 +1,4 @@
-#load('202404031541_my_workspace_ERA5_allmodels_new.RData')
+# load('202404031541_my_workspace_ERA5_allmodels_new.RData')
 
 # Install and load necessary libraries
 list_of_packages <- read.table("package_list.txt", sep="\n")$V1
@@ -18,7 +18,7 @@ for(path in file_paths){source(path)}
 
 
 # Hyperparameters
-lambda <- c(0, 0.01, 0.05, 0.1, 0.2, 0.3, 0.5)
+lambda <- c(0, 0.01, 0.1, 0.3, 0.5, 0.7)
 
 # Precompute h_dist for all models
 cat("Starting Hellinger distance computation...  ")
@@ -64,22 +64,29 @@ print(time_spent)
 # Initialize an empty list to store the results
 GC_result_hellinger_new <- list()
 
-# Loop over each lambda value
 for (i in seq_along(lambda)) {
   # Compute the weights based on the current lambda
   weight_data <- 1 - lambda[i]
   weight_smooth <- lambda[i]
 
-  # Call the GraphCutHellinger2D_new2 function and store the result
-  GC_result_hellinger_new[[i]] <- GraphCutHellinger2D_new2(kde_ref = kde_ref,
-                                                           kde_models = kde_models,
-                                                           kde_models_future = kde_models_future,
-                                                           h_dist = h_dist,
-                                                           weight_data = weight_data,
-                                                           weight_smooth = weight_smooth,
-                                                           nBins = nbins1d^2,
-                                                           verbose = TRUE,
-                                                           rebuilt = FALSE)
+  # Use tryCatch to handle errors
+  GC_result_hellinger_new[[i]] <- tryCatch({
+    # Call the GraphCutHellinger2D_new2 function and store the result
+    GraphCutHellinger2D_new2(kde_ref = kde_ref,
+                             kde_models = kde_models,
+                             kde_models_future = kde_models_future,
+                             h_dist = h_dist,
+                             weight_data = weight_data,
+                             weight_smooth = weight_smooth,
+                             nBins = nbins1d^2,
+                             verbose = TRUE,
+                             rebuild = FALSE)
+  }, error = function(e) {
+    # Handle the error, e.g., by printing a message and returning NULL or a specific error value
+    cat("An error occurred in iteration", i, "with lambda =", lambda[i], "\nError message:", e$message, "\n")
+    # Optionally, return a specific value indicating the error
+    NULL  # Or any other value that makes sense in your context
+  })
 
   # Optionally, name each element of the list by its corresponding lambda value for easier reference
   names(GC_result_hellinger_new)[i] <- as.character(lambda[i])
