@@ -92,6 +92,19 @@ for (i in seq_along(lambda)) {
   names(GC_result_hellinger_new)[i] <- as.character(lambda[i])
 }
 
+# Get the current date and time
+current_time <- Sys.time()
+
+# Format the date and time as a string in the format 'yyyymmddhhmm'
+formatted_time <- format(current_time, "%Y%m%d%H%M")
+
+# Concatenate the formatted time string with your desired filename
+filename <- paste0(formatted_time, "_my_workspace_ERA5_allmodels_lambda_test.RData")
+
+# Save the workspace using the generated filename
+save.image(file = filename, compress = FALSE)
+
+
 avg_h_dist <- list()
 data_cost <- c()
 smooth_cost <- c()
