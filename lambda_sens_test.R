@@ -18,7 +18,7 @@ for(path in file_paths){source(path)}
 
 
 # Hyperparameters
-lambda <- c(0, 0.01, 0.1, 0.3, 0.5, 0.7)
+lambdas <- c(0, 0.01, 0.1, 0.3, 0.5, 0.7)
 
 # Precompute h_dist for all models
 cat("Starting Hellinger distance computation...  ")
@@ -64,10 +64,10 @@ print(time_spent)
 # Initialize an empty list to store the results
 GC_result_hellinger_new <- list()
 
-for (i in seq_along(lambda)) {
-  # Compute the weights based on the current lambda
-  weight_data <- 1 - lambda[i]
-  weight_smooth <- lambda[i]
+for (i in seq_along(lambdas)) {
+  # Compute the weights based on the current lambdas
+  weight_data <- 1 - lambdas[i]
+  weight_smooth <- lambdas[i]
 
   # Use tryCatch to handle errors
   GC_result_hellinger_new[[i]] <- tryCatch({
@@ -83,13 +83,13 @@ for (i in seq_along(lambda)) {
                              rebuild = FALSE)
   }, error = function(e) {
     # Handle the error, e.g., by printing a message and returning NULL or a specific error value
-    cat("An error occurred in iteration", i, "with lambda =", lambda[i], "\nError message:", e$message, "\n")
+    cat("An error occurred in iteration", i, "with lambda =", lambdas[i], "\nError message:", e$message, "\n")
     # Optionally, return a specific value indicating the error
     NULL  # Or any other value that makes sense in your context
   })
 
   # Optionally, name each element of the list by its corresponding lambda value for easier reference
-  names(GC_result_hellinger_new)[i] <- as.character(lambda[i])
+  names(GC_result_hellinger_new)[i] <- as.character(lambdas[i])
 }
 
 # Get the current date and time
@@ -108,24 +108,112 @@ save.image(file = filename, compress = FALSE)
 avg_h_dist <- list()
 data_cost <- c()
 smooth_cost <- c()
-for (i in seq_along(lambda)) {
-  avg_h_dist[[i]] <- mean(GC_result_hellinger_new[[i]]$h_dist)
+for (i in seq_along(lambdas)) {
+  avg_h_dist[[i]] <- mean(c(GC_result_hellinger_new[[i]]$h_dist))
   data_cost[i]    <- GC_result_hellinger_new[[i]]$`Data and smooth cost`$`Data cost`
   smooth_cost[i]  <- GC_result_hellinger_new[[i]]$`Data and smooth cost`$`Smooth cost`
 }
 
 # Generate the polychrome color palette with 26 colors
 color_palette <- pals::glasbey(26)
+h <- list()
+for (i in seq_along(lambdas)) {
+  GC_labels <- GC_result_hellinger_new[[i]]$label_attribution
 
-GC_labels <- GC_result_hellinger_new[[7]]$label_attribution
+  label_df <- melt(GC_labels, c("lon", "lat"), value.name = "label_attribution")
+  label_df$lat <- label_df$lat - 91
 
-label_df <- melt(GC_labels, c("lon", "lat"), value.name = "label_attribution")
-label_df$lat <- label_df$lat - 91
+  h[[i]] <- ggplot() +
+    geom_tile(data = label_df, aes(x = lon, y = lat, fill = factor(label_attribution))) +
+    scale_fill_manual(values = as.vector(color_palette), na.value = NA, guide = FALSE) +  # guide = FALSE to remove legend
+    ggtitle('Label attribution for GC hybrid') +
+    borders("world2", colour = 'black', lwd = 0.12) +
+    scale_x_continuous(, expand = c(0, 0)) +
+    scale_y_continuous(, expand = c(0,0))+
+    theme(legend.position = 'bottom')+
+    theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+    theme(panel.background = element_blank())+
+    xlab('Longitude')+
+    ylab('Latitude') +
+    labs(fill='Hellinger \nDistance')+
+    theme_bw()+
+    theme(legend.key.size = unit(1, 'cm'), #change legend key size
+          legend.key.height = unit(1.4, 'cm'), #change legend key height
+          legend.key.width = unit(0.4, 'cm'), #change legend key width
+          legend.title = element_text(size=16), #change legend title font size
+          legend.text = element_text(size=12))+ #change legend text font size
+    theme(plot.title = element_text(size=24),
+          plot.subtitle = element_text(size = 20,hjust=0.5),
+          axis.text=element_text(size=14),
+          axis.title=element_text(size=16),)+
+    easy_center_title()
 
-h <- ggplot() +
-  geom_tile(data = label_df, aes(x = lon, y = lat, fill = factor(label_attribution))) +
-  scale_fill_manual(values = as.vector(color_palette), na.value = NA, guide = FALSE) +  # guide = FALSE to remove legend
-  ggtitle('Label attribution for GC hybrid') +
+}
+
+h_dist_future_lambdas <- list()
+avg_hdist_future <- list()
+for (i in seq_along(lambdas)) {
+  tmp <- array(NA, dim = dim(GC_result_hellinger_new[[1]]$label_attribution))
+  for(j in seq_along(variables)){
+    for(l in 0:(length(model_names))){
+      islabel <- which(GC_result_hellinger_new[[i]]$label_attribution == l)
+      tmp[islabel] <- h_dist_future[,,(l)][islabel]
+
+    }
+  }
+  h_dist_future_lambdas[[i]] <- tmp
+  avg_hdist_future[[i]] <- mean(h_dist_future_lambdas[[i]])
+}
+
+GC_hellinger_projections_new <- list()
+
+for (i in seq_along(lambdas)) {
+  tmp4 <- list()
+  j <- 1
+  for(var in variables){
+    for(l in 0:(length(model_names))){
+      islabel <- which(GC_result_hellinger_new[[i]]$label_attribution == l)
+      tmp4[[var]][islabel] <- models_matrix$future[,,l,j][islabel]
+    }
+    j <- j + 1
+  }
+  GC_hellinger_projections_new[[i]] <- list("tas" = matrix(tmp4$tas, nrow = 360), "pr" = matrix(tmp4$pr * 86400, nrow = 360))
+}
+
+
+
+
+tmp_array <- array(data = NA, dim = c(length(lon), length(lat), nbins1d^2))
+
+for(j in 1:length(lon)){
+  for(i in 1:length(lat)){
+    label <- GC_result_hellinger_new$`0.1`$label_attribution[j,i]
+    tmp_array[j, i, ] <- kde_models_future[j, i, , label]
+  }
+}
+
+GC_hellinger_projections_pdf_01 <- tmp_array
+
+
+
+
+h_dist_map <- array(NA, dim = dim(GC_result_hellinger_new[[3]]$label_attribution))
+
+for(j in seq_along(variables)){
+  for(l in 0:(length(model_names))){
+    islabel <- which(GC_result_hellinger_new[[3]]$label_attribution == l)
+    h_dist_map[islabel] <- h_dist_future[,,(l)][islabel]
+  }
+}
+
+
+test_df <- melt(h_dist_map, c("lon", "lat"), value.name = "Bias")
+
+p5 <- ggplot() +
+  geom_tile(data=test_df, aes(x=lon, y=lat-90, fill=Bias))+
+labs(subtitle = 'Projection period : 2000 - 2022')+
+  ggtitle(paste0('GC Hellinger', ': Mean Hellinger distance = ', round(mean(h_dist_map), 2)))+
+  scale_fill_gradient(low = "white", high = "#015a8c", limits = c(0.1, 0.70), oob = scales::squish)+
   borders("world2", colour = 'black', lwd = 0.12) +
   scale_x_continuous(, expand = c(0, 0)) +
   scale_y_continuous(, expand = c(0,0))+
@@ -139,41 +227,15 @@ h <- ggplot() +
   theme(legend.key.size = unit(1, 'cm'), #change legend key size
         legend.key.height = unit(1.4, 'cm'), #change legend key height
         legend.key.width = unit(0.4, 'cm'), #change legend key width
-        legend.title = element_text(size=16), #change legend title font size
+        legend.title = element_text(size=16), #change legend title font sizen
         legend.text = element_text(size=12))+ #change legend text font size
   theme(plot.title = element_text(size=24),
         plot.subtitle = element_text(size = 20,hjust=0.5),
         axis.text=element_text(size=14),
         axis.title=element_text(size=16),)+
   easy_center_title()
+p5
 
-h
-
-
-
-
-h_dist_future_lambda <- array(NA, dim = c(dim(GC_result_hellinger_new[[1]]$label_attribution), length(lambda)))
-for (i in seq_along(lambda)) {
-  for(j in seq_along(variables)){
-    for(l in 0:(length(model_names))){
-      islabel <- which(GC_result_hellinger_new[[i]]$label_attribution == l)
-      h_dist_future_lambda[islabel] <- h_dist_future[,,(l)][islabel]
-    }
-  }
-}
-
-GC_hellinger_projections_new <- list()
-j <- 1
-for (i in seq_along(lambda)) {
-  for(var in variables){
-    for(l in 0:(length(model_names))){
-      islabel <- which(GC_result_hellinger_new[[i]]$label_attribution == l)
-      GC_hellinger_projections_new[[var]][islabel] <- models_matrix$future[,,(l),j][islabel]
-    }
-    j <- j + 1
-  }
-  GC_hellinger_projections_new$tas <- matrix(GC_hellinger_projections_new$tas, nrow = 360)
-  GC_hellinger_projections_new$pr <- matrix(GC_hellinger_projections_new$pr * 86400, nrow = 360)
-}
-
-
+name <- paste0('figure/H_dist_future_GC_hellinger_lambda01_26models')
+ggsave(paste0(name, '.pdf'), plot = p5, width = 35, height = 25, units = "cm", dpi = 300)
+ggsave(paste0(name, '.png'), plot = p5, width = 35, height = 25, units = "cm", dpi = 300)

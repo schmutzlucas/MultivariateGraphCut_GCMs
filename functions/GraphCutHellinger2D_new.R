@@ -147,23 +147,23 @@ GraphCutHellinger2D_new2 <- function(
                                         nBins   = nBins))
 
 
-  # Initialization matrix based on the best model (h_dist)
-  mae_list <- numeric(n_labs)
-  for(i in seq_along(mae_list)){
-    mae_list[[i]] <- mean(abs(h_dist[,,i]))
-  }
-  best_label <- which.min(mae_list)-1 # in C++ label indices start at 0
-  print(best_label)
-  for(z in 0:((width*height)-1)){
-    # Label is set as the best average model
-    gco$setLabel(z, best_label)
-  }
-
-  # # Initializing randomly
-  # for(z in 0:((width*height)-1)){
-  #   random_label <- sample(0:(n_labs-1), 1) # Sample a random index uniformly
-  #   gco$setLabel(z, random_label)
+  # # Initialization matrix based on the best model (h_dist)
+  # mae_list <- numeric(n_labs)
+  # for(i in seq_along(mae_list)){
+  #   mae_list[[i]] <- mean(abs(h_dist[,,i]))
   # }
+  # best_label <- which.min(mae_list)-1 # in C++ label indices start at 0
+  # print(best_label)
+  # for(z in 0:((width*height)-1)){
+  #   # Label is set as the best average model
+  #   gco$setLabel(z, best_label)
+  # }
+
+  # Initializing randomly
+  for(z in 0:((width*height)-1)){
+    random_label <- sample(0:(n_labs-1), 1) # Sample a random index uniformly
+    gco$setLabel(z, random_label)
+  }
 
   # for(z in 0:(length(width*height)-1)){
   #  gco$setLabel(z, 7)
