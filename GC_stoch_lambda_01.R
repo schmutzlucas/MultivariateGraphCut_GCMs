@@ -1,5 +1,5 @@
 # Stochastic Graph cuts test
-load('202404071152_my_workspace_ERA5_allmodels_stoch_lambda01.RData')
+# load('202404071152_my_workspace_ERA5_allmodels_stoch_lambda01.RData')
 
 # Install and load necessary libraries
 list_of_packages <- read.table("package_list.txt", sep="\n")$V1
@@ -18,10 +18,10 @@ file_paths <- list.files(source_code_dir, full.names = T)
 for(path in file_paths){source(path)}
 
 
-N_IT <- 10  # Number of iterations
+N_IT <- 20  # Number of iterations
 
 # Initialize the list to store results outside the loop
-GC_result_hellinger_lambda01_10 <- vector("list", N_IT)
+GC_result_hellinger_lambda01_20 <- vector("list", N_IT)
 error_list <- vector("list", N_IT)  # To store error messages, if any
 
 lambda <- 0.1
@@ -32,7 +32,7 @@ weight_smooth <- lambda
 
 for(i in 1:N_IT) {
   # Wrap the function call in tryCatch to handle errors
-  GC_result_hellinger_lambda01_10[[i]] <- tryCatch({
+  GC_result_hellinger_lambda01_20[[i]] <- tryCatch({
     # Call the GraphCutHellinger2D_new2 function and store the result
     GraphCutHellinger2D_new2(kde_ref = kde_ref,
                              kde_models = kde_models,
@@ -62,7 +62,7 @@ current_time <- Sys.time()
 formatted_time <- format(current_time, "%Y%m%d%H%M")
 
 # Concatenate the formatted time string with your desired filename
-filename <- paste0(formatted_time, "_my_workspace_ERA5_allmodels_stoch_lambda01.RData")
+filename <- paste0(formatted_time, "_my_workspace_ERA5_allmodels_stoch_lambda01_20.RData")
 
 # Save the workspace using the generated filename
 save.image(file = filename, compress = FALSE)
@@ -91,19 +91,19 @@ entropy_matrix <- array(NaN, c(length(lon), length(lat)))
 
 # Loop over each pixel location
 for (i in 1:360) {
- for (j in 1:181) {
-   # Extract labels for the current pixel across all realizations
-   labels <- GC_res_lambda01_15_matrix[i, j, ]
+  for (j in 1:181) {
+    # Extract labels for the current pixel across all realizations
+    labels <- GC_res_lambda01_15_matrix[i, j, ]
 
-   # Calculate the frequency distribution of the labels
-   label_freq <- table(labels) / length(labels)
+    # Calculate the frequency distribution of the labels
+    label_freq <- table(labels) / length(labels)
 
-   # Compute entropy
-   entropy <- -sum(label_freq * log2(label_freq))
+    # Compute entropy
+    entropy <- -sum(label_freq * log2(label_freq))
 
-   # Assign the computed entropy to the entropy matrix
-   entropy_matrix[i, j] <- entropy
- }
+    # Assign the computed entropy to the entropy matrix
+    entropy_matrix[i, j] <- entropy
+  }
 }
 
 
