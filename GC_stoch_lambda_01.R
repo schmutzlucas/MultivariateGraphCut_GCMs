@@ -18,10 +18,10 @@ file_paths <- list.files(source_code_dir, full.names = T)
 for(path in file_paths){source(path)}
 
 
-N_IT <- 20  # Number of iterations
+N_IT <- 5  # Number of iterations
 
 # Initialize the list to store results outside the loop
-GC_result_hellinger_lambda01_20 <- vector("list", N_IT)
+GC_result_hellinger_lambda01_5_s <- vector("list", N_IT)
 error_list <- vector("list", N_IT)  # To store error messages, if any
 
 lambda <- 0.1
@@ -32,7 +32,7 @@ weight_smooth <- lambda
 
 for(i in 1:N_IT) {
   # Wrap the function call in tryCatch to handle errors
-  GC_result_hellinger_lambda01_20[[i]] <- tryCatch({
+  GC_result_hellinger_lambda01_5_s[[i]] <- tryCatch({
     # Call the GraphCutHellinger2D_new2 function and store the result
     GraphCutHellinger2D_new2(kde_ref = kde_ref,
                              kde_models = kde_models,
@@ -62,7 +62,7 @@ current_time <- Sys.time()
 formatted_time <- format(current_time, "%Y%m%d%H%M")
 
 # Concatenate the formatted time string with your desired filename
-filename <- paste0(formatted_time, "_my_workspace_ERA5_allmodels_stoch_lambda01_20.RData")
+filename <- paste0(formatted_time, "_my_workspace_ERA5_allmodels_stoch_lambda01_5s.RData")
 
 # Save the workspace using the generated filename
 save.image(file = filename, compress = FALSE)
@@ -72,18 +72,18 @@ save.image(file = filename, compress = FALSE)
 avg_h_dist <- list()
 data_cost <- c()
 smooth_cost <- c()
-for (i in seq_along(GC_result_hellinger_lambda01_15)) {
-  avg_h_dist[[i]] <- mean(c(GC_result_hellinger_lambda01_15[[i]]$h_dist))
-  data_cost[i]    <- GC_result_hellinger_lambda01_15[[i]]$`Data and smooth cost`$`Data cost`
-  smooth_cost[i]  <- GC_result_hellinger_lambda01_15[[i]]$`Data and smooth cost`$`Smooth cost`
+for (i in seq_along(GC_result_hellinger_lambda01_20)) {
+  avg_h_dist[[i]] <- mean(c(GC_result_hellinger_lambda01_20[[i]]$h_dist))
+  data_cost[i]    <- GC_result_hellinger_lambda01_20[[i]]$`Data and smooth cost`$`Data cost`
+  smooth_cost[i]  <- GC_result_hellinger_lambda01_20[[i]]$`Data and smooth cost`$`Smooth cost`
 }
 
 
-GC_res_lambda01_15_matrix <- array(dim = c(length(lon), length(lat), 15))
+GC_res_lambda01_20_matrix <- array(dim = c(length(lon), length(lat), 20))
 
 
-for(i in 1:15) {
-  GC_res_lambda01_15_matrix[,,i] <- GC_result_hellinger_lambda01_15[[i]]$label_attribution
+for(i in 1:20) {
+  GC_res_lambda01_20_matrix[,,i] <- GC_result_hellinger_lambda01_20[[i]]$label_attribution
 }
 
 # Initialize the matrix to store entropy values
@@ -93,7 +93,7 @@ entropy_matrix <- array(NaN, c(length(lon), length(lat)))
 for (i in 1:360) {
   for (j in 1:181) {
     # Extract labels for the current pixel across all realizations
-    labels <- GC_res_lambda01_15_matrix[i, j, ]
+    labels <- GC_res_lambda01_20_matrix[i, j, ]
 
     # Calculate the frequency distribution of the labels
     label_freq <- table(labels) / length(labels)
@@ -143,7 +143,7 @@ unique_model_count_matrix <- array(NA, c(length(lon), length(lat)))
 for (i in 1:360) {
   for (j in 1:181) {
     # Extract labels for the current pixel across all realizations
-    labels <- GC_res_lambda01_15_matrix[i, j, ]
+    labels <- GC_res_lambda01_20_matrix[i, j, ]
 
     # Count the number of unique labels (models)
     unique_models <- length(unique(labels))
