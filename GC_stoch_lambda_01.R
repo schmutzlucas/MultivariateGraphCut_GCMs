@@ -211,3 +211,19 @@ p1 <- ggplot() +
         axis.title=element_text(size=16),)+
   easy_center_title()
 p1
+
+
+h_dist_future_lambda01 <- list()
+avg_hdist_future_lambda01 <- list()
+for (i in 1:20) {
+  tmp <- array(NA, dim = dim(GC_result_hellinger_new[[1]]$label_attribution))
+  for(j in seq_along(variables)){
+    for(l in 0:(length(model_names))){
+      islabel <- which(GC_result_hellinger_lambda01_20[[i]]$label_attribution == l)
+      tmp[islabel] <- h_dist_future[,,(l)][islabel]
+
+    }
+  }
+  h_dist_future_lambda01[[i]] <- tmp
+  avg_hdist_future_lambda01[[i]] <- mean(h_dist_future_lambda01[[i]])
+}

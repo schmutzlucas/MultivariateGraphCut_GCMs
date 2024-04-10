@@ -41,7 +41,7 @@ library(gcoWrapR)
 #'
 #' @import gcoWrapR
 #' @export
-GraphCutHellinger2D_new2 <- function(
+GraphCutHellinger2D_new2_omp <- function(
   kde_ref,
   kde_models,
   kde_models_future,
@@ -87,29 +87,32 @@ GraphCutHellinger2D_new2 <- function(
     rebuild = rebuild, showOutput = FALSE, verbose = FALSE
   )
 
-  # cat("Creating SmoothCost function...  ")
-  # ptrSmoothCost <- cppXPtr(
-  #   code = 'float smoothFn(int p1, int p2, int l1, int l2, Rcpp::List extraData)
-  #   {
-  #     int nbVariables = extraData["n_variables"];
-  #     int numPix = extraData["numPix"];
-  #     float weight = extraData["weight"];
-  #     NumericVector data = extraData["data"];
-  #     int totPix = numPix;
-  #
-  #     float cost = 0;
-  #
-  #     for (int k = 0; k < nbVariables; k++) {
-  #       cost += std::abs(data[k + (p1 * nbVariables + totPix * l1)] - data[k + (p2 * nbVariables + totPix * l2)]);
-  #     }
-  #
-  #     return(weight * cost);
-  #   }',
-  #   includes = c("#include <math.h>", "#include <Rcpp.h>"),
-  #   rebuild = TRUE, showOutput = FALSE, verbose = FALSE
-  # )
+  cat("Creating SmoothCost function...  ")
+  ptrSmoothCost <- cppXPtr(
+    code = 'float smoothFn(int p1, int p2, int l1, int l2, Rcpp::List extraData)
+    {
+      int nbVariables = extraData["n_variables"];
+      int numPix = extraData["numPix"];
+      float weight = extraData["weight"];
+      NumericVector data = extraData["data"];
+      int totPix = numPix;
+
+      float cost = 0;
+
+      for (int k = 0; k < nbVariables; k++) {
+        cost += std::abs(data[k + (p1 * nbVariables + totPix * l1)] - data[k + (p2 * nbVariables + totPix * l2)]);
+      }
+
+      return(weight * cost);
+    }',
+    includes = c("#include <math.h>", "#include <Rcpp.h>"),
+    rebuild = TRUE, showOutput = FALSE, verbose = FALSE
+  )
 
   cat("Creating SmoothCost function...  ")
+  Sys.setenv(PKG_CXXFLAGS = "-O3 -march=native -fopenmp")
+  Sys.setenv(PKG_LIBS = "-fopenmp")
+
   ptrSmoothCost <- cppXPtr(
     code = 'float smoothFn(int p1, int p2, int l1, int l2, Rcpp::List extraData)
     {
@@ -122,16 +125,17 @@ GraphCutHellinger2D_new2 <- function(
       float tmp1  = 0;
       float tmp2  = 0;
 
+      #pragma omp parallel for simd reduction(+:tmp1, tmp2) num_threads(2) proc_bind(close) default(none) firstprivate(data, p1, p2, l1, l2, numPix, nBins)
       for (int i = 0; i < nBins; i++) {
-        tmp1 += pow((sqrt(data[(p1 + numPix * l1) * nBins + i]) - sqrt(data[(p1 + numPix * l2) * nBins + i]))
-                   -(sqrt(data[(p2 + numPix * l1) * nBins + i]) - sqrt(data[(p2 + numPix * l2) * nBins + i])), 2);
+        tmp1 += pow((sqrt(data[(p1 + numPix * l1) * nBins + i]) - sqrt(data[(p1 + numPix * l2) * nBins + i])), 2);
+        tmp2 += pow((sqrt(data[(p2 + numPix * l1) * nBins + i]) - sqrt(data[(p2 + numPix * l2) * nBins + i])), 2);
       }
 
-      cost = sqrt(tmp1) + sqrt(tmp2);
+      cost = sqrt(tmp1)/sqrt(2) + sqrt(tmp2)/sqrt(2);
 
       return(weight * cost);
     }',
-    includes = c("#include <math.h>", "#include <Rcpp.h>"),
+    includes = c("#include <math.h>", "#include <Rcpp.h>", "#include <omp.h>"),
     rebuild = rebuild, showOutput = FALSE, verbose = FALSE
   )
 
