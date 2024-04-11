@@ -17,3 +17,4 @@ fst
 gplots
 squash
 fields
+ggspatial
