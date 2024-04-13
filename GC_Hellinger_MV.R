@@ -14,11 +14,11 @@ source_code_dir <- 'functions/' #The directory where all functions are saved.
 file_paths <- list.files(source_code_dir, full.names = T)
 for(path in file_paths){source(path)}
 
-range_var_final <- readRDS('ranges/range_var_final_allModelsPar_1950-2022.rds')
+range_var_final <- readRDS('ranges/range_var_final_allModelsPar_1950-2022_new.rds.rds')
 
 # Setting global variables
-lon <<- 0:359
-lat <<- -90:90
+lon <- -180:179
+lat <- -90:90
 # Temporal ranges
 year_present <<- 1977:1999
 year_future <<- 2000:2022

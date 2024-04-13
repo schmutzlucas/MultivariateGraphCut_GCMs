@@ -45,6 +45,7 @@ GraphCutHellinger2D_stoch_new <- function(
   kde_ref,
   kde_models,
   models_smoothcost,
+  h_dist,
   weight_data,
   weight_smooth,
   N_IT,
@@ -55,27 +56,6 @@ GraphCutHellinger2D_stoch_new <- function(
   width       <- ncol(kde_ref)
   height      <- nrow(kde_ref)
   n_variables <- 2
-
-
-
-  # Computing the sum of hellinger distances between models and reference --> used as datacost
-  h_dist <- array(data = 0, dim = c(length(lon), length(lat),
-                                    length(model_names)))
-
-  # Loop through variables and models
-  m <- 1
-  for (model_name in model_names) {
-    for (i in seq_along(lon)) {
-      for (j in seq_along(lat)) {
-        # Compute Hellinger distance
-        h_dist_unchecked <- sqrt(sum((sqrt(kde_models[i, j, , m]) - sqrt(kde_ref[i, j, ]))^2)) / sqrt(2)
-
-        # Replace NaN with 0
-        h_dist[i, j, m] <- replace(h_dist_unchecked, is.nan(h_dist_unchecked), 0)
-      }
-    }
-    m <- m + 1
-  }
 
 
   # Permuting longitude and latitude since the indexing isn't the same in R and in C++

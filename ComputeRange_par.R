@@ -27,7 +27,7 @@ calculate_ranges <- function(variable, model_names, data_dir, year_interest, lon
     tmp_grid_var <- ncvar_get(nc_var, variable, start = c(1, 1, min(iyyyy)), count = c(-1, -1, length(iyyyy)))
 
     if (variable == 'pr') {
-      tmp_grid_var <- log2((tmp_grid_var * 86400) + 1)
+      tmp_grid_var <- log2((tmp_grid_var) + 1)
     }
 
     range_var[ , , 1, m] <- apply(tmp_grid_var, c(1, 2), min, na.rm = TRUE)
@@ -68,7 +68,7 @@ model_names <- as.list(model_names[['V1']])
 ref_index <<- 1
 
 # Setting global variables
-lon <- 0:359
+lon <- -180:179
 lat <- -90:90
 # Temporal ranges
 year_interest <- 1950:2022
@@ -84,8 +84,8 @@ range_var_1 <- calculate_ranges(variables[1], model_names, data_dir, year_intere
 # Calculate ranges for the second variable
 range_var_2 <- calculate_ranges(variables[2], model_names, data_dir, year_interest, lon, lat)
 
-saveRDS(range_var_1, 'ranges/pr_log_range_AllModelsPar_1950-2022.rds', compress = FALSE)
-saveRDS(range_var_2, 'ranges/tas_range_AllModelsPar_1950-2022.rds', compress = FALSE)
+saveRDS(range_var_1, 'ranges/pr_log_range_AllModelsPar_1950-2022_new.rds', compress = FALSE)
+saveRDS(range_var_2, 'ranges/tas_range_AllModelsPar_1950-2022_new.rds', compress = FALSE)
 range_var_final <- list()
 range_var_final[[variables[1]]] <- array(data = NA, dim = c(length(lon), length(lat), 2))
 range_var_final[[variables[2]]] <- array(data = NA, dim = c(length(lon), length(lat), 2))
@@ -101,4 +101,4 @@ for (i in seq_along(lon)) {
   }
 }
 
-saveRDS(range_var_final, 'ranges/range_var_final_allModelsPar_1950-2022.rds', compress = FALSE)
+saveRDS(range_var_final, 'ranges/range_var_final_allModelsPar_1950-2022_new.rds', compress = FALSE)

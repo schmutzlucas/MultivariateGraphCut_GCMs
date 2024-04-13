@@ -1,13 +1,98 @@
-tmp <- OpenAndHist2D_range('ERA5', variables, year_present, range_var_final)
+# Install and load necessary libraries
+list_of_packages <- read.table("package_list.txt", sep="\n")$V1
+new.packages <- list_of_packages[!(list_of_packages %in% installed.packages()[,"Package"])]
+if(length(new.packages))
+  install.packages(new.packages, repos = "https://cloud.r-project.org")
 
-kde_ref <- tmp[[1]]
+library(devtools)
+lapply(list_of_packages, library, character.only = TRUE)
+install_github("thaos/gcoWrapR")
 
 
-tmp <- OpenAndHist2D_range('ERA5', variables, year_future , range_var_final)
+# Loading local functions
+source_code_dir <- 'functions/' #The directory where all functions are saved.
+file_paths <- list.files(source_code_dir, full.names = T)
+for(path in file_paths){source(path)}
 
-kde_ref_future <- tmp[[1]]
 
+
+range_var_final <- readRDS('ranges/range_var_final_allModelsPar_1950-2022_new.rds')
+
+# Setting global variables
+lon <- -180:179
+lat <- -90:90
+# Temporal ranges
+year_present <<- 1977:1999
+year_future <<- 2000:2022
+# data directory
+data_dir <<- 'data/CMIP6_merged_all/'
+
+# Bins for the kde
+nbins1d <<- 32
+
+
+
+# List of the variable used
+# variables <- c('tas', 'tasmax',
+#                'tasmin', 'pr',
+#                'psl', 'hur',
+#                'huss')
+# variables <- c('pr', 'tas', 'tasmin', 'tasmax')
+variables <- c('pr', 'tas')
+
+# Obtains the list of models from the model names or from a file
+# # Method 1
+# dir_path <- paste0('data/CMIP6_merged_all/')
+# model_names <- list.dirs(dir_path, recursive = FALSE)
+# model_names <- basename(model_names)
+
+# Method 2
+# model_names <- c(  'ERA5',
+#                                   'MIROC6',
+#                                   'IPSL-CM6A-LR',
+#                                   'NorESM2-MM',
+#                                   'UKESM1-0-LL')
+
+# Method 3
+model_names <- read.table('model_names_long.txt')
+model_names <- as.list(model_names[['V1']])
+# Index of the reference
+ref_index <<- 1
+
+
+tmp <- OpenAndHist2D_range(model_names, variables, year_present, range_var_final)
+
+pdf_matrix <- tmp[[1]]
+kde_models <- pdf_matrix[ , , , -ref_index]
+kde_ref <- pdf_matrix[ , , , ref_index]
 rm(pdf_matrix)
+range_matrix <- tmp[[2]]
+x_breaks <- tmp[[3]]
+y_breaks <- tmp[[4]]
+
+
+tmp <- OpenAndHist2D_range(model_names, variables, year_future , range_var_final)
+
+pdf_matrix <- tmp[[1]]
+kde_models_future <- pdf_matrix[ , , , -ref_index]
+kde_ref_future <- pdf_matrix[ , , , ref_index]
+range_matrix_future <- tmp[[2]]
+x_breaks_future <- tmp[[3]]
+y_breaks_future <- tmp[[4]]
+rm(pdf_matrix)
+rm(tmp)
+
+# Choose the reference in the models
+reference_name <<- model_names[ref_index]
+model_names <<- model_names[-ref_index]
+
+
+# Open and average the models for the selected time periods
+tmp <- OpenAndAverageCMIP6(
+  model_names, variables, year_present, year_future
+)
+models_list <- tmp[[1]]
+models_matrix <- tmp[[2]]
 rm(tmp)
 
 
@@ -25,27 +110,108 @@ reference_matrix_nrm <- list()
 reference_matrix_nrm <- NormalizeVariables(reference_matrix, variables, 'StdSc')
 
 
-weight_data <- 1
-weight_smooth <- 1
+# Get the current date and time
+
+current_time <- Sys.time()
+
+# Format the date and time as a string in the format 'yyyymmddhhmm'
+formatted_time <- format(current_time, "%Y%m%d%H%M")
+
+# Concatenate the formatted time string with your desired filename
+filename <- paste0(formatted_time, "_my_workspace_ERA5_allModels_beforeOptim.RData")
+
+# Save the workspace using the generated filename
+save.image(file = filename, compress = FALSE)
 
 
-GC_result_hellinger_test_new_era5_5 <- list()
-GC_result_hellinger_test_new_era5_5 <- tryCatch({
-  # Call the GraphCutHellinger2D_new2 function and store the result
-  GraphCutHellinger2D_new2(kde_ref = kde_ref,
-                           kde_models = kde_models,
-                           kde_models_future = kde_models_future,
-                           h_dist = h_dist,
-                           weight_data = weight_data,
-                           weight_smooth = weight_smooth,
-                           nBins = nbins1d^2,
-                           verbose = TRUE,
-                           rebuild = FALSE)
-}, error = function(e) {
-  # If an error occurs, save the error message and return NULL for this iteration
-  error_list[[i]] <- paste("Error in iteration", i, ":", e$message)
-  NULL  # Returning NULL to indicate failure for this iteration
-})
+# Computing the sum of hellinger distances between models and reference --> used as datacost
+h_dist <- array(data = 0, dim = c(length(lon), length(lat),
+                                  length(model_names)))
+h_dist_unchecked <- array(data = 0, dim = c(length(lon), length(lat),
+                                  length(model_names)))
+
+# Loop through variables and models
+m <- 1
+for (model_name in model_names) {
+  for (i in seq_along(lon)) {
+    for (j in seq_along(lat)) {
+      # Compute Hellinger distance
+      h_dist_unchecked[i, j, m] <- sqrt(sum((sqrt(kde_models[i, j, , m]) - sqrt(kde_ref[i, j, ]))^2)) / sqrt(2)
+    }
+  }
+  m <- m + 1
+}
+
+hist(h_dist_unchecked)
+# Replace NaN with 0
+h_dist[i, j, m] <- replace(h_dist_unchecked, is.nan(h_dist_unchecked), 0)
+rm(h_dist_unchecked)
+
+
+# Computing the sum of hellinger distances between models and reference --> used as datacost
+h_dist_future <- array(data = 0, dim = c(length(lon), length(lat),
+                                  length(model_names)))
+
+h_dist_unchecked <- array(data = 0, dim = c(length(lon), length(lat),
+                                  length(model_names)))
+
+# Loop through variables and models
+m <- 1
+for (model_name in model_names) {
+  for (i in seq_along(lon)) {
+    for (j in seq_along(lat)) {
+      # Compute Hellinger distance
+      h_dist_unchecked[i, j, m] <- sqrt(sum((sqrt(kde_models_future[i, j, , m]) - sqrt(kde_ref_future[i, j, ]))^2)) / sqrt(2)
+    }
+  }
+  m <- m + 1
+}
+
+# Replace NaN with 0
+h_dist_future[i, j, m] <- replace(h_dist_unchecked, is.nan(h_dist_unchecked), 0)
+rm(h_dist_unchecked)
+
+
+
+
+# Graphcut hellinger labelling
+GC_result_hellinger_mixte <- list()
+GC_result_hellinger_mixte <- GraphCutHellinger2D_stoch_new(kde_ref = kde_ref,
+                                                                 kde_models = kde_models,
+                                                                 models_smoothcost = models_matrix_nrm$future,
+                                                                 weight_data = 1,
+                                                                 weight_smooth = 1,
+                                                                 N_IT = 1,
+                                                                 verbose = TRUE)
+
+
+# Graphcut hellinger labelling
+GC_result_hellinger_new <- list()
+GC_result_hellinger_new <- GraphCutHellinger2D_new2(kde_ref = kde_ref,
+                                                    kde_models = kde_models,
+                                                    kde_models_future = kde_models_future,
+                                                    h_dist = h_dist,
+                                                    weight_data = 0.9,
+                                                    weight_smooth = 0.1,
+                                                    nBins = nbins1d^2,
+                                                    verbose = TRUE,
+                                                    rebuild = TRUE)
+
+
+# Get the current date and time
+
+current_time <- Sys.time()
+
+# Format the date and time as a string in the format 'yyyymmddhhmm'
+formatted_time <- format(current_time, "%Y%m%d%H%M")
+
+# Concatenate the formatted time string with your desired filename
+filename <- paste0(formatted_time, "_my_workspace_ERA5_allModels_mixte.RData")
+
+# Save the workspace using the generated filename
+save.image(file = filename, compress = FALSE)
+
+
 
 
 
@@ -53,23 +219,23 @@ GC_hellinger_projections <- list()
 j <- 1
 for(var in variables){
   for(l in 0:(length(model_names))){
-    islabel <- which(GC_result_hellinger_test_new_era5_5$label_attribution == l)
+    islabel <- which(GC_result_hellinger_new$label_attribution == l)
     GC_hellinger_projections[[var]][islabel] <- models_matrix$future[,,(l),j][islabel]
   }
   j <- j + 1
 }
 GC_hellinger_projections$tas <- matrix(GC_hellinger_projections$tas, nrow = 360)
-GC_hellinger_projections$pr <- matrix(GC_hellinger_projections$pr * 86400, nrow = 360)
+GC_hellinger_projections$pr <- matrix(GC_hellinger_projections$pr, nrow = 360)
 
 
 
 
 
-h_dist_map <- array(NA, dim = dim(GC_result_hellinger_test_new_era5_5$label_attribution))
+h_dist_map <- array(NA, dim = dim(GC_result_hellinger_new$label_attribution))
 
 for(j in seq_along(variables)){
   for(l in 0:(length(model_names))){
-    islabel <- which(GC_result_hellinger_test_new_era5_5$label_attribution == l)
+    islabel <- which(GC_result_hellinger_new$label_attribution == l)
     h_dist_map[islabel] <- h_dist_future[,,(l)][islabel]
   }
 }
@@ -278,7 +444,6 @@ p5
 name <- paste0('figure/H_dist_future_GC_hellinger_new_26models_present5')
 ggsave(paste0(name, '.pdf'), plot = p5, width = 35, height = 25, units = "cm", dpi = 300)
 ggsave(paste0(name, '.png'), plot = p5, width = 35, height = 25, units = "cm", dpi = 300)
-
 
 
 

@@ -29,7 +29,7 @@ lat <<- -90:90
 year_present <<- 1985:1999
 year_future <<- 2000:2014
 
-nc <- nc_open(paste0('data/CMIP6_merged/ERA5/pr/pr_ERA5_19600101-20230431_regrid.nc'))
+nc <- nc_open(paste0('data/CMIP6_merged_all/ERA5/pr/pr_ERA5_19600101-20230431_regrid.nc'))
 
 
 
@@ -43,10 +43,10 @@ tmp <- apply(
 )
 
 
-era5 <- tmp * 24000
+era5 <- tmp
 
 
-nc <- nc_open(paste0('data/CMIP6_merged/IPSL-CM6A-LR/pr/pr_IPSL-CM6A-LR_19500101-21001231_merged.nc'))
+nc <- nc_open(paste0('data/CMIP6_merged_all/IPSL-CM6A-LR/pr/pr_IPSL-CM6A-LR_19500101-21001230.nc'))
 
 
 
@@ -59,11 +59,9 @@ tmp <- apply(
   mean
 )
 
-IPSL <- tmp * 86400
+ACCESS <- tmp
 
-pr_bias <- IPSL - era5
-
-pr_bias <- pr_bias
+pr_bias <- ACCESS - era5
 
 
 

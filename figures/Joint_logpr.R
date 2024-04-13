@@ -86,17 +86,17 @@
 
   ## Model 2
 
-  nc <- nc_open('data/CMIP6/MIROC6/tas/tas_MIROC6_historical_r1i1p1f1_19500101-20141230_merged_regridded_v20191016.nc')
+  nc <- nc_open('data/CMIP6_merged_all/MIROC6/tas/tas_MIROC6_19500101-21001230.nc')
   var <- 'tas'
   # Temporal ranges
   year_present <- 1970:2014
   yyyy <- substr(as.character(nc.get.time.series(nc)), 1, 4)
   iyyyy <- which(yyyy %in% year_present)
-  tas <- ncvar_get(nc, var, start = c(lon, lat, min(iyyyy)), count = c(1, 1, length(iyyyy)))
+  tas <- ncvar_get(nc, 'tas', start = c(lon, lat, min(iyyyy)), count = c(1, 1, length(iyyyy)))
 
   var <- 'pr'
-  nc <- nc_open('data/CMIP6/MIROC6/pr/pr_MIROC6_historical_r1i1p1f1_19500101-20141230_merged_regridded_v20191016.nc')
-  pr <- ncvar_get(nc, var, start = c(lon, lat, min(iyyyy)), count = c(1, 1, length(iyyyy)))
+  nc <- nc_open('data/CMIP6_merged_all/MIROC6/pr/pr_MIROC6_19500101-21001230.nc')
+  pr <- ncvar_get(nc, 'pr', start = c(lon, lat, min(iyyyy)), count = c(1, 1, length(iyyyy)))
   pr <- log2(pr * 86400 + 1)
 
 
@@ -126,7 +126,7 @@
     scale_x_continuous(limits = c(tas_min, tas_max), expand = c(0, 0)) +
     scale_y_continuous(limits = c(0, pr_max), expand = c(0,0))+
     easy_center_title()
-
+p1
 
 
   ## Model 3
