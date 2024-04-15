@@ -2,7 +2,7 @@
 # Map of the bias that works
 # Creating the dataframe
 # For pr
-bias_tmp <- MMM$pr - reference_list$future$pr[[1]]*86400
+bias_tmp <- MMM$pr - reference_list$future$pr[[1]]
 
 # Ensure you are removing NA values in the computation
 avg_bias <- round(mean(abs(bias_tmp), na.rm = TRUE), 2)
@@ -56,7 +56,7 @@ p <- ggplot()+
 p
 mean(abs(bias_tmp))
 
-name <- paste0('figure/MMM_bias_pr_26models_new')
+name <- paste0('figure/MMM_bias_pr_26models_new2')
 ggsave(paste0(name, '.pdf'), plot = p, width = 35, height = 25, units = "cm", dpi = 300)
 ggsave(paste0(name, '.png'), plot = p, width = 35, height = 25, units = "cm", dpi = 300)
 

@@ -296,7 +296,7 @@ MMM_h_dist_future <- array(data = 0, dim = dim(MinBias_labels))
 MMM <- list()
 MMM$tas <- apply(models_matrix$future[,,,2], c(1, 2), mean)
 
-MMM$pr <- apply(models_matrix$future[,,,1]*86400, c(1, 2), mean)
+MMM$pr <- apply(models_matrix$future[,,,1], c(1, 2), mean)
 
 GC_hellinger_projections <- list()
 j <- 1

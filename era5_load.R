@@ -128,7 +128,7 @@ save.image(file = filename, compress = FALSE)
 h_dist <- array(data = 0, dim = c(length(lon), length(lat),
                                   length(model_names)))
 h_dist_unchecked <- array(data = 0, dim = c(length(lon), length(lat),
-                                  length(model_names)))
+                                            length(model_names)))
 
 # Loop through variables and models
 m <- 1
@@ -144,16 +144,17 @@ for (model_name in model_names) {
 
 hist(h_dist_unchecked)
 # Replace NaN with 0
-h_dist[i, j, m] <- replace(h_dist_unchecked, is.nan(h_dist_unchecked), 0)
+h_dist[,,] <- replace(h_dist_unchecked[,,], is.nan(h_dist_unchecked), 0)
+hist(h_dist)
 rm(h_dist_unchecked)
 
 
 # Computing the sum of hellinger distances between models and reference --> used as datacost
 h_dist_future <- array(data = 0, dim = c(length(lon), length(lat),
-                                  length(model_names)))
+                                         length(model_names)))
 
 h_dist_unchecked <- array(data = 0, dim = c(length(lon), length(lat),
-                                  length(model_names)))
+                                            length(model_names)))
 
 # Loop through variables and models
 m <- 1
@@ -166,9 +167,10 @@ for (model_name in model_names) {
   }
   m <- m + 1
 }
-
+hist(h_dist_unchecked)
 # Replace NaN with 0
-h_dist_future[i, j, m] <- replace(h_dist_unchecked, is.nan(h_dist_unchecked), 0)
+h_dist_future[,,] <- replace(h_dist_unchecked[,,], is.nan(h_dist_unchecked), 0)
+hist(h_dist_future)
 rm(h_dist_unchecked)
 
 
@@ -176,26 +178,25 @@ rm(h_dist_unchecked)
 
 # Graphcut hellinger labelling
 GC_result_hellinger_mixte <- list()
-GC_result_hellinger_mixte <- GraphCutHellinger2D_stoch_new(kde_ref = kde_ref,
-                                                                 kde_models = kde_models,
-                                                                 models_smoothcost = models_matrix_nrm$future,
-                                                                 weight_data = 1,
-                                                                 weight_smooth = 1,
-                                                                 N_IT = 1,
-                                                                 verbose = TRUE)
+GC_result_hellinger_mixte <- GraphCutHellinger2D(kde_ref = kde_ref,
+                                                           models_smoothcost = models_matrix_nrm$future,
+                                                           h_dist = h_dist,
+                                                           weight_data = 1,
+                                                           weight_smooth = 1,
+                                                           verbose = TRUE)
 
 
 # Graphcut hellinger labelling
-GC_result_hellinger_new <- list()
-GC_result_hellinger_new <- GraphCutHellinger2D_new2(kde_ref = kde_ref,
-                                                    kde_models = kde_models,
-                                                    kde_models_future = kde_models_future,
-                                                    h_dist = h_dist,
-                                                    weight_data = 0.9,
-                                                    weight_smooth = 0.1,
-                                                    nBins = nbins1d^2,
-                                                    verbose = TRUE,
-                                                    rebuild = TRUE)
+GC_result_hellinger_new2 <- list()
+GC_result_hellinger_new2 <- GraphCutHellinger2D_new2(kde_ref = kde_ref,
+                                                     kde_models = kde_models,
+                                                     kde_models_future = kde_models_future,
+                                                     h_dist = h_dist,
+                                                     weight_data = 1,
+                                                     weight_smooth = 1,
+                                                     nBins = nbins1d^2,
+                                                     verbose = TRUE,
+                                                     rebuild = TRUE)
 
 
 # Get the current date and time
@@ -214,12 +215,11 @@ save.image(file = filename, compress = FALSE)
 
 
 
-
 GC_hellinger_projections <- list()
 j <- 1
 for(var in variables){
   for(l in 0:(length(model_names))){
-    islabel <- which(GC_result_hellinger_new$label_attribution == l)
+    islabel <- which(GC_result_hellinger_new2$label_attribution == l)
     GC_hellinger_projections[[var]][islabel] <- models_matrix$future[,,(l),j][islabel]
   }
   j <- j + 1
@@ -231,17 +231,18 @@ GC_hellinger_projections$pr <- matrix(GC_hellinger_projections$pr, nrow = 360)
 
 
 
-h_dist_map <- array(NA, dim = dim(GC_result_hellinger_new$label_attribution))
+h_dist_map <- array(NA, dim = dim(GC_result_hellinger_new2$label_attribution))
 
 for(j in seq_along(variables)){
   for(l in 0:(length(model_names))){
-    islabel <- which(GC_result_hellinger_new$label_attribution == l)
+    islabel <- which(GC_result_hellinger_new2$label_attribution == l)
     h_dist_map[islabel] <- h_dist_future[,,(l)][islabel]
   }
 }
 
 test_df <- melt(h_dist_map, c("lon", "lat"), value.name = "Bias")
 
+test_df$lon[test_df$lon > 180] <- test_df$lon[test_df$lon > 180] - 360
 
 
 p5 <- ggplot() +
@@ -249,7 +250,7 @@ p5 <- ggplot() +
   labs(subtitle = 'Projection period : 1999 - 2022')+
   ggtitle(paste0('GraphCut Hellinger', ': Mean Hellinger distance = ', round(mean(h_dist_map), 2)))+
   scale_fill_gradient(low = "white", high = "#015a8c", limits = c(0.1, 0.70), oob = scales::squish)+
-  borders("world2", colour = 'black', lwd = 0.12) +
+  borders("world", colour = 'black', lwd = 0.12) +
   scale_x_continuous(, expand = c(0, 0)) +
   scale_y_continuous(, expand = c(0,0))+
   theme(legend.position = 'bottom')+
@@ -271,7 +272,8 @@ p5 <- ggplot() +
   easy_center_title()
 p5
 
-name <- paste0('figure/H_dist_future_GC_hellinger_new_26models5')
+
+name <- paste0('figure/H_dist_future_GC_hellinger_new_26models8')
 ggsave(paste0(name, '.pdf'), plot = p5, width = 35, height = 25, units = "cm", dpi = 300)
 ggsave(paste0(name, '.png'), plot = p5, width = 35, height = 25, units = "cm", dpi = 300)
 
@@ -280,7 +282,8 @@ ggsave(paste0(name, '.png'), plot = p5, width = 35, height = 25, units = "cm", d
 # Map of the bias that works
 # Creating the dataframe
 # For tas
-bias_tmp <- GC_hellinger_projections$tas - reference_list$future$tas[[1]]
+bias_tmp <- GC_hellinger_projections$tas -
+  reference_list$future$tas[[1]]
 
 test_df <- melt(bias_tmp, c("lon", "lat"), value.name = "Bias")
 
@@ -332,7 +335,7 @@ p <- ggplot() +
 p
 mean(abs(bias_tmp))
 
-name <- paste0('figure/GC_Hellinger_bias_tas_26models_new5')
+name <- paste0('figure/GC_Hellinger_bias_tas_26models_new7')
 ggsave(paste0(name, '.pdf'), plot = p, width = 35, height = 25, units = "cm", dpi = 300)
 ggsave(paste0(name, '.png'), plot = p, width = 35, height = 25, units = "cm", dpi = 300)
 
@@ -395,7 +398,7 @@ p <- ggplot() +
 p
 mean(abs(bias_tmp))
 
-name <- paste0('figure/GC_Hellinger_new_bias_pr_26models_new5')
+name <- paste0('figure/GC_Hellinger_new_bias_pr_26models_new7')
 ggsave(paste0(name, '.pdf'), plot = p, width = 35, height = 25, units = "cm", dpi = 300)
 ggsave(paste0(name, '.png'), plot = p, width = 35, height = 25, units = "cm", dpi = 300)
 
@@ -403,11 +406,11 @@ ggsave(paste0(name, '.png'), plot = p, width = 35, height = 25, units = "cm", dp
 
 
 
-h_dist_map <- array(NA, dim = dim(GC_result_hellinger_test_new_era5_5$label_attribution))
+h_dist_map <- array(NA, dim = dim(GC_result_hellinger_new2$label_attribution))
 
 for(j in seq_along(variables)){
   for(l in 0:(length(model_names))){
-    islabel <- which(GC_result_hellinger_test_new_era5_5$label_attribution == l)
+    islabel <- which(GC_result_hellinger_new2$label_attribution == l)
     h_dist_map[islabel] <- h_dist[,,(l)][islabel]
   }
 }
@@ -441,9 +444,46 @@ p5 <- ggplot() +
   easy_center_title()
 p5
 
-name <- paste0('figure/H_dist_future_GC_hellinger_new_26models_present5')
+name <- paste0('figure/H_dist_future_GC_hellinger_new_26models_present7')
 ggsave(paste0(name, '.pdf'), plot = p5, width = 35, height = 25, units = "cm", dpi = 300)
 ggsave(paste0(name, '.png'), plot = p5, width = 35, height = 25, units = "cm", dpi = 300)
 
 
 
+n1 <- dim(kde_models)[1]
+n2 <- dim(kde_models)[2]
+n3 <- dim(kde_models)[3]
+n4 <- dim(kde_models)[4]
+
+MMM_KDE_future <- array(0, dim = c(n1, n2, n3))
+
+for (i in 1:n1) {
+  for (j in 1:n2) {
+    for (k in 1:n3) {
+      MMM_KDE_future[i,j,k] <- mean(kde_models_future[i,j,k,])
+    }
+  }
+}
+
+
+
+# Computing the sum of hellinger distances between models and reference --> used as datacost
+MMM_h_dist_future <- array(data = 0, dim = dim(h_dist_map))
+h_dist_unchecked <- array(data = 0, dim = dim(h_dist_map))
+
+# Loop through grip-points
+for (i in 1:360) {
+  for (j in 1:181) {
+    # Compute Hellinger distance
+    h_dist_unchecked[i,j] <- sqrt(sum((sqrt(MMM_KDE_future[i,j, ]) - sqrt(kde_ref[i, j, ]))^2)) / sqrt(2)
+
+  }
+}
+
+# Replace NaN with 0
+MMM_h_dist_future[, ] <- replace(h_dist_unchecked[,], is.nan(h_dist_unchecked), 0)
+
+MMM <- list()
+MMM$tas <- apply(models_matrix$future[,,,2], c(1, 2), mean)
+
+MMM$pr <- apply(models_matrix$future[,,,1], c(1, 2), mean)

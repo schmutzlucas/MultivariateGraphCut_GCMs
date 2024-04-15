@@ -43,7 +43,6 @@ library(gcoWrapR)
 #' @export
 GraphCutHellinger2D_stoch_new <- function(
   kde_ref,
-  kde_models,
   models_smoothcost,
   h_dist,
   weight_data,
