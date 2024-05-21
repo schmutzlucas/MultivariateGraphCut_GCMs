@@ -69,7 +69,7 @@ ref_index <<- 1
 
 # Setting global variables
 lon <- -180:179
-lat <- -90:90
+lat <- -70:70
 # Temporal ranges
 year_interest <- 1950:2022
 # data directory
@@ -84,8 +84,8 @@ range_var_1 <- calculate_ranges(variables[1], model_names, data_dir, year_intere
 # Calculate ranges for the second variable
 range_var_2 <- calculate_ranges(variables[2], model_names, data_dir, year_interest, lon, lat)
 
-saveRDS(range_var_1, 'ranges/pr_log_range_AllModelsPar_1950-2022_new.rds', compress = FALSE)
-saveRDS(range_var_2, 'ranges/tas_range_AllModelsPar_1950-2022_new.rds', compress = FALSE)
+saveRDS(range_var_1, 'ranges/pr_log_range_AllModelsPar_1950-2022_70deg.rds', compress = FALSE)
+saveRDS(range_var_2, 'ranges/tas_range_AllModelsPar_1950-2022_70deg.rds', compress = FALSE)
 range_var_final <- list()
 range_var_final[[variables[1]]] <- array(data = NA, dim = c(length(lon), length(lat), 2))
 range_var_final[[variables[2]]] <- array(data = NA, dim = c(length(lon), length(lat), 2))
@@ -101,4 +101,4 @@ for (i in seq_along(lon)) {
   }
 }
 
-saveRDS(range_var_final, 'ranges/range_var_final_allModelsPar_1950-2022_new.rds', compress = FALSE)
+saveRDS(range_var_final, 'ranges/range_var_final_allModelsPar_1950-2022_70deg.rds', compress = FALSE)
