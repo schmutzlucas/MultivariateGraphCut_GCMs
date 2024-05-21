@@ -27,7 +27,7 @@ calculate_ranges <- function(variable, model_names, data_dir, year_interest, lon
     tmp_grid_var <- ncvar_get(nc_var, variable, start = c(1, 1, min(iyyyy)), count = c(-1, -1, length(iyyyy)))
 
     if (variable == 'pr') {
-      tmp_grid_var <- log2((tmp_grid_var) + 1)
+      tmp_grid_var <- log((tmp_grid_var) + 1)
     }
 
     range_var[ , , 1, m] <- apply(tmp_grid_var, c(1, 2), min, na.rm = TRUE)
