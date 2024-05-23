@@ -90,10 +90,10 @@ OpenAndHist2D_range <- function (model_names, variables,
         tmp2 <- tmp_grid_2[i, j, ]
 
         if (variables[1] == 'pr') {
-          tmp1 <- log2(tmp1 + 1)
+          tmp1 <- log(tmp1 + 1)
         }
         if (variables[2] == 'pr') {
-          tmp2 <- log2(tmp2 + 1)
+          tmp2 <- log(tmp2 + 1)
         }
 
         # Compute the breaks
