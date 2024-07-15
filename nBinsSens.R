@@ -22,7 +22,7 @@ model_names <- as.list(model_names[['V1']])
 
 
 # Loading the ranges
-range_var_final <- readRDS('ranges/range_var_final_allModelsPar_1950-2022_new.rds.rds')
+range_var_final <- readRDS('ranges/range_var_final_allModelsPar_1950-2022_new.rds')
 
 
 # Setting global variables
@@ -47,9 +47,7 @@ ref_index <<- 1
 
 
 
-
 tmp <- OpenAndHist2D_range(model_names, variables, year_present, range_var_final)
-
 
 
 pdf_matrix <- tmp[[1]]
@@ -59,6 +57,8 @@ rm(pdf_matrix)
 range_matrix <- tmp[[2]]
 x_breaks <- tmp[[3]]
 y_breaks <- tmp[[4]]
+
+
 
 
 
