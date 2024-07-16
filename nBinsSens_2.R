@@ -22,9 +22,9 @@ model_names <- as.list(model_names[['V1']])
 # Loading the ranges
 range_var_final <- readRDS('ranges/range_var_final_allModelsPar_1950-2022_new.rds')
 
-# Setting global variables
-lon <- c(150)
-lat <- c(55)
+# # Setting global variables
+# lon <- c(30, 210)
+# lat <- c(85, 130)
 # Temporal ranges
 year_present <- 1990:2021
 
@@ -34,7 +34,17 @@ data_dir <- 'data/CMIP6_merged_all/'
 # List of the variable used
 variables <- c('pr', 'tas')
 
-nbins1d_values <- c(4, 6, 8, 11, 14, 17, 20, 23, 26)
+nbins1d_values <- c(4, 5)
+
+# Define the longitude indices with step size (1 to 360, should be within 1 to 360)
+lon <- seq(1, 360, length.out = 3)
+
+# Define symmetric latitude indices around the equator (30 to 150, should be within 1 to 181)
+lat <- seq(30, 150, length.out = 3)
+
+# Ensure they are integers
+lon <- as.integer(lon)
+lat <- as.integer(lat)
 
 # Initialize list to store h_dist for each nbins1d
 h_dist_list <- list()
@@ -47,7 +57,7 @@ for (nbins1d in nbins1d_values) {
   ref_index <- 1
 
   # Call the function with the current nbins1d
-  tmp <- OpenAndHist2D_range_lonlat(model_names, variables, year_present, range_var_final, lon, lat)
+  tmp <- OpenAndHist2D_range_lonlat_2(model_names, variables, year_present, range_var_final, lon, lat)
 
   pdf_matrix <- tmp[[1]]
   kde_models <- pdf_matrix[ , , , -ref_index]
@@ -65,29 +75,43 @@ for (nbins1d in nbins1d_values) {
 
   h_dist <- array(NaN, c(length(lon), length(lat),  length(model_names)))
 
-  # Loop through variables and models
-  m <- 1
-  for (model_name in model_names) {
-    for (i in 1:length(lon)) {
+# Loop through variables and models
+m <- 1
+for (model_name in model_names) {
+  for (i in 1:length(lon)) {
+    for (j in 1:length(lat)){
       # Compute Hellinger distance
-      h_dist_unchecked <- sqrt(sum((sqrt(kde_models[i, i, , m]) - sqrt(kde_ref[i, i, ]))^2)) / sqrt(2)
+      h_dist_unchecked <- sqrt(sum((sqrt(kde_models[i, j, , m]) - sqrt(kde_ref[i, j, ]))^2)) / sqrt(2)
 
       # Replace NaN with 0
-      h_dist[i, i, m] <- replace(h_dist_unchecked, is.nan(h_dist_unchecked), 0)
+      h_dist[i, j, m] <- replace(h_dist_unchecked, is.nan(h_dist_unchecked), 0)
     }
-    m <- m + 1
   }
+  m <- m + 1
+}
+
 
   # Store the h_dist for the current nbins1d
   h_dist_list[[as.character(nbins1d)]] <- h_dist
 }
 
+
+
+
+# Get the current date and time
+
+current_time <- Sys.time()
+
+# Format the date and time as a string in the format 'yyyymmddhhmm'
+formatted_time <- format(current_time, "%Y%m%d%H%M")
+
+# Concatenate the formatted time string with your desired filename
+filename <- paste0(formatted_time, "h_dist_list.rds")
+
 # Save the results to plot later
-saveRDS(h_dist_list, file = "h_dist_list.rds")
+saveRDS(h_dist_list, file = filename)
 
 
-# Load the h_dist_list from the saved file
-h_dist_list <- readRDS("h_dist_list.rds")
 
 
 # Prepare the data for plotting
@@ -110,3 +134,16 @@ ggplot(plot_data, aes(x = factor(nbins1d), y = h_dist)) +
        y = "Hellinger Distance") +
   theme_minimal()
 
+
+# Get the current date and time
+
+current_time <- Sys.time()
+
+# Format the date and time as a string in the format 'yyyymmddhhmm'
+formatted_time <- format(current_time, "%Y%m%d%H%M")
+
+# Concatenate the formatted time string with your desired filename
+filename <- paste0(formatted_time, "_my_workspace_NBins_sens.RData")
+
+# Save the workspace using the generated filename
+save.image(file = filename, compress = FALSE)

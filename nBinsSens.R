@@ -38,9 +38,9 @@ data_dir <<- 'data/CMIP6_merged_all/'
 # List of the variable used
 variables <- c('pr', 'tas')
 
-nbins1d <<- c(5, 10, 15, 25, 40, 60)
+nbins1d <<- c(3)
 
-for i in nbins1d
+
 # Model names
 model_names <- read.table('model_names_long.txt')
 model_names <- as.list(model_names[['V1']])
