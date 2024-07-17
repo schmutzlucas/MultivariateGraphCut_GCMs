@@ -34,13 +34,13 @@ data_dir <- 'data/CMIP6_merged_all/'
 # List of the variable used
 variables <- c('pr', 'tas')
 
-nbins1d_values <- c(4, 5)
+nbins1d_values <- seq(from = 10, to = 32, by = 2)
 
 # Define the longitude indices with step size (1 to 360, should be within 1 to 360)
-lon <- seq(1, 360, length.out = 3)
+lon <- seq(1, 360, length.out = 10)
 
 # Define symmetric latitude indices around the equator (30 to 150, should be within 1 to 181)
-lat <- seq(30, 150, length.out = 3)
+lat <- seq(30, 150, length.out = 10)
 
 # Ensure they are integers
 lon <- as.integer(lon)
