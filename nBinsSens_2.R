@@ -47,7 +47,7 @@ lon <- as.integer(lon)
 lat <- as.integer(lat)
 
 # Initialize list to store h_dist for each nbins1d
-h_dist_list <- list()
+h_dist_list_long <- list()
 
 for (nbins1d in nbins1d_values) {
   # Model names
@@ -92,7 +92,7 @@ for (model_name in model_names) {
 
 
   # Store the h_dist for the current nbins1d
-  h_dist_list[[as.character(nbins1d)]] <- h_dist
+  h_dist_list_long[[as.character(nbins1d)]] <- h_dist
 }
 
 
