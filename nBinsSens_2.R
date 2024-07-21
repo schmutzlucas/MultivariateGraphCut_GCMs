@@ -57,7 +57,7 @@ for (nbins1d in nbins1d_values) {
   ref_index <- 1
 
   # Call the function with the current nbins1d
-  tmp <- OpenAndHist2D_range_lonlat_2(model_names, variables, year_present, range_var_final, lon, lat)
+  tmp <- OpenAndHist2D_range_lonlat_2(model_names, variables, year_present, range_var_final, lon, lat, nbins1d)
 
   pdf_matrix <- tmp[[1]]
   kde_models <- pdf_matrix[ , , , -ref_index]
@@ -75,20 +75,20 @@ for (nbins1d in nbins1d_values) {
 
   h_dist <- array(NaN, c(length(lon), length(lat),  length(model_names)))
 
-# Loop through variables and models
-m <- 1
-for (model_name in model_names) {
-  for (i in 1:length(lon)) {
-    for (j in 1:length(lat)){
-      # Compute Hellinger distance
-      h_dist_unchecked <- sqrt(sum((sqrt(kde_models[i, j, , m]) - sqrt(kde_ref[i, j, ]))^2)) / sqrt(2)
+  # Loop through variables and models
+  m <- 1
+  for (model_name in model_names) {
+    for (i in 1:length(lon)) {
+      for (j in 1:length(lat)){
+        # Compute Hellinger distance
+        h_dist_unchecked <- sqrt(sum((sqrt(kde_models[i, j, , m]) - sqrt(kde_ref[i, j, ]))^2)) / sqrt(2)
 
-      # Replace NaN with 0
-      h_dist[i, j, m] <- replace(h_dist_unchecked, is.nan(h_dist_unchecked), 0)
+        # Replace NaN with 0
+        h_dist[i, j, m] <- replace(h_dist_unchecked, is.nan(h_dist_unchecked), 0)
+      }
     }
+    m <- m + 1
   }
-  m <- m + 1
-}
 
 
   # Store the h_dist for the current nbins1d
