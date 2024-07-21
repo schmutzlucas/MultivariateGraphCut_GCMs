@@ -34,7 +34,7 @@ data_dir <- 'data/CMIP6_merged_all/'
 # List of the variable used
 variables <- c('pr', 'tas')
 
-nbins1d_values <- seq(from = 10, to = 32, by = 2)
+nbins1d_values <- (5:12)^2
 
 # Define the longitude indices with step size (1 to 360, should be within 1 to 360)
 lon <- seq(1, 360, length.out = 10)
@@ -112,18 +112,23 @@ filename <- paste0(formatted_time, "h_dist_list.rds")
 saveRDS(h_dist_list, file = filename)
 
 
+h_dist_values <- h_dist_list
 
-
-# Prepare the data for plotting
+# Initialize plot_data as an empty data frame
 plot_data <- data.frame(
   nbins1d = integer(),
   h_dist = numeric()
 )
 
+# Loop through the nbins1d_values and prepare the data for plotting
 for (nbins in nbins1d_values) {
   h_dist <- h_dist_list[[as.character(nbins)]]
   h_dist_values <- as.vector(h_dist[!is.nan(h_dist)])
-  plot_data <- rbind(plot_data, data.frame(nbins1d = nbins, h_dist = h_dist_values))
+
+  # Check if h_dist_values is not empty before appending to plot_data
+  if (length(h_dist_values) > 0) {
+    plot_data <- rbind(plot_data, data.frame(nbins1d = nbins, h_dist = h_dist_values))
+  }
 }
 
 # Create the box plots
@@ -133,6 +138,7 @@ ggplot(plot_data, aes(x = factor(nbins1d), y = h_dist)) +
        x = "Number of Bins (nbins1d)",
        y = "Hellinger Distance") +
   theme_minimal()
+
 
 
 # Get the current date and time
@@ -147,3 +153,4 @@ filename <- paste0(formatted_time, "_my_workspace_NBins_sens.RData")
 
 # Save the workspace using the generated filename
 save.image(file = filename, compress = FALSE)
+
