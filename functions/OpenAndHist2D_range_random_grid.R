@@ -1,4 +1,4 @@
-OpenAndHist2D_range_lonlat_2 <- function (model_names, variables, year_interest, range_var, lon_vec, lat_vec) {
+OpenAndHist2D_range_lonlat_2 <- function (model_names, variables, year_interest, range_var, lon_vec, lat_vec, nbins1d) {
   # Initialize data structures
   pdf_matrix <- array(0, c(length(lon_vec), length(lat_vec), nbins1d^2, length(model_names)))
   x_breaks <- array(0, c(length(lon_vec), length(lat_vec), nbins1d+1, length(model_names)))

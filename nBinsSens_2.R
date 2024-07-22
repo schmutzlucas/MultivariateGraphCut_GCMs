@@ -22,9 +22,6 @@ model_names <- as.list(model_names[['V1']])
 # Loading the ranges
 range_var_final <- readRDS('ranges/range_var_final_allModelsPar_1950-2022_new.rds')
 
-# # Setting global variables
-# lon <- c(30, 210)
-# lat <- c(85, 130)
 # Temporal ranges
 year_present <- 1990:2021
 
@@ -34,7 +31,7 @@ data_dir <- 'data/CMIP6_merged_all/'
 # List of the variable used
 variables <- c('pr', 'tas')
 
-nbins1d_values <- (5:12)^2
+nbins1d_values <- 2^(5:12)
 
 # Define the longitude indices with step size (1 to 360, should be within 1 to 360)
 lon <- seq(1, 360, length.out = 10)
