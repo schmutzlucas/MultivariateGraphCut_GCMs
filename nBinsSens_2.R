@@ -31,7 +31,7 @@ data_dir <- 'data/CMIP6_merged_all/'
 # List of the variable used
 variables <- c('pr', 'tas')
 
-nbins1d_values <- 2^(5:12)
+nbins1d_values <- 2^(5:11)
 
 # Define the longitude indices with step size (1 to 360, should be within 1 to 360)
 lon <- seq(1, 360, length.out = 10)
@@ -108,7 +108,7 @@ filename <- paste0(formatted_time, "h_dist_list.rds")
 # Save the results to plot later
 saveRDS(h_dist_list, file = filename)
 
-
+h_dist_list <- h_dist_list_long
 h_dist_values <- h_dist_list
 
 # Initialize plot_data as an empty data frame

@@ -14,10 +14,10 @@ source_code_dir <- 'functions/' #The directory where all functions are saved.
 file_paths <- list.files(source_code_dir, full.names = T)
 for(path in file_paths){source(path)}
 
-range_var_final <- readRDS('ranges/range_var_final_allModelsPar_1950-2022_new.rds.rds')
+range_var_final <- readRDS('ranges/range_var_final_allModelsPar_1950-2022_new.rds')
 
 # Setting global variables
-lon <- -180:179
+lon <- 0:359
 lat <- -70:70
 # Temporal ranges
 year_present <<- 1977:1999
@@ -26,7 +26,7 @@ year_future <<- 2000:2022
 data_dir <<- 'data/CMIP6_merged_all/'
 
 # Bins for the kde
-nbins1d <<- 32
+nbins1d <<- 10
 
 
 
@@ -322,7 +322,7 @@ for(var in variables){
   j <- j + 1
 }
 GC_hellinger_projections_new$tas <- matrix(GC_hellinger_projections_new$tas, nrow = 360)
-GC_hellinger_projections_new$pr <- matrix(GC_hellinger_projections_new$pr * 86400, nrow = 360)
+GC_hellinger_projections_new$pr <- matrix(GC_hellinger_projections_new$pr, nrow = 360)
 
 
 
