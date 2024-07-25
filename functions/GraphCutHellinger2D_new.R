@@ -43,7 +43,6 @@ library(gcoWrapR)
 #' @export
 GraphCutHellinger2D_new2 <- function(
   kde_ref,
-  kde_models,
   kde_models_future,
   h_dist,
   weight_data,
