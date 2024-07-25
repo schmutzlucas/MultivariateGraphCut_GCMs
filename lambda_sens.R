@@ -37,16 +37,32 @@ remove(m)
 GC_result_hellinger_new <- list()
 n <- 1
 for (lambda in lambda_values) {
-
-  GC_result_hellinger_new[[n]] <- GraphCutHellinger2D_new2(kde_ref = kde_ref,
-                                                                kde_models_future = kde_models_future,
-                                                                h_dist = h_dist,
-                                                                weight_data = lambda,
-                                                                weight_smooth = 10,
-                                                                nBins = nbins1d^2,
-                                                                verbose = TRUE,
-                                                                rebuild = TRUE)
+  GC_result_hellinger_new[[n]] <-
+    GraphCutHellinger2D_new2(kde_ref = kde_ref,
+                             kde_models_future = kde_models_future,
+                             h_dist = h_dist,
+                             weight_data = lambda,
+                             weight_smooth = 10,
+                             nBins = nbins1d^2,
+                             seed = 123,
+                             verbose = TRUE,
+                             rebuild = TRUE)
   n <- n + 1
 }
 
+GC_result_hellinger_new <- setNames(GC_result_hellinger_new, lambda_values)
+
+
+# Get the current date and time
+
+current_time <- Sys.time()
+
+# Format the date and time as a string in the format 'yyyymmddhhmm'
+formatted_time <- format(current_time, "%Y%m%d%H%M")
+
+# Concatenate the formatted time string with your desired filename
+filename <- paste0(formatted_time, "_my_workspace_ERA5_allModels_lambda_sens.RData")
+
+# Save the workspace using the generated filename
+save.image(file = filename, compress = FALSE)
 

@@ -48,6 +48,7 @@ GraphCutHellinger2D_new2 <- function(
   weight_data,
   weight_smooth,
   nBins,
+  seed,
   verbose,
   rebuild
 ){
@@ -159,6 +160,8 @@ GraphCutHellinger2D_new2 <- function(
   # }
 
   # Initializing randomly
+
+  set.seed(seed)
   for(z in 0:((width*height)-1)){
     random_label <- sample(0:(n_labs-1), 1) # Sample a random index uniformly
     gco$setLabel(z, random_label)
@@ -183,7 +186,8 @@ GraphCutHellinger2D_new2 <- function(
   smooth_cost       <- gco$giveSmoothEnergy()
   data_smooth_list  <- list("Data cost" = data_cost, "Smooth cost" = smooth_cost)
 
-  label_attribution <- matrix(0,nrow = height,ncol = width)
+  label_attribution <- matrix(0, nrow = height, ncol = width)
+  h_dist_GC_present <- matrix(0, nrow = height, ncol = width)
   for(j in 1:height){
     for(i in 1:width){
       label_attribution[j,i] <- gco$whatLabel((i - 1) + width * (j - 1)) ### Permuting from the C++ indexing to the R indexing
@@ -192,8 +196,20 @@ GraphCutHellinger2D_new2 <- function(
 
   label_attribution <- label_attribution + 1
 
+
+  tmp <- array(NA, dim = dim(label_attribution))
+  for(l in 0:(length(model_names))){
+    islabel <- which(label_attribution == l)
+    tmp[islabel] <- h_dist[,,(l)][islabel]
+  }
+
+  h_dist_GC_present <- tmp
+
+
   # gc_result <- vector("list",length=2)
-  gc_result <- list("label_attribution" = label_attribution, "Data and smooth cost" = data_smooth_list, 'h_dist' = h_dist)
+  gc_result <- list("label_attribution" = label_attribution,
+                    "Data and smooth cost" = data_smooth_list,
+                    'h_dist_GC_present' = h_dist_GC_present)
 
   return(gc_result)
 }
