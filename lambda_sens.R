@@ -66,3 +66,42 @@ filename <- paste0(formatted_time, "_my_workspace_ERA5_allModels_lambda_sens.RDa
 # Save the workspace using the generated filename
 save.image(file = filename, compress = FALSE)
 
+
+
+# Computing the sum of hellinger distances between models and reference --> used as datacost
+h_dist_future <- array(data = 0, dim = c(length(lon), length(lat),
+                                         length(model_names)))
+
+# Loop through variables and models
+m <- 1
+for (model_name in model_names) {
+  for (i in seq_along(lon)) {
+    for (j in seq_along(lat)) {
+      # Compute Hellinger distance
+      h_dist_unchecked <- sqrt(sum((sqrt(kde_models_future[i, j, , m]) - sqrt(kde_ref_future[i, j, ]))^2)) / sqrt(2)
+
+      # Replace NaN with 0
+      h_dist_future[i, j, m] <- replace(h_dist_unchecked, is.nan(h_dist_unchecked), 0)
+    }
+  }
+  m <- m + 1
+}
+
+# Loop through variables and models
+GC_results_lambda_h_dist_future <- list()
+GC_results_lambda_h_dist_mean_future <- list()
+i <- 1
+for (lambda in lambda_values) {
+  tmp <- array(NA, dim = dim(GC_result_hellinger_new[[i]]$label_attribution))
+
+  for(l in 0:(length(model_names))){
+    islabel <- which(GC_result_hellinger_new[[i]]$label_attribution== l)
+    tmp[islabel] <- h_dist_future[,,(l)][islabel]
+  }
+  GC_results_lambda_h_dist_future[[i]] <- tmp
+  GC_results_lambda_h_dist_mean_future[[i]] <- mean(tmp)
+  i <- i + 1
+}
+
+
+
