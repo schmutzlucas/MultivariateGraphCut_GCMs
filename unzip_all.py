@@ -36,5 +36,5 @@ def unzip_folder(path):
                 logging.info(f"Finished unzipping: {filepath}")
                 logging.info(f"Time taken: {end_time - start_time:.2f} seconds")
 
-path_to_folders = 'download_day'
+path_to_folders = 'data_download/download_day'
 unzip_folders(path_to_folders)

@@ -40,7 +40,7 @@ experiment = ['historical', 'ssp5_8_5']
 # Define the main function to run the data retrieval
 def main():
     # create a thread pool with n worker threads
-    with ThreadPoolExecutor(max_workers=10) as exe:
+    with ThreadPoolExecutor(max_workers=32) as exe:
         z = 0
         for n in experiment:
             # Set the year and month ranges depending on the experiment

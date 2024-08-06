@@ -65,7 +65,7 @@ variable_map = {
 
 # Define the list of years to retrieve data for
 # Define the list of years to retrieve data for
-YEARS = list(map(str, range(1990, 2010)))
+YEARS = list(map(str, range(2010, 2025)))
 
 
 # Define the list of months to retrieve data for
