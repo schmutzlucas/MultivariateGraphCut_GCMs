@@ -1,5 +1,6 @@
 calculate_ranges <- function(variable, model_names, data_dir, year_interest, lon, lat) {
-  range_var <- array(data = NA, dim = c(length(lon), length(lat), 2, length(model_names)))
+  nVar <- length(variable)
+  range_var <- array(data = NA, dim = c(length(lon), length(lat), nVar, length(model_names)))
 
   # Loop through models
   m <- 1

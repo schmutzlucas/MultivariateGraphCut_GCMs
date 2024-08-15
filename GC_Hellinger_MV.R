@@ -26,7 +26,7 @@ year_future <<- 2000:2022
 data_dir <<- 'data/CMIP6_merged_all/'
 
 # Bins for the kde
-nbins1d <<- 10
+nbins1d <<- 16
 
 
 
@@ -36,7 +36,7 @@ nbins1d <<- 10
 #                'psl', 'hur',
 #                'huss')
 # variables <- c('pr', 'tas', 'tasmin', 'tasmax')
-variables <- c('pr', 'tas')
+variables <- c('pr', 'tas', 'psl')
 
 # Obtains the list of models from the model names or from a file
 # # Method 1
