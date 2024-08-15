@@ -1,6 +1,7 @@
 from concurrent.futures import ThreadPoolExecutor
 import cdsapi
 import os
+import time
 
 # Create a CDS API client object
 c = cdsapi.Client()
@@ -27,11 +28,19 @@ with open('../model_list.txt', 'r') as file:
     model_list = file.read().splitlines()
 
 # Define the list of variables to retrieve
-variable_list = ['near_surface_specific_humidity']
+variable_list = [
+'near_surface_air_temperature',
+'precipitation',
+'near_surface_wind_speed',
+'sea_level_pressure']
 
 # Map variable names to short names
 variable_shortnames = {
-    'near_surface_specific_humidity': 'huss'
+    'near_surface_specific_humidity': 'huss',
+    'near_surface_air_temperature' : 'tas',
+    'precipitation' : 'pr',
+    'near_surface_wind_speed' : 'sfcWind',
+    'sea_level_pressure' : 'psl'
 }
 
 # Define the list of experiments to retrieve data for
@@ -40,7 +49,7 @@ experiment = ['historical', 'ssp5_8_5']
 # Define the main function to run the data retrieval
 def main():
     # create a thread pool with n worker threads
-    with ThreadPoolExecutor(max_workers=32) as exe:
+    with ThreadPoolExecutor(max_workers=64) as exe:
         z = 0
         for n in experiment:
             # Set the year and month ranges depending on the experiment
@@ -56,7 +65,7 @@ def main():
                 day = list(map(str, day_int))
                 month_int = list(range(1, 13))
                 month = list(map(str, month_int))
-                year_int = list(range(2015, 2101))
+                year_int = list(range(2014, 2101))
                 year = list(map(str, year_int))
             for i in model_list:
                 # Create a directory to store the downloaded files for each model
@@ -75,6 +84,8 @@ def main():
                         try:
                             # Submit a job to the thread pool to download the data
                             var = [exe.submit(cds_api_call, n, i, year, month, day, j, name)]
+                            # Add a small wait time between requests
+                            time.sleep(0.1)
                         finally:
                             pass
     print('finished')

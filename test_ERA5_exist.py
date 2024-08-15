@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 def generate_filenames(start_date, end_date):
     current_date = start_date
     while current_date <= end_date:
-        yield f"tas_ERA5_{current_date.strftime('%Y%m01')}-{current_date.strftime('%Y%m31')}.nc"
+        yield f"sp_ERA5_{current_date.strftime('%Y%m01')}-{current_date.strftime('%Y%m31')}.nc"
         current_date += timedelta(days=31)
         current_date = current_date.replace(day=1)
 
@@ -18,9 +18,9 @@ def check_files(directory, start_date, end_date):
     return missing_files
 
 # Testing the function
-directory = "data/ERA5/tas/"  # REPLACE WITH YOUR PATH
-start_date = datetime.strptime("1960-01-01", "%Y-%m-%d")
-end_date = datetime.strptime("2022-12-31", "%Y-%m-%d")
+directory = "data/ERA5_land/sp/"  # REPLACE WITH YOUR PATH
+start_date = datetime.strptime("1950-01-01", "%Y-%m-%d")
+end_date = datetime.strptime("2024-12-31", "%Y-%m-%d")
 
 missing_files = check_files(directory, start_date, end_date)
 
