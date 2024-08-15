@@ -10,8 +10,7 @@ calculate_ranges <- function(variable, model_names, data_dir, year_interest, lon
     pattern <- glob2rx(paste0(variable, "_", model_name, "*.nc"))
 
     # Get the filepath
-    file_name <- list.files(path = dir_path,
-                            pattern = pattern)
+    file_name <- list.files(path = dir_path, pattern = pattern)
     file_path <- paste0(dir_path, file_name)
     print(file_path)
     print(format(Sys.time(), "%Y%m%d%H%M"))
@@ -98,15 +97,18 @@ variables <- c('pr', 'tas', 'psl')
 range_var_1 <- calculate_ranges(variables[1], model_names, data_dir, year_interest, lon, lat)
 # Calculate ranges for the second variable
 range_var_2 <- calculate_ranges(variables[2], model_names, data_dir, year_interest, lon, lat)
-# Calculate ranges for the second variable
+# Calculate ranges for the third variable
 range_var_3 <- calculate_ranges(variables[3], model_names, data_dir, year_interest, lon, lat)
 
-saveRDS(range_var_1, 'ranges/pr_log_range_AllModelsPar_1950-2022_70deg.rds', compress = FALSE)
-saveRDS(range_var_2, 'ranges/tas_range_AllModelsPar_1950-2022_70deg.rds', compress = FALSE)
-saveRDS(range_var_3, 'ranges/tas_range_AllModelsPar_1950-2022_70deg.rds', compress = FALSE)
+saveRDS(range_var_1, 'ranges/pr_log_range_AllModelsPar_1950-2023_70deg.rds', compress = FALSE)
+saveRDS(range_var_2, 'ranges/tas_range_AllModelsPar_1950-2023_70deg.rds', compress = FALSE)
+saveRDS(range_var_3, 'ranges/psl_range_AllModelsPar_1950-2023_70deg.rds', compress = FALSE)
+
+# Initialize the final range list for all variables
 range_var_final <- list()
 range_var_final[[variables[1]]] <- array(data = NA, dim = c(length(lon), length(lat), 2))
 range_var_final[[variables[2]]] <- array(data = NA, dim = c(length(lon), length(lat), 2))
+range_var_final[[variables[3]]] <- array(data = NA, dim = c(length(lon), length(lat), 2))
 
 # For each grid point...
 for (i in seq_along(lon)) {
@@ -116,7 +118,11 @@ for (i in seq_along(lon)) {
 
     range_var_final[[variables[2]]][i, j, 1] <- min(range_var_2[i, j, 1, ])
     range_var_final[[variables[2]]][i, j, 2] <- max(range_var_2[i, j, 2, ])
+
+    range_var_final[[variables[3]]][i, j, 1] <- min(range_var_3[i, j, 1, ])
+    range_var_final[[variables[3]]][i, j, 2] <- max(range_var_3[i, j, 2, ])
   }
 }
 
-saveRDS(range_var_final, 'ranges/range_var_final_allModelsPar_1950-2022_70deg.rds', compress = FALSE)
+# Save the final combined ranges
+saveRDS(range_var_final, 'ranges/range_var_final_allModelsPar_1950-2023_70deg.rds', compress = FALSE)
