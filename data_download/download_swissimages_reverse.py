@@ -67,7 +67,7 @@ def download_image(url):
                     t.update(len(data))
                     file.write(data)
                     # Pause briefly between chunks to avoid stalling
-                    time.sleep(0.001)
+                    time.sleep(0.1)
             t.close()
 
             if total_size != 0 and t.n != total_size:
@@ -84,7 +84,7 @@ def download_image(url):
     print(f"Failed to download {url} after {max_retries} attempts.")
 
 # Function to download images concurrently
-def download_images_concurrently(urls, max_workers=16):
+def download_images_concurrently(urls, max_workers=10):
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         future_to_url = {executor.submit(download_image, url): url for url in urls}
         for future in tqdm(as_completed(future_to_url), total=len(urls), desc="Overall Progress"):
@@ -102,5 +102,8 @@ with open(csv_file_path, mode='r') as csv_file:
         image_url = row[0]  # Assuming the image URLs are in the first column
         urls.append(image_url)
 
+# Reverse the list of URLs to start downloading from the end
+urls.reverse()
+
 # Download images using multiple workers
-download_images_concurrently(urls, max_workers=16)
+download_images_concurrently(urls, max_workers=10)

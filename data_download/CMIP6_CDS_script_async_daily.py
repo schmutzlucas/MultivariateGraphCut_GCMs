@@ -65,7 +65,7 @@ def main():
                 day = list(map(str, day_int))
                 month_int = list(range(1, 13))
                 month = list(map(str, month_int))
-                year_int = list(range(2014, 2101))
+                year_int = list(range(2015, 2101))
                 year = list(map(str, year_int))
             for i in model_list:
                 # Create a directory to store the downloaded files for each model
