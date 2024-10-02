@@ -59,7 +59,8 @@ def cds_api_call(year, month, variable, name):
 variable_map = {
     '2m_temperature': 'tas',
     'total_precipitation': 'pr',
-    'surface_pressure' : 'sp'
+    'surface_pressure' : 'sp',
+    'near_surface_specific_humidity' : ''
     # 'mean_sea_level_pressure': 'psl'
 }
 
