@@ -3,11 +3,17 @@ list_of_packages <- read.table("package_list.txt", sep = "\n")$V1
 new.packages <- list_of_packages[!(list_of_packages %in% installed.packages()[, "Package"])]
 if (length(new.packages)) install.packages(new.packages, repos = "https://cloud.r-project.org")
 
-library(doParallel)
+library(future)
+library(future.apply)
+library(progressr)
 library(ncdf4)
 library(devtools)
 lapply(list_of_packages, library, character.only = TRUE)
 install_github("thaos/gcoWrapR")
+
+# Set up `progressr` for better visibility of parallel progress
+handlers(global = TRUE)  # Enable global progress handlers
+handlers("txtprogressbar")  # Use a text progress bar for console updates
 
 # Loading local functions
 source_code_dir <- 'functions/'  # The directory where all functions are saved.
@@ -24,24 +30,28 @@ data_dir <- 'data/CMIP6_merged_all/'
 variables <- c('pr', 'tas', 'psl')
 model_names <- read.table('model_names_pr_tas_psl.txt')$V1
 
-# Setting up parallel backend
-num_cores <- detectCores() - 1  # Use all but one core
-cl <- makeCluster(num_cores)
-registerDoParallel(cl)
+# Set up parallel backend using `future`
+plan(multisession, workers = 3)  # Use 3 separate R sessions
 
 # Function for calculating ranges for each variable across all models
 calculate_ranges <- function(variable, model_names, data_dir, year_interest, lon, lat) {
+  # Start progress tracking
+  p <- progressr::progressor(steps = length(model_names))
+  message(paste0("Starting range calculation for variable: '", variable, "' at ", format(Sys.time(), "%Y-%m-%d %H:%M:%S")))
+
   range_var <- array(data = NA, dim = c(length(lon), length(lat), 2, length(model_names)))  # Initialize result array
 
-  # Loop through models sequentially
   for (m in seq_along(model_names)) {
     model_name <- model_names[m]
     dir_path <- paste0(data_dir, model_name, '/', variable, '/')
     pattern <- glob2rx(paste0(variable, "_", model_name, "*.nc"))
     file_name <- list.files(path = dir_path, pattern = pattern)
     file_path <- paste0(dir_path, file_name)
-    message(paste0("Processing model: ", model_name, " for variable: ", variable, " at ", format(Sys.time(), "%Y-%m-%d %H:%M:%S")))
-    message(paste0("File path: ", file_path))
+
+    # Log model and file information with progress
+    p(sprintf("Processing Model '%s' for Variable '%s' [File: %s]", model_name, variable, basename(file_path)))
+    message(paste0("[INFO] Processing Model: '", model_name, "' for Variable: '", variable, "' at ", format(Sys.time(), "%Y-%m-%d %H:%M:%S")))
+    message(paste0("[INFO] File Path: ", file_path))
 
     # Open the NetCDF file
     nc_var <- nc_open(file_path)
@@ -75,28 +85,29 @@ calculate_ranges <- function(variable, model_names, data_dir, year_interest, lon
 
     # Close the NetCDF file
     nc_close(nc_var)
-    message(paste0("Completed processing for model: ", model_name, " at ", format(Sys.time(), "%Y-%m-%d %H:%M:%S")))
-    flush.console()  # Force flush the console output
+    message(paste0("[INFO] Completed processing for Model: '", model_name, "' for Variable: '", variable, "' at ", format(Sys.time(), "%Y-%m-%d %H:%M:%S")))
+    p()
   }
 
+  message(paste0("Completed range calculation for variable: '", variable, "' at ", format(Sys.time(), "%Y-%m-%d %H:%M:%S")))
   return(range_var)
 }
 
-# Export custom functions and variables to each worker node
-clusterExport(cl, c("calculate_ranges", "nc.get.time.series", "model_names", "data_dir", "year_interest", "lon", "lat"))
+# Enhanced progress messages with `progressr`
+message(paste0("Starting parallel range calculations for all variables at ", format(Sys.time(), "%Y-%m-%d %H:%M:%S")))
 
-message(paste0("Starting parallel range calculations at ", format(Sys.time(), "%Y-%m-%d %H:%M:%S")))
-flush.console()
+# Run `calculate_ranges` for each variable asynchronously using `progressr` wrapper
+range_results <- with_progress({
+  future_lapply(variables, function(var) {
+    message(paste0("[TASK] Starting calculation for Variable: '", var, "' at ", format(Sys.time(), "%Y-%m-%d %H:%M:%S")))
+    result <- calculate_ranges(var, model_names, data_dir, year_interest, lon, lat)
+    message(paste0("[TASK] Completed calculation for Variable: '", var, "' at ", format(Sys.time(), "%Y-%m-%d %H:%M:%S")))
+    return(result)
+  })
+})
 
-# Parallel execution of the range calculations for each variable
-range_results <- foreach(var = variables, .packages = c("ncdf4"), .combine = list) %dopar% {
-  message(paste0("Starting calculation for variable: ", var, " at ", format(Sys.time(), "%Y-%m-%d %H:%M:%S")))
-  flush.console()
-  result <- calculate_ranges(var, model_names, data_dir, year_interest, lon, lat)
-  message(paste0("Completed calculation for variable: ", var, " at ", format(Sys.time(), "%Y-%m-%d %H:%M:%S")))
-  flush.console()
-  return(result)
-}
+# Remaining part of the code...
+
 
 # Assign the results to respective variables
 range_var_1 <- range_results[[1]]
@@ -134,6 +145,3 @@ saveRDS(range_var_final, 'ranges/range_var_final_allModelsPar_1950-2022_70deg.rd
 
 message(paste0("Completed full processing at ", format(Sys.time(), "%Y-%m-%d %H:%M:%S")))
 flush.console()
-
-# Stop the parallel backend
-stopCluster(cl)
