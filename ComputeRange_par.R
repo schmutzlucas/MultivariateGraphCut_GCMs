@@ -103,7 +103,7 @@ range_var_3 <- calculate_ranges(variables[3], model_names, data_dir, year_intere
 
 saveRDS(range_var_1, 'ranges/pr_log_range_AllModelsPar_1950-2022_70deg.rds', compress = FALSE)
 saveRDS(range_var_2, 'ranges/tas_range_AllModelsPar_1950-2022_70deg.rds', compress = FALSE)
-saveRDS(range_var_3, 'ranges/tas_range_AllModelsPar_1950-2022_70deg.rds', compress = FALSE)
+saveRDS(range_var_3, 'ranges/psl_range_AllModelsPar_1950-2022_70deg.rds', compress = FALSE)
 range_var_final <- list()
 range_var_final[[variables[1]]] <- array(data = NA, dim = c(length(lon), length(lat), 2))
 range_var_final[[variables[2]]] <- array(data = NA, dim = c(length(lon), length(lat), 2))
