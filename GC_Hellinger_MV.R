@@ -25,7 +25,7 @@ year_future <<- 2000:2022
 # data directory
 data_dir <<- 'data/CMIP6_merged_all/'
 
-# Bins for the kde
+# Bins for the pdfs
 nbins1d <<- 16
 
 
