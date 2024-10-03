@@ -15,6 +15,10 @@ source_code_dir <- 'functions/'
 file_paths <- list.files(source_code_dir, full.names = TRUE)
 for (path in file_paths) source(path)
 
+start_time <- Sys.time()
+cat("Script started at: ", format(start_time, "%Y-%m-%d %H:%M:%S"), "\n")
+
+
 # Global variables
 lon <- 0:359
 lat <- -70:70
@@ -86,3 +90,8 @@ for (i in seq_along(lon)) {
 
 # Save the final merged ranges
 saveRDS(range_var_final, 'ranges/range_var_final_allModelsPar_1950-2022_70deg.rds')
+
+end_time <- Sys.time()
+cat("Script completed at: ", format(end_time, "%Y-%m-%d %H:%M:%S"), "\n")
+cat("Total execution time: ", round(difftime(end_time, start_time, units = "mins"), 2), " minutes\n")
+
