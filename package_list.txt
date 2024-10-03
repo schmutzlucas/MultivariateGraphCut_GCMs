@@ -18,3 +18,5 @@ gplots
 squash
 fields
 ggspatial
+future
+future.apply
