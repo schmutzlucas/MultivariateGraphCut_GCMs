@@ -37,6 +37,10 @@ compute_nd_pdf <- function(variable_list, model_names, data_dir, year_interest, 
         # Collect data for each variable at the current pixel
         pixel_data <- sapply(var_data_list, function(var) var[i, j, ])
 
+        # Transpose the matrix to match the expected input shape for `compute_histND()`
+        pixel_data <- t(pixel_data)
+        print(dim(pixel_data))
+
         # Compute n-dimensional histogram using compute_histND
         hist_tmp <- compute_histND(pixel_data, range_var[i, j, , ], nbins)
 
