@@ -1,15 +1,16 @@
-# Main function to compute n-dimensional PDFs
 compute_nd_pdf <- function(variables, model_names, data_dir, year_interest, lon, lat, range_var, nbins) {
   n_var <- length(variables)  # Number of variables
   num_models <- length(model_names)
-  pdf_matrix <- array(NA, dim = c(length(lon), length(lat), prod(nbins), num_models))  # Output array
+  pdf_matrix <- array(NA, dim = c(length(lon), length(lat), nbins^n_var, num_models))  # Output array
 
   for (m in seq_along(model_names)) {
     model_name <- model_names[m]
+    cat(paste0("Processing model: ", model_name, "\n"))  # Debug print for current model
 
     # Read data for all variables for the current model
     var_data_list <- list()
     for (v in seq_along(variables)) {
+      # Read the NetCDF file for the variable
       file_path <- paste0(data_dir, model_name, '/', variables[v], '/', list.files(path = paste0(data_dir, model_name, '/', variables[v], '/'), pattern = glob2rx(paste0(variables[v], "_", model_name, "*.nc")))[1])
       nc_var <- nc_open(file_path)
 
@@ -37,21 +38,18 @@ compute_nd_pdf <- function(variables, model_names, data_dir, year_interest, lon,
         # Collect data for each variable at the current pixel
         pixel_data <- sapply(var_data_list, function(var) var[i, j, ])
 
-        # Transpose the matrix to match the expected input shape for `compute_histND()`
-        pixel_data <- t(pixel_data)
-
         # Compute n-dimensional histogram using compute_histND
         hist_tmp <- compute_histND(pixel_data, range_var[i, j, , ], nbins)
 
-        print(dim(hist_tmp))  # Print dimensions of hist_tmp
-        print(length(hist_tmp))
-        print(sum(hist_tmp))
-        print(length(c(hist_tmp / sum(hist_tmp))))  # Number of elements after normalization
-        print(length(pdf_matrix[i, j, , m]))  # Number of elements expected in pdf_matrix slice
-
+        # Check that the sum of counts equals the number of observations
+        total_counts <- sum(hist_vector)
+        cat("Total counts in histogram:", total_counts, "\n")
+        cat("Number of observations:", nrow(pixel_data), "\n")
 
         # Normalize and store the histogram as a vector in pdf_matrix
         pdf_matrix[i, j, , m] <- c(hist_tmp / sum(hist_tmp))
+
+        asfafs
       }
     }
   }

@@ -1,32 +1,36 @@
 compute_histND <- function(data, range_var, nbins) {
-  n_vars <- dim(range_var)[1]  # Number of variables
+  n_vars <- ncol(data)  # Number of variables
+  n_obs <- nrow(data)   # Number of observations
 
-  # Calculate the bin edges based on predefined ranges
-  bin_edges <- lapply(seq_len(n_vars), function(v) {
+  # Calculate the bin edges for each variable
+  bin_edges <- lapply(1:n_vars, function(v) {
     seq(range_var[v, 1], range_var[v, 2], length.out = nbins + 1)
   })
 
-  # Initialize an empty n-dimensional histogram array
-  hist_array <- array(0, dim = rep(nbins, n_vars))
+  # Initialize a matrix to hold bin indices for each observation and variable
+  bin_indices <- matrix(NA, nrow = n_obs, ncol = n_vars)
 
-  # For each observation, determine which bin it belongs to
-  for (i in seq_len(nrow(data))) {
-    # Determine bin indices for each variable
-    indices <- mapply(function(value, edges) {
-      # Find the interval for the value in the given bin edges
-      which.min(value < edges) - 1
-    }, data[i, ], bin_edges)
-
-    # Ensure indices are within bounds (i.e., between 1 and `nbins`)
-    indices[indices < 1] <- 1
-    indices[indices > nbins] <- nbins
-
-    # Increment the count in the corresponding bin
-    hist_array[indices] <- hist_array[indices] + 1
+  # Assign each data point to a bin
+  for (v in 1:n_vars) {
+    bin_indices[, v] <- findInterval(data[, v], vec = bin_edges[[v]], rightmost.closed = TRUE)
+    # Correct any indices that are zero or out of bounds
+    bin_indices[, v][bin_indices[, v] < 1] <- 1
+    bin_indices[, v][bin_indices[, v] > nbins] <- nbins
   }
 
-  # Flatten the n-dimensional histogram to a 1D vector
-  hist_vector <- c(hist_array)
+  # Compute linear indices for the n-dimensional histogram
+  dims <- rep(nbins, n_vars)
+  multiplier <- cumprod(c(1, dims[-length(dims)]))
+  idx_linear <- as.numeric((bin_indices - 1) %*% multiplier) + 1
+
+  # Initialize the histogram vector
+  hist_vector <- rep(0, prod(dims))
+
+  # Count occurrences using table()
+  counts <- table(idx_linear)
+
+  # Update the histogram vector
+  hist_vector[as.numeric(names(counts))] <- counts
 
   return(hist_vector)
 }
