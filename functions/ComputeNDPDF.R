@@ -1,8 +1,8 @@
 # Main function to compute n-dimensional PDFs
-compute_nd_pdf <- function(variable_list, model_names, data_dir, year_interest, lon, lat, range_var, bins_per_variable) {
+compute_nd_pdf <- function(variable_list, model_names, data_dir, year_interest, lon, lat, range_var, nbins) {
   n_var <- length(variable_list)  # Number of variables
   num_models <- length(model_names)
-  pdf_matrix <- array(NA, dim = c(length(lon), length(lat), prod(bins_per_variable), num_models))  # Output array
+  pdf_matrix <- array(NA, dim = c(length(lon), length(lat), prod(nbins), num_models))  # Output array
 
   for (m in seq_along(model_names)) {
     model_name <- model_names[m]
@@ -38,7 +38,7 @@ compute_nd_pdf <- function(variable_list, model_names, data_dir, year_interest, 
         pixel_data <- sapply(var_data_list, function(var) var[i, j, ])
 
         # Compute n-dimensional histogram using compute_histND
-        hist_tmp <- compute_histND(pixel_data, range_var[i, j, , ], bins_per_variable)
+        hist_tmp <- compute_histND(pixel_data, range_var[i, j, , ], nbins)
 
         # Normalize and store the histogram as a vector in pdf_matrix
         pdf_matrix[i, j, , m] <- c(hist_tmp / sum(hist_tmp))
