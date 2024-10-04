@@ -37,8 +37,30 @@ model_names <- read.table('model_names_pr_tas_psl.txt')
 model_names <- as.list(model_names[['V1']])
 # Index of the reference
 ref_index <<- 1
+# Custom function to format time into human-readable format
+format_time <- function(time_seconds) {
+  hours <- floor(time_seconds / 3600)
+  minutes <- floor((time_seconds %% 3600) / 60)
+  seconds <- round(time_seconds %% 60, 2)
+  if (hours > 0) {
+    return(paste(hours, "hours", minutes, "minutes", seconds, "seconds"))
+  } else if (minutes > 0) {
+    return(paste(minutes, "minutes", seconds, "seconds"))
+  } else {
+    return(paste(seconds, "seconds"))
+  }
+}
 
+# Time the execution of the optimized function
+time_optimized <- system.time({
+  tmp_optimized <- compute_nd_pdf_optimized(variables, model_names, data_dir, year_present,
+                                            lon, lat, aperm(abind(range_var_final, along = 4), c(1, 2, 4, 3)), nbins1d)
+})
+cat("Time taken for compute_nd_pdf_optimized: ", format_time(time_optimized["elapsed"]), "\n")
 
-tmp <- compute_nd_pdf(variables, model_names, data_dir, year_present,
-                      lon, lat, aperm(abind(range_var_final, along = 4), c(1, 2, 4, 3)), nbins1d)
-
+# Time the execution of the standard function
+time_standard <- system.time({
+  tmp_standard <- compute_nd_pdf(variables, model_names, data_dir, year_present,
+                                 lon, lat, aperm(abind(range_var_final, along = 4), c(1, 2, 4, 3)), nbins1d)
+})
+cat("Time taken for compute_nd_pdf: ", format_time(time_standard["elapsed"]), "\n")

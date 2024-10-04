@@ -5,7 +5,9 @@ compute_nd_pdf <- function(variables, model_names, data_dir, year_interest, lon,
 
   for (m in seq_along(model_names)) {
     model_name <- model_names[m]
-    cat(paste0("Processing model: ", model_name, "\n"))  # Debug print for current model
+    cat(paste0("Processing model: ", model_name, " at ",
+               format(Sys.time(), "%Y-%m-%d %H:%M:%S"), "\n"))  # Debug print with date and time
+
 
     # Read data for all variables for the current model
     var_data_list <- list()
@@ -41,15 +43,8 @@ compute_nd_pdf <- function(variables, model_names, data_dir, year_interest, lon,
         # Compute n-dimensional histogram using compute_histND
         hist_tmp <- compute_histND(pixel_data, range_var[i, j, , ], nbins)
 
-        # Check that the sum of counts equals the number of observations
-        total_counts <- sum(hist_vector)
-        cat("Total counts in histogram:", total_counts, "\n")
-        cat("Number of observations:", nrow(pixel_data), "\n")
-
         # Normalize and store the histogram as a vector in pdf_matrix
         pdf_matrix[i, j, , m] <- c(hist_tmp / sum(hist_tmp))
-
-        asfafs
       }
     }
   }
