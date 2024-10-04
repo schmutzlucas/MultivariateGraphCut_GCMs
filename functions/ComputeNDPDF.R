@@ -39,10 +39,15 @@ compute_nd_pdf <- function(variable_list, model_names, data_dir, year_interest, 
 
         # Transpose the matrix to match the expected input shape for `compute_histND()`
         pixel_data <- t(pixel_data)
-        print(dim(pixel_data))
 
         # Compute n-dimensional histogram using compute_histND
         hist_tmp <- compute_histND(pixel_data, range_var[i, j, , ], nbins)
+
+        print(dim(hist_tmp))  # Print dimensions of hist_tmp
+        print(sum(hist_tmp))
+        print(length(c(hist_tmp / sum(hist_tmp))))  # Number of elements after normalization
+        print(length(pdf_matrix[i, j, , m]))  # Number of elements expected in pdf_matrix slice
+
 
         # Normalize and store the histogram as a vector in pdf_matrix
         pdf_matrix[i, j, , m] <- c(hist_tmp / sum(hist_tmp))
