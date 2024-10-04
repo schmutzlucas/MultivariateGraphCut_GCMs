@@ -14,7 +14,7 @@ source_code_dir <- 'functions/' #The directory where all functions are saved.
 file_paths <- list.files(source_code_dir, full.names = T)
 for(path in file_paths){source(path)}
 
-range_var_final <- readRDS('ranges/range_var_final_allModelsPar_1950-2022_new.rds')
+range_var_final <- readRDS('ranges/range_var_final_allModelsPar_1950-2022_70deg.rds')
 
 # Setting global variables
 lon <- 0:359
@@ -52,7 +52,7 @@ variables <- c('pr', 'tas', 'psl')
 #                                   'UKESM1-0-LL')
 
 # Method 3
-model_names <- read.table('model_names_long.txt')
+model_names <- read.table('model_names_pr_tas_psl.txt')
 model_names <- as.list(model_names[['V1']])
 # Index of the reference
 ref_index <<- 1

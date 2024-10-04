@@ -16,6 +16,10 @@ for (path in file_paths) {
   source(path)
 }
 
+start_time <- Sys.time()
+cat("Script started at: ", format(start_time, "%Y-%m-%d %H:%M:%S"), "\n")
+
+
 # Global variables
 lon <- 0:359
 lat <- -70:70
@@ -130,10 +134,14 @@ for (i in seq_along(lon)) {
 }
 
 # Save the final merged ranges
-saveRDS(range_var_final, 'ranges/range_var_final_allModelsPar_1950-2022_70deg.rds', compress = FALSE)
+saveRDS(range_var_final, 'ranges/range_var_final_allModelsPar_1950-2022_70deg_par.rds', compress = FALSE)
 
-message(paste0("Completed full processing at ", format(Sys.time(), "%Y-%m-%d %H:%M:%S")))
-flush.console()
+
+end_time <- Sys.time()
+cat("Script completed at: ", format(end_time, "%Y-%m-%d %H:%M:%S"), "\n")
+cat("Total execution time: ", round(difftime(end_time, start_time, units = "mins"), 2), " minutes\n")
+
+
 
 # Stop the parallel backend
 stopCluster(cl)
