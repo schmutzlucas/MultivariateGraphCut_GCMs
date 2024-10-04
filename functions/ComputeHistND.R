@@ -1,4 +1,4 @@
-compute_histND_fixed <- function(data, range_var, nbins) {
+compute_histND <- function(data, range_var, nbins) {
   n_vars <- dim(range_var)[1]  # Number of variables
 
   # Calculate the bin edges based on predefined ranges
@@ -21,15 +21,12 @@ compute_histND_fixed <- function(data, range_var, nbins) {
     indices[indices < 1] <- 1
     indices[indices > nbins] <- nbins
 
-    # Convert to list for indexing
-    idx_list <- as.list(indices)
-
     # Increment the count in the corresponding bin
-    hist_array[idx_list] <- hist_array[idx_list] + 1
+    hist_array[indices] <- hist_array[indices] + 1
   }
 
   # Flatten the n-dimensional histogram to a 1D vector
-  hist_vector <- as.vector(hist_array)
+  hist_vector <- c(hist_array)
 
   return(hist_vector)
 }

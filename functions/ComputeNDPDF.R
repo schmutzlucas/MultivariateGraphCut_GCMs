@@ -1,6 +1,6 @@
 # Main function to compute n-dimensional PDFs
-compute_nd_pdf <- function(variable_list, model_names, data_dir, year_interest, lon, lat, range_var, nbins) {
-  n_var <- length(variable_list)  # Number of variables
+compute_nd_pdf <- function(variables, model_names, data_dir, year_interest, lon, lat, range_var, nbins) {
+  n_var <- length(variables)  # Number of variables
   num_models <- length(model_names)
   pdf_matrix <- array(NA, dim = c(length(lon), length(lat), prod(nbins), num_models))  # Output array
 
@@ -9,8 +9,8 @@ compute_nd_pdf <- function(variable_list, model_names, data_dir, year_interest, 
 
     # Read data for all variables for the current model
     var_data_list <- list()
-    for (v in seq_along(variable_list)) {
-      file_path <- paste0(data_dir, model_name, '/', variable_list[v], '/', list.files(path = paste0(data_dir, model_name, '/', variable_list[v], '/'), pattern = glob2rx(paste0(variable_list[v], "_", model_name, "*.nc")))[1])
+    for (v in seq_along(variables)) {
+      file_path <- paste0(data_dir, model_name, '/', variables[v], '/', list.files(path = paste0(data_dir, model_name, '/', variables[v], '/'), pattern = glob2rx(paste0(variables[v], "_", model_name, "*.nc")))[1])
       nc_var <- nc_open(file_path)
 
       yyyy <- substr(as.character(nc.get.time.series(nc_var)), 1, 4)
@@ -24,10 +24,10 @@ compute_nd_pdf <- function(variable_list, model_names, data_dir, year_interest, 
       start_lat <- min(lat_indices)
 
       # Extract data slice for the specified variable and close the file
-      var_data <- ncvar_get(nc_var, variable_list[v], start = c(start_lon, start_lat, min(iyyyy)), count = c(length(lon_indices), length(lat_indices), length(iyyyy)))
+      var_data <- ncvar_get(nc_var, variables[v], start = c(start_lon, start_lat, min(iyyyy)), count = c(length(lon_indices), length(lat_indices), length(iyyyy)))
       nc_close(nc_var)
 
-      if (variable_list[v] == 'pr') var_data <- log(var_data + 1)  # Log transform if variable is precipitation
+      if (variables[v] == 'pr') var_data <- log(var_data + 1)  # Log transform if variable is precipitation
       var_data_list[[v]] <- var_data
     }
 
@@ -44,6 +44,7 @@ compute_nd_pdf <- function(variable_list, model_names, data_dir, year_interest, 
         hist_tmp <- compute_histND(pixel_data, range_var[i, j, , ], nbins)
 
         print(dim(hist_tmp))  # Print dimensions of hist_tmp
+        print(length(hist_tmp))
         print(sum(hist_tmp))
         print(length(c(hist_tmp / sum(hist_tmp))))  # Number of elements after normalization
         print(length(pdf_matrix[i, j, , m]))  # Number of elements expected in pdf_matrix slice
