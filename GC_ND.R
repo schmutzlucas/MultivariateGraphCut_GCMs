@@ -59,9 +59,7 @@ time_optimized <- system.time({
 cat("Time taken for compute_nd_pdf_optimized: ", format_time(time_optimized["elapsed"]), "\n")
 
 
-
 # Get the current date and time
-
 current_time <- Sys.time()
 
 # Format the date and time as a string in the format 'yyyymmddhhmm'
@@ -72,5 +70,4 @@ filename <- paste0(formatted_time, "_my_workspace_ERA5_allModels_beforeOptim_3v.
 
 # Save the workspace using the generated filename
 save.image(file = filename, compress = FALSE)
-
 
