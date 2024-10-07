@@ -188,9 +188,9 @@ GC_result_hellinger_mixte <- GraphCutHellinger2D(kde_ref = kde_ref,
 
 # Graphcut hellinger labelling
 GC_result_hellinger_new2 <- list()
-GC_result_hellinger_new2 <- GraphCutHellinger2D_new2(kde_ref = kde_ref,
+GC_result_hellinger_new2 <- GraphCutHellinger2D_new2(pdf_ref = kde_ref,
                                                      kde_models = kde_models,
-                                                     kde_models_future = kde_models_future,
+                                                     pdf_models_future = kde_models_future,
                                                      h_dist = h_dist,
                                                      weight_data = 1,
                                                      weight_smooth = 1,

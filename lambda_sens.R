@@ -38,8 +38,8 @@ GC_result_hellinger_new <- list()
 n <- 1
 for (lambda in lambda_values) {
   GC_result_hellinger_new[[n]] <-
-    GraphCutHellinger2D_new2(kde_ref = kde_ref,
-                             kde_models_future = kde_models_future,
+    GraphCutHellinger2D_new2(pdf_ref = kde_ref,
+                             pdf_models_future = kde_models_future,
                              h_dist = h_dist,
                              weight_data = lambda,
                              weight_smooth = 10,

@@ -9,7 +9,7 @@ library(gcoWrapR)
 #' This function performs graph cut optimization using the gco-v3.0 C++ library and gcoWrapR package.
 #' It produces a map of labels where each grid-point is assigned to one model.
 #'
-#' @param kde_ref An array representing the kde_ref dataset for the optimization.
+#' @param pdf_ref An array representing the kde_ref dataset for the optimization.
 #' @param models_datacost An array representing the models' data cost for the optimization.
 #' @param models_smoothcost An array representing the models' smooth cost for the optimization.
 #' @param weight_data A numeric value representing the weight for the data cost.
@@ -41,9 +41,9 @@ library(gcoWrapR)
 #'
 #' @import gcoWrapR
 #' @export
-GraphCutHellinger2D_new2 <- function(
-  kde_ref,
-  kde_models_future,
+GraphCutHellinger2D_new3 <- function(
+  pdf_ref,
+  pdf_models_future,
   h_dist,
   weight_data,
   weight_smooth,
@@ -54,15 +54,15 @@ GraphCutHellinger2D_new2 <- function(
 ){
 
   n_labs      <- length(model_names)
-  width       <- ncol(kde_ref)
-  height      <- nrow(kde_ref)
+  width       <- ncol(pdf_ref)
+  height      <- nrow(pdf_ref)
 
 
   # Permuting longitude and latitude since the indexing isn't the same in R and in C++
   # changed: c(aperm(sum_h_dist, c(2, 1, 3))) call was redundant
   # when go from matrix to vector
   h_dist_cpp <- c(aperm(h_dist, c(2, 1, 3)))
-  kde_models_cpp <- c(aperm(kde_models_future, c(4, 2, 1, 3)))
+  kde_models_cpp <- c(aperm(pdf_models_future, c(4, 2, 1, 3)))
 
 
   # Instanciation of the GraphCut environment
@@ -120,14 +120,13 @@ GraphCutHellinger2D_new2 <- function(
 
       float cost  = 0;
       float tmp1  = 0;
-      float tmp2  = 0;
 
       for (int i = 0; i < nBins; i++) {
         tmp1 += pow((sqrt(data[(p1 + numPix * l1) * nBins + i]) - sqrt(data[(p1 + numPix * l2) * nBins + i]))
                    -(sqrt(data[(p2 + numPix * l1) * nBins + i]) - sqrt(data[(p2 + numPix * l2) * nBins + i])), 2);
       }
 
-      cost = sqrt(tmp1) + sqrt(tmp2);
+      cost = sqrt(tmp1) / sqrt(2);
 
       return(weight * cost);
     }',

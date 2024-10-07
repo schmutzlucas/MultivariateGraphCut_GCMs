@@ -72,9 +72,9 @@ for (i in seq_along(lambdas)) {
   # Use tryCatch to handle errors
   GC_result_hellinger_new[[i]] <- tryCatch({
     # Call the GraphCutHellinger2D_new2 function and store the result
-    GraphCutHellinger2D_new2(kde_ref = kde_ref,
+    GraphCutHellinger2D_new2(pdf_ref = kde_ref,
                              kde_models = kde_models,
-                             kde_models_future = kde_models_future,
+                             pdf_models_future = kde_models_future,
                              h_dist = h_dist,
                              weight_data = weight_data,
                              weight_smooth = weight_smooth,

@@ -173,9 +173,9 @@ GC_result_hellinger <- GraphCutHellinger2D(kde_ref = kde_ref,
 
 # Graphcut hellinger labelling
 GC_result_hellinger_new <- list()
-GC_result_hellinger_new <- GraphCutHellinger2D_new2(kde_ref = kde_ref,
+GC_result_hellinger_new <- GraphCutHellinger2D_new2(pdf_ref = kde_ref,
                                                     kde_models = kde_models,
-                                                    kde_models_future = kde_models_future ,
+                                                    pdf_models_future = kde_models_future ,
                                                     weight_data = 1,
                                                     weight_smooth = 1,
                                                     nBins = nbins1d^2,
@@ -183,9 +183,9 @@ GC_result_hellinger_new <- GraphCutHellinger2D_new2(kde_ref = kde_ref,
 
 # Graphcut hellinger labelling
 GC_result_hellinger_new <- list()
-GC_result_hellinger_new <- GraphCutHellinger2D_new2(kde_ref = kde_ref,
+GC_result_hellinger_new <- GraphCutHellinger2D_new2(pdf_ref = kde_ref,
                                                     kde_models = kde_models,
-                                                    kde_models_future = kde_models_future ,
+                                                    pdf_models_future = kde_models_future ,
                                                     weight_data = 0.9,
                                                     weight_smooth = 0.1,
                                                     nBins = nbins1d^2,

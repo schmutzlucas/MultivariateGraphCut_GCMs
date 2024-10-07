@@ -45,6 +45,7 @@ GraphCutHellinger2D <- function(
   kde_ref,
   models_smoothcost,
   h_dist,
+  variables,
   weight_data,
   weight_smooth,
   verbose
@@ -53,7 +54,7 @@ GraphCutHellinger2D <- function(
   n_labs      <- length(model_names)
   width       <- ncol(kde_ref)
   height      <- nrow(kde_ref)
-  n_variables <- 2
+  n_variables <- length(variables)
 
 
 
