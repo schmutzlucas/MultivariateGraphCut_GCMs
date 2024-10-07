@@ -53,14 +53,24 @@ format_time <- function(time_seconds) {
 
 # Time the execution of the optimized function
 time_optimized <- system.time({
-  tmp_optimized <- compute_nd_pdf_optimized(variables, model_names, data_dir, year_present,
-                                            lon, lat, aperm(abind(range_var_final, along = 4), c(1, 2, 4, 3)), nbins1d)
+  tmp <- compute_nd_pdf_optimized(variables, model_names, data_dir, year_present, year_future,
+                                  lon, lat, aperm(abind(range_var_final, along = 4), c(1, 2, 4, 3)), nbins1d)
 })
 cat("Time taken for compute_nd_pdf_optimized: ", format_time(time_optimized["elapsed"]), "\n")
 
-# Time the execution of the standard function
-time_standard <- system.time({
-  tmp_standard <- compute_nd_pdf(variables, model_names, data_dir, year_present,
-                                 lon, lat, aperm(abind(range_var_final, along = 4), c(1, 2, 4, 3)), nbins1d)
-})
-cat("Time taken for compute_nd_pdf: ", format_time(time_standard["elapsed"]), "\n")
+
+
+# Get the current date and time
+
+current_time <- Sys.time()
+
+# Format the date and time as a string in the format 'yyyymmddhhmm'
+formatted_time <- format(current_time, "%Y%m%d%H%M")
+
+# Concatenate the formatted time string with your desired filename
+filename <- paste0(formatted_time, "_my_workspace_ERA5_allModels_beforeOptim_3v.RData")
+
+# Save the workspace using the generated filename
+save.image(file = filename, compress = FALSE)
+
+
