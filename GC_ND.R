@@ -167,8 +167,7 @@ rm(h_dist_unchecked)
 
 # Graphcut hellinger labelling
 GC_result_hellinger_new <- list()
-GC_result_hellinger_new <- GraphCutHellinger2D_new3(pdf_ref = pdf_ref_present[ , , ],
-                                                    pdf_models_future = pdf_models_future[,,,-1] ,
+GC_result_hellinger_new <- GraphCutHellinger2D_new3(pdf_models_future = pdf_models_future[,,, ] ,
                                                     h_dist = h_dist,
                                                     weight_data = 1,
                                                     weight_smooth = 1,

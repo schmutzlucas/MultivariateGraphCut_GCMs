@@ -9,13 +9,15 @@ client = cdsapi.Client()
 # Define the list of variables with long and short names
 variable_dict = {
     '2m_temperature': 'tas',
-    'total_precipitation': 'pr',
+    # 'total_precipitation': 'pr',
+    'mean_sea_level_pressure': 'msl'  # Added pressure download
 }
 
 # Define a function to call the CDS API and retrieve data
 def cds_api_call(year, variable, shortname, save_dir):
-    # Construct the target filename
+    # Construct the target filename and a temporary download filename
     target = f"{save_dir}/{shortname}_ERA5_{year}0101-{year}1231.nc"
+    temp_target = f"{target}.part"
 
     # Define the request parameters
     request = {
@@ -33,13 +35,26 @@ def cds_api_call(year, variable, shortname, save_dir):
         "format": "netcdf",  # Output format
     }
 
-    # Check if the file already exists to avoid re-downloading
-    if not os.path.exists(target):
-        print(f"Downloading {target}...")
-        client.retrieve('reanalysis-era5-single-levels', request, target)
-        print(f"Downloaded: {target}")
-    else:
+    # Check if the final target file already exists
+    if os.path.exists(target):
         print(f"File already exists: {target}")
+        return
+
+    # If a temporary file exists, it indicates an incomplete download
+    if os.path.exists(temp_target):
+        print(f"Resuming download for {temp_target}...")
+    else:
+        print(f"Starting download: {target}")
+
+    # Download the file to the temporary target first
+    try:
+        client.retrieve('reanalysis-era5-single-levels', request, temp_target)
+        # Rename to the final target file name upon successful download
+        os.rename(temp_target, target)
+        print(f"Downloaded: {target}")
+    except Exception as e:
+        print(f"Error downloading {target}: {e}")
+        # If there's an error, the partially downloaded file is left as is
 
 # Define the main function to run the data retrieval
 def main():
@@ -51,7 +66,7 @@ def main():
     base_save_dir = os.path.expanduser("ERA5")
 
     # Create a thread pool with a defined number of worker threads
-    with ThreadPoolExecutor(max_workers=10) as exe:
+    with ThreadPoolExecutor(max_workers=8) as executor:
         # Iterate through each variable and its short name
         for longname, shortname in variable_dict.items():
             # Create a save directory for each variable if it doesn't exist
@@ -61,7 +76,7 @@ def main():
             # Iterate through years to define the download period
             for year in range(start_year, end_year + 1):
                 # Submit a job to the thread pool to download the entire year
-                exe.submit(cds_api_call, year, longname, shortname, save_dir)
+                executor.submit(cds_api_call, year, longname, shortname, save_dir)
                 # Add a small wait time between requests to avoid overloading the server
                 time.sleep(0.1)
 
