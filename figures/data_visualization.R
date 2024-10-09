@@ -1,10 +1,10 @@
 # Generate the polychrome color palette with 26 colors
-color_palette <- pals::glasbey(26)
+color_palette <- pals::glasbey(length(model_names))
 
-GC_labels <- GC_result_hellinger$label_attribution
+GC_labels <- GC_result_hellinger_new$label_attribution
 
 label_df <- melt(GC_labels, c("lon", "lat"), value.name = "label_attribution")
-label_df$lat <- label_df$lat - 91
+label_df$lat <- label_df$lat - 71
 
 h <- ggplot() +
   geom_tile(data = label_df, aes(x = lon, y = lat, fill = factor(label_attribution))) +

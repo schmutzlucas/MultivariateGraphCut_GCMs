@@ -83,7 +83,7 @@ ref_index <<- 1
 
 # Setting global variables
 lon <- 0:359
-lat <- -70:70
+lat <- -90:90
 # Temporal ranges
 year_interest <- 1950:2022
 # data directory
@@ -100,9 +100,9 @@ range_var_2 <- calculate_ranges(variables[2], model_names, data_dir, year_intere
 # Calculate ranges for the third variable
 range_var_3 <- calculate_ranges(variables[3], model_names, data_dir, year_interest, lon, lat)
 
-saveRDS(range_var_1, 'ranges/pr_log_range_AllModelsPar_1950-2023_70deg.rds', compress = FALSE)
-saveRDS(range_var_2, 'ranges/tas_range_AllModelsPar_1950-2023_70deg.rds', compress = FALSE)
-saveRDS(range_var_3, 'ranges/psl_range_AllModelsPar_1950-2023_70deg.rds', compress = FALSE)
+saveRDS(range_var_1, 'ranges/pr_log_range_AllModelsPar_1950-2023_90deg_3v.rds', compress = FALSE)
+saveRDS(range_var_2, 'ranges/tas_range_AllModelsPar_1950-2023_90deg_3v.rds', compress = FALSE)
+saveRDS(range_var_3, 'ranges/psl_range_AllModelsPar_1950-2023_90deg_3v.rds', compress = FALSE)
 
 # Initialize the final range list for all variables
 range_var_final <- list()
@@ -125,4 +125,4 @@ for (i in seq_along(lon)) {
 }
 
 # Save the final combined ranges
-saveRDS(range_var_final, 'ranges/range_var_final_allModelsPar_1950-2023_70deg.rds', compress = FALSE)
+saveRDS(range_var_final, 'ranges/range_var_final_allModelsPar_1950-2023_90deg_3v.rds', compress = FALSE)

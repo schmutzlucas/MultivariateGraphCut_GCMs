@@ -18,7 +18,7 @@ range_var_final <- readRDS('ranges/range_var_final_allModelsPar_1950-2022_70deg.
 
 # Setting global variables
 lon <- 0:359
-lat <- -70:70
+lat <- -90:90
 # Temporal ranges
 year_present <<- 1977:1999
 year_future <<- 2000:2022

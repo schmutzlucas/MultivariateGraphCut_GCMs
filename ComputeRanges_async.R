@@ -117,9 +117,9 @@ range_var_2 <- range_results[[2]]
 range_var_3 <- range_results[[3]]
 
 # 8. Save each variable's range separately as RDS files
-saveRDS(range_var_1, 'ranges/pr_log_range_AllModelsPar_1950-2022_70deg.rds')
-saveRDS(range_var_2, 'ranges/tas_range_AllModelsPar_1950-2022_70deg.rds')
-saveRDS(range_var_3, 'ranges/psl_range_AllModelsPar_1950-2022_70deg.rds')
+saveRDS(range_var_1, 'ranges/pr_log_range_AllModelsPar_1950-2023_90deg_3v.rds', compress = FALSE)
+saveRDS(range_var_2, 'ranges/tas_range_AllModelsPar_1950-2023_90deg_3v.rds', compress = FALSE)
+saveRDS(range_var_3, 'ranges/psl_range_AllModelsPar_1950-2023_90deg_3v.rds', compress = FALSE)
 
 # 9. Final global range computation by merging results for each variable
 range_var_final <- list()
@@ -138,7 +138,7 @@ for (i in seq_along(lon)) {
 }
 
 # 10. Save the final merged ranges
-saveRDS(range_var_final, 'ranges/range_var_final_allModelsPar_1950-2022_70deg.rds')
+saveRDS(range_var_final, 'ranges/range_var_final_allModelsPar_1950-2023_90deg_3v.rds', compress = FALSE)
 
 # Display script execution time and completion message
 end_time <- Sys.time()

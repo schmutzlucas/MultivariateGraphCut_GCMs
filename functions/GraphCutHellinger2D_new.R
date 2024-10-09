@@ -42,7 +42,6 @@ library(gcoWrapR)
 #' @import gcoWrapR
 #' @export
 GraphCutHellinger2D_new3 <- function(
-  pdf_ref,
   pdf_models_future,
   h_dist,
   weight_data,
@@ -54,8 +53,8 @@ GraphCutHellinger2D_new3 <- function(
 ){
 
   n_labs      <- length(model_names)
-  width       <- ncol(pdf_ref)
-  height      <- nrow(pdf_ref)
+  width       <- ncol(pdf_models_future[,,,1])
+  height      <- nrow(pdf_models_future[,,,1])
 
 
   # Permuting longitude and latitude since the indexing isn't the same in R and in C++
