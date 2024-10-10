@@ -1,5 +1,5 @@
 
-h_dist_map <- array(NA, dim = dim(GC_result_hellinger$label_attribution))
+h_dist_map <- array(NA, dim = dim(GC_result_hellinger_new$label_attribution))
 
 for(j in seq_along(variables)){
   for(l in 0:(length(model_names))){
