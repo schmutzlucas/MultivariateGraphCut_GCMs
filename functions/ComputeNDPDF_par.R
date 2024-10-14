@@ -1,4 +1,45 @@
-# Main function to compute n-dimensional PDFs for two time periods
+#' Compute N-dimensional PDFs for Two Time Periods
+#'
+#' This function computes n-dimensional Probability Density Functions (PDFs)
+#' for a set of climate variables across multiple climate models. The PDFs are
+#' computed for two time periods (present and future) and for each grid point
+#' based on the provided longitude and latitude coordinates.
+#'
+#' @param variables A character vector of climate variables (e.g., 'pr', 'tas', 'psl').
+#' @param model_names A character vector of climate model names to be processed.
+#' @param data_dir A character string specifying the directory where the climate model data is stored.
+#' @param year_present A numeric vector specifying the years representing the present time period.
+#' @param year_future A numeric vector specifying the years representing the future time period.
+#' @param lon A numeric vector of longitude coordinates.
+#' @param lat A numeric vector of latitude coordinates.
+#' @param range_var An array of dimension `[lon, lat, nvar, 2]` containing the range (min/max) for each variable.
+#' @param nbins A numeric value specifying the number of bins to use when computing histograms for each variable.
+#'
+#' @return A list containing two arrays:
+#' \item{present}{The n-dimensional PDF array for the present period.}
+#' \item{future}{The n-dimensional PDF array for the future period.}
+#' The arrays have dimensions `[lon, lat, nbins^nvar, num_models]`, where:
+#' - `lon` and `lat` are the grid points.
+#' - `nbins^nvar` is the number of bins for the joint PDF of all variables.
+#' - `num_models` is the number of climate models.
+#'
+#' @examples
+#' # Define parameters
+#' variables <- c('pr', 'tas', 'psl')
+#' model_names <- c('model1', 'model2', 'model3')
+#' data_dir <- 'data/CMIP6_merged_all/'
+#' year_present <- 1960:1990
+#' year_future <- 2070:2100
+#' lon <- 0:359
+#' lat <- -90:90
+#' range_var <- array(NA, dim = c(length(lon), length(lat), length(variables), 2))  # Example range array
+#' nbins <- 20
+#'
+#' # Compute n-dimensional PDFs for both time periods
+#' pdf_result <- compute_nd_pdf_optimized(variables, model_names, data_dir, year_present, year_future, lon, lat, range_var, nbins)
+#'
+#' @import ncdf4 future future.apply
+#' @export
 compute_nd_pdf_optimized <- function(variables, model_names, data_dir, year_present, year_future, lon, lat, range_var, nbins) {
   n_var <- length(variables)  # Number of variables
   num_models <- length(model_names)

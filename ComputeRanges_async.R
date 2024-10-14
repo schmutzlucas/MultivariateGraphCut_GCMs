@@ -1,25 +1,35 @@
-# -----------------------------------------------
-# Script to Calculate and Merge Variable Ranges
-# across Multiple Climate Models Using Parallel
-# Processing in R
-# -----------------------------------------------
-
-# This script performs the following operations:
-# 1. Installs and loads the necessary R packages.
-# 2. Loads custom functions from local directories.
-# 3. Defines global variables such as longitude, latitude, and models.
-# 4. Sets up a parallel backend to speed up the processing.
-# 5. Defines a function to compute the minimum and maximum range
-#    values for each variable (pr, tas, psl) across a list of
-#    climate models.
-# 6. Uses parallel processing (`future_lapply`) to compute the ranges.
-# 7. Merges the computed ranges into a final global range for each variable.
-# 8. Saves the results as RDS files.
-# 9. Displays the total execution time.
-# -----------------------------------------------
-
-# 1. Install and load necessary libraries
-# Read the list of required packages from a text file and install if not already present
+#' Calculate Variable Ranges Across Climate Models
+#'
+#' This function calculates the minimum and maximum values of a specified climate variable
+#' (e.g., precipitation, temperature, pressure) across multiple climate models for each
+#' grid cell, based on latitude and longitude coordinates.
+#'
+#' @param variable A character string specifying the climate variable (e.g., 'pr', 'tas', 'psl').
+#' @param model_names A character vector containing the names of the climate models to process.
+#' @param data_dir A character string specifying the directory where the climate model data is stored.
+#' @param year_interest A numeric vector of years for which the data will be extracted and analyzed.
+#' @param lon A numeric vector of longitude coordinates.
+#' @param lat A numeric vector of latitude coordinates.
+#'
+#' @return An array containing the calculated minimum and maximum ranges for the specified variable
+#'         across all models for each grid cell. The array has dimensions [lon, lat, 2, models], where:
+#'         - `[, , 1, ]` contains the minimum values.
+#'         - `[, , 2, ]` contains the maximum values.
+#'
+#' @examples
+#' # Define parameters
+#' variable <- 'pr'
+#' model_names <- c('model1', 'model2', 'model3')
+#' data_dir <- 'data/CMIP6_merged_all/'
+#' year_interest <- 1960:2022
+#' lon <- 0:359
+#' lat <- -90:90
+#'
+#' # Calculate ranges for the specified variable
+#' ranges <- calculate_ranges(variable, model_names, data_dir, year_interest, lon, lat)
+#'
+#' @import ncdf4
+#' @export
 list_of_packages <- read.table("package_list.txt", sep = "\n")$V1
 new.packages <- list_of_packages[!(list_of_packages %in% installed.packages()[, "Package"])]
 if (length(new.packages)) install.packages(new.packages, repos = "https://cloud.r-project.org")
@@ -50,7 +60,7 @@ cat("Script started at: ", format(start_time, "%Y-%m-%d %H:%M:%S"), "\n")
 # 3. Global variables definition
 # Define longitude, latitude, years of interest, data directory, variables, and model names
 lon <- 0:359
-lat <- -70:70
+lat <- -90:90
 year_interest <- 1960:2022
 data_dir <- 'data/CMIP6_merged_all/'
 variables <- c('pr', 'tas', 'psl')

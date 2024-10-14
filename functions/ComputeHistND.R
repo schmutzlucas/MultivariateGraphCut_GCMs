@@ -1,3 +1,29 @@
+#' Compute N-dimensional Histogram
+#'
+#' This function computes an n-dimensional histogram from a given dataset, where each variable
+#' is assigned to a specific bin based on the provided range and number of bins. The function
+#' returns a flattened vector representing the histogram counts for each combination of bins
+#' across all variables.
+#'
+#' @param data A matrix where each column represents a variable and each row is an observation.
+#' @param range_var A matrix of dimension `[n_vars, 2]` that defines the minimum and maximum values
+#' for each variable. The first column corresponds to the minimum values, and the second column
+#' corresponds to the maximum values.
+#' @param nbins A numeric value specifying the number of bins for each variable.
+#'
+#' @return A numeric vector representing the flattened n-dimensional histogram. The vector has length
+#' equal to `nbins^n_vars`, where `n_vars` is the number of variables.
+#'
+#' @examples
+#' # Example data with two variables
+#' data <- matrix(rnorm(100), ncol = 2)  # 100 observations of 2 variables
+#' range_var <- matrix(c(-3, 3, -3, 3), ncol = 2)  # Min/max for each variable
+#' nbins <- 10  # Number of bins per variable
+#'
+#' # Compute the n-dimensional histogram
+#' hist_vector <- compute_histND(data, range_var, nbins)
+#'
+#' @export
 compute_histND <- function(data, range_var, nbins) {
   n_vars <- ncol(data)  # Number of variables
   n_obs <- nrow(data)   # Number of observations
