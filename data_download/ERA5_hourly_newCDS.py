@@ -13,6 +13,14 @@ variable_dict = {
     'mean_sea_level_pressure': 'msl'
 }
 
+# Define a function to delete completed requests
+def delete_completed_request(request_id):
+    try:
+        client.delete(request_id)
+        print(f"Deleted request: {request_id}")
+    except Exception as e:
+        print(f"Failed to delete request {request_id}: {e}")
+
 # Define a function to call the CDS API and retrieve data
 def cds_api_call(year, month, variable, shortname, save_dir):
     # Construct the target filename and a temporary download filename
@@ -49,10 +57,16 @@ def cds_api_call(year, month, variable, shortname, save_dir):
 
     # Download the file to the temporary target first
     try:
-        client.retrieve('reanalysis-era5-single-levels', request, temp_target)
+        result = client.retrieve('reanalysis-era5-single-levels', request, temp_target)
         # Rename to the final target file name upon successful download
         os.rename(temp_target, target)
         print(f"Downloaded: {target}")
+
+        # Delete the completed request from the server
+        request_id = result.get("request_id", None)
+        if request_id:
+            delete_completed_request(request_id)
+
     except Exception as e:
         print(f"Error downloading {target}: {e}")
         # If there's an error, the partially downloaded file is left as is
@@ -63,7 +77,6 @@ def main():
     start_year = 1962
     end_year = 1970
 
-    # Define the base directory for saving files
     # Define the base directory for saving files
     base_save_dir = os.path.join(os.getcwd(), "ERA5")
 
@@ -88,6 +101,3 @@ def main():
 # Call the main function to start the data retrieval
 if __name__ == "__main__":
     main()
-
-
-
