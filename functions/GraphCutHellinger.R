@@ -91,7 +91,7 @@ for (var in variables) {
   # changed: c(aperm(sum_h_dist, c(2, 1, 3))) call was redundant
   # when go from matrix to vector
   sum_h_dist_cpp <- c(aperm(sum_h_dist, c(2, 1, 3)))
-  smooth_cpp <- c(aperm(models_smoothcost, c(4, 2, 1, 3)))
+  smooth_cpp <- c(aperm(models_smoothcost, c(2, 1, 3, 4)))
 
 
   # Instanciation of the GraphCut environment

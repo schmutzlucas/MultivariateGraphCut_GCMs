@@ -4,7 +4,7 @@ color_palette <- pals::glasbey(length(model_names))
 # Correct latitudes: adjust for the fact that your latitude values are from -70 to 70
 GC_labels <- GC_result_hellinger_new$label_attribution
 label_df <- melt(GC_labels, c("lon", "lat"), value.name = "label_attribution")
-label_df$lat <- label_df$lat -70  # Adjust latitudes if necessary
+label_df$lat <- label_df$lat -90  # Adjust latitudes if necessary
 
 # Create the plot
 h <- ggplot() +
@@ -13,7 +13,7 @@ h <- ggplot() +
   ggtitle('Label attribution for GC hybrid') +
   borders("world2", colour = 'black', lwd = 0.12) +
   scale_x_continuous(expand = c(0, 0)) +
-  scale_y_continuous(limits = c(-70, 70), expand = c(0, 0)) +  # Set y-axis limits to -70 to 70
+  scale_y_continuous(limits = c(-90, 90), expand = c(0, 0)) +  # Set y-axis limits to -70 to 70
   theme(legend.position = 'bottom') +
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
   theme(panel.background = element_blank()) +
@@ -31,9 +31,7 @@ h <- ggplot() +
         axis.text = element_text(size = 14),
         axis.title = element_text(size = 16)) +
   easy_center_title()
-
 h
-
 
 
 # Generate the polychrome color palette with 26 colors
@@ -97,7 +95,6 @@ h <- ggplot() +
         axis.text = element_text(size = 14),
         axis.title = element_text(size = 16)) +
   easy_center_title()
-
 h
 
 

@@ -62,6 +62,7 @@ GraphCutHellinger2D_new3 <- function(
   # when go from matrix to vector
   h_dist_cpp <- c(aperm(h_dist, c(2, 1, 3)))
   kde_models_cpp <- c(aperm(pdf_models_future, c(4, 2, 1, 3)))
+  # kde_models_cpp <- c(pdf_models_future)
 
 
   # Instanciation of the GraphCut environment
@@ -211,5 +212,3 @@ GraphCutHellinger2D_new3 <- function(
 
   return(gc_result)
 }
-
-

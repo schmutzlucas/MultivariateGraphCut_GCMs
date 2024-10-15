@@ -20,8 +20,8 @@ range_var_final <- readRDS('ranges/range_var_final_allModelsPar_1950-2023_90deg_
 lon <- 0:359
 lat <- -90:90
 # Temporal ranges
-year_present <<- 1977:1999
-year_future <<- 2000:2022
+year_present <<- seq(1963, 2021, 2)
+year_future <<- seq(1964, 2022, 2)
 # data directory
 data_dir <<- 'data/CMIP6_merged_all/'
 
@@ -74,60 +74,6 @@ filename <- paste0(formatted_time, "_my_workspace_ERA5_allModels_beforeOptim_3v.
 
 # Save the workspace using the generated filename
 save.image(file = filename, compress = FALSE)
-
-
-# Step 1: Extract the PDF for the desired pixel (i = 54, j = 56) and model 1
-pdf_present_pixel <- tmp$present[54, 56, , 1]  # Present period for model 1
-pdf_future_pixel <- tmp$future[54, 56, , 1]    # Future period for model 1
-
-# Step 2: Reshape the 1D PDF vector into a 3D array
-# Assuming we have 8 bins per variable (as set in nbins1d)
-nbins <- nbins1d  # Number of bins
-pdf_present_3d <- array(pdf_present_pixel, dim = c(nbins, nbins, nbins))
-pdf_future_3d <- array(pdf_future_pixel, dim = c(nbins, nbins, nbins))
-
-# Step 3: Prepare data for 3D plotting
-# Convert the 3D array into a format suitable for plotly
-plot_data_present <- melt(pdf_present_3d)
-plot_data_present <- subset(plot_data_present, value > 0)  # Filter non-zero values
-
-
-# Example pixel and model to plot
-lon_idx <- 54
-lat_idx <- 56
-model_idx <- 1
-
-# Extract the 3D histogram values for the specific pixel and model
-hist_values <- tmp$present[lon_idx, lat_idx, , model_idx]
-
-# Extract the range values for the specific pixel from the list structure
-pr_range_pixel <- range_var_final$pr[lon_idx, lat_idx, ]
-tas_range_pixel <- range_var_final$tas[lon_idx, lat_idx, ]
-psl_range_pixel <- range_var_final$psl[lon_idx, lat_idx, ]
-
-# Compute the bin edges using the extracted ranges
-pr_bins <- seq(pr_range_pixel[1], pr_range_pixel[2], length.out = 9)  # nbins + 1
-tas_bins <- seq(tas_range_pixel[1], tas_range_pixel[2], length.out = 9)
-psl_bins <- seq(psl_range_pixel[1], psl_range_pixel[2], length.out = 9)
-
-# Create a data frame for the 3D scatter plot based on the histogram values
-plot_data <- expand.grid(Pr = pr_bins[-length(pr_bins)],
-                         Tas = tas_bins[-length(tas_bins)],
-                         Psl = psl_bins[-length(psl_bins)])
-plot_data$Value <- as.vector(hist_values)
-
-# Remove zero values to focus on non-empty bins
-plot_data <- subset(plot_data, Value > 0)
-
-# Create a 3D scatter plot with appropriate axes and color scale
-plot_ly(data = plot_data, x = ~Pr, y = ~Tas, z = ~Psl, size = ~Value, color = ~Value, colors = c("blue", "red")) %>%
-  add_markers(sizemode = "diameter", marker = list(sizeref = 0.1)) %>%  # Adjust sizeref for better scaling
-  layout(scene = list(xaxis = list(title = 'Precipitation (pr)', range = c(min(pr_bins), max(pr_bins))),
-                      yaxis = list(title = 'Temperature (tas)', range = c(min(tas_bins), max(tas_bins))),
-                      zaxis = list(title = 'Pressure (psl)', range = c(min(psl_bins), max(psl_bins)))),
-         title = paste("3D Histogram at Pixel (", lon_idx, ",", lat_idx, ") for Model", model_idx))
-
-
 
 pdf_present <- tmp$present
 pdf_future <- tmp$future
