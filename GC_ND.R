@@ -165,6 +165,19 @@ h_dist[,,] <- replace(h_dist_unchecked[,,], is.nan(h_dist_unchecked), 0)
 hist(h_dist)
 rm(h_dist_unchecked)
 
+
+# Get the current date and time
+current_time <- Sys.time()
+
+# Format the date and time as a string in the format 'yyyymmddhhmm'
+formatted_time <- format(current_time, "%Y%m%d%H%M")
+
+# Concatenate the formatted time string with your desired filename
+filename <- paste0(formatted_time, "_my_workspace_ERA5_allModels_beforeOptim_3v.RData")
+
+# Save the workspace using the generated filename
+save.image(file = filename, compress = FALSE)
+
 # Graphcut hellinger labelling
 GC_result_hellinger_new <- list()
 GC_result_hellinger_new <- GraphCutHellinger2D_new3(pdf_models_future = pdf_models_future[,,, ] ,
