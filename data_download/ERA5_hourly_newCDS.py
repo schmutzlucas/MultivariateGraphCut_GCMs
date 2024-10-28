@@ -60,8 +60,8 @@ def cds_api_call(year, month, variable, shortname, save_dir):
 # Define the main function to run the data retrieval
 def main():
     # Set the year range for data retrieval
-    start_year = 1971
-    end_year = 2005
+    start_year = 2006
+    end_year = 2024
 
     # Define the base directory for saving files
     base_save_dir = os.path.join(os.getcwd(), "ERA5")
@@ -80,7 +80,7 @@ def main():
                     # Submit a job to the thread pool to download data for each month
                     executor.submit(cds_api_call, year, month, longname, shortname, save_dir)
                     # Add a small wait time between requests to avoid overloading the server
-                    time.sleep(0.03)
+                    time.sleep(0.3)
 
     print('Download completed!')
 
