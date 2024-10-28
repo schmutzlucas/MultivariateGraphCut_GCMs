@@ -3,8 +3,8 @@ import cdsapi
 import os
 import time
 
-# Create a CDS API client object
-client = cdsapi.Client()
+# Create a CDS API client object with delete=True to automatically delete completed requests
+client = cdsapi.Client(wait_until_complete=True, delete=True)
 
 # Define the list of variables with long and short names for ERA5
 variable_dict = {
@@ -12,14 +12,6 @@ variable_dict = {
     'total_precipitation': 'pr',
     'mean_sea_level_pressure': 'msl'
 }
-
-# Define a function to delete completed requests
-def delete_completed_request(request_id):
-    try:
-        client.delete(request_id)
-        print(f"Deleted request: {request_id}")
-    except Exception as e:
-        print(f"Failed to delete request {request_id}: {e}")
 
 # Define a function to call the CDS API and retrieve data
 def cds_api_call(year, month, variable, shortname, save_dir):
@@ -57,16 +49,10 @@ def cds_api_call(year, month, variable, shortname, save_dir):
 
     # Download the file to the temporary target first
     try:
-        result = client.retrieve('reanalysis-era5-single-levels', request, temp_target)
+        client.retrieve('reanalysis-era5-single-levels', request, temp_target)
         # Rename to the final target file name upon successful download
         os.rename(temp_target, target)
         print(f"Downloaded: {target}")
-
-        # Delete the completed request from the server
-        request_id = result.get("request_id", None)
-        if request_id:
-            delete_completed_request(request_id)
-
     except Exception as e:
         print(f"Error downloading {target}: {e}")
         # If there's an error, the partially downloaded file is left as is
@@ -74,8 +60,8 @@ def cds_api_call(year, month, variable, shortname, save_dir):
 # Define the main function to run the data retrieval
 def main():
     # Set the year range for data retrieval
-    start_year = 1962
-    end_year = 1970
+    start_year = 1971
+    end_year = 2005
 
     # Define the base directory for saving files
     base_save_dir = os.path.join(os.getcwd(), "ERA5")
@@ -94,7 +80,7 @@ def main():
                     # Submit a job to the thread pool to download data for each month
                     executor.submit(cds_api_call, year, month, longname, shortname, save_dir)
                     # Add a small wait time between requests to avoid overloading the server
-                    time.sleep(0.3)
+                    time.sleep(0.03)
 
     print('Download completed!')
 

@@ -53,6 +53,7 @@ format_time <- function(time_seconds) {
 
 # Time the execution of the optimized function
 time_optimized <- system.time({
+  # todo add number of workers as argument
   tmp <- compute_nd_pdf_optimized(variables, model_names, data_dir, year_present, year_future,
                                   lon, lat, aperm(abind(range_var_final, along = 4), c(1, 2, 4, 3)), nbins1d)
 })
@@ -123,6 +124,8 @@ filename <- paste0(formatted_time, "_my_workspace_ERA5_allModels_beforeOptim_3v.
 
 # Save the workspace using the generated filename
 save.image(file = filename, compress = FALSE)
+
+
 
 # Graphcut hellinger labelling
 GC_result_hellinger_new <- list()
