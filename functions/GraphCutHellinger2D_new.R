@@ -120,13 +120,14 @@ GraphCutHellinger2D_new3 <- function(
 
       float cost  = 0;
       float tmp1  = 0;
+      float tmp2  = 0;
 
       for (int i = 0; i < nBins; i++) {
-        tmp1 += pow((sqrt(data[(p1 + numPix * l1) * nBins + i]) - sqrt(data[(p1 + numPix * l2) * nBins + i]))
-                   -(sqrt(data[(p2 + numPix * l1) * nBins + i]) - sqrt(data[(p2 + numPix * l2) * nBins + i])), 2);
+        tmp1 += pow(sqrt(data[(p1 + numPix * l1) * nBins + i]) - sqrt(data[(p1 + numPix * l2) * nBins + i]), 2);
+        tmp2 += pow(sqrt(data[(p2 + numPix * l1) * nBins + i]) - sqrt(data[(p2 + numPix * l2) * nBins + i]), 2);
       }
 
-      cost = sqrt(tmp1) / sqrt(2);
+      cost = (sqrt(tmp1) / sqrt(2)) + (sqrt(tmp2) / sqrt(2));
 
       return(weight * cost);
     }',
@@ -167,7 +168,7 @@ GraphCutHellinger2D_new3 <- function(
   }
 
   # for(z in 0:(length(width*height)-1)){
-  #  gco$setLabel(z, 7)
+  #  gco$setLabel(z, 0)
   # }
 
   # Optimizing the MRF energy with alpha-beta swap
