@@ -80,7 +80,7 @@ def main():
                     # Submit a job to the thread pool to download data for each month
                     executor.submit(cds_api_call, year, month, longname, shortname, save_dir)
                     # Add a small wait time between requests to avoid overloading the server
-                    time.sleep(0.3)
+                    time.sleep(0.001)
 
     print('Download completed!')
 
