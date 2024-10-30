@@ -100,7 +100,7 @@ rm(h_dist_unchecked)
 
 # Graphcut hellinger labelling
 GC_result_hellinger_new <- list()
-GC_result_hellinger_new <- GraphCutHellinger2D_new3(pdf_models_future = pdf_models,
+GC_result_hellinger_new <- GraphCutHellinger(pdf_models_future = pdf_models,
                                                     h_dist = h_dist,
                                                     weight_data = 1,
                                                     weight_smooth = 0.1,
@@ -187,7 +187,7 @@ rm(h_dist_unchecked)
 
 # GraphCut Hellinger labelling
 GC_result_hellinger_new <- list()
-GC_result_hellinger_new <- GraphCutHellinger2D_new3(pdf_models_future = pdf_models,
+GC_result_hellinger_new <- GraphCutHellinger(pdf_models_future = pdf_models,
                                                     h_dist = h_dist,
                                                     weight_data = 1,
                                                     weight_smooth = 0.1,
@@ -210,8 +210,8 @@ image(GC_result_hellinger_new$label_attribution)
 # Model 2: Uniform PDF pattern matching the odd "squares" of the reference (bins 410-419)
 
 # Initialize dimensions
-lon <- 45
-lat <- 22
+lon <- 360
+lat <- 300
 pdf_bins <- 512
 square_size <- 3  # Size of each "chessboard" square (3x3)
 
@@ -280,11 +280,11 @@ rm(h_dist_unchecked)
 
 # GraphCut Hellinger labelling
 GC_result_hellinger_new <- list()
-GC_result_hellinger_new <- GraphCutHellinger2D_new3(
+GC_result_hellinger_new <- GraphCutHellinger(
   pdf_models_future = pdf_models,
   h_dist = h_dist,
   weight_data = 1,
-  weight_smooth = 0.2,
+  weight_smooth = 1,
   nBins = nbins1d^3,
   seed = 10,
   verbose = TRUE,
@@ -293,30 +293,3 @@ GC_result_hellinger_new <- GraphCutHellinger2D_new3(
 
 # Visualize label attribution result
 image(GC_result_hellinger_new$label_attribution)
-
-
-# Verify that reference_matrix follows a chessboard pattern
-cat("Checking chessboard pattern in reference_matrix...\n")
-for (i in seq(1, lon, by = square_size)) {
-  for (j in seq(1, lat, by = square_size)) {
-    if (((i + j) / square_size) %% 2 == 0) {
-      # Check even "chessboard" square
-      check_even <- all(reference_matrix[i:(min(i + square_size - 1, lon)), j:(min(j + square_size - 1, lat)), even_bins] == 0.1)
-      cat("Even square at", i, j, ":", check_even, "\n")
-    } else {
-      # Check odd "chessboard" square
-      check_odd <- all(reference_matrix[i:(min(i + square_size - 1, lon)), j:(min(j + square_size - 1, lat)), odd_bins] == 0.1)
-      cat("Odd square at", i, j, ":", check_odd, "\n")
-    }
-  }
-}
-
-# Verify uniformity in model1_matrix and model2_matrix
-cat("\nChecking uniformity in model1_matrix (even bins)...\n")
-check_model1 <- apply(model1_matrix, c(1, 2), function(cell) all(cell[even_bins] == 0.1))
-print(all(check_model1))
-
-cat("Checking uniformity in model2_matrix (odd bins)...\n")
-check_model2 <- apply(model2_matrix, c(1, 2), function(cell) all(cell[odd_bins] == 0.1))
-print(all(check_model2))
-

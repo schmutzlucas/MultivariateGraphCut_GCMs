@@ -41,7 +41,7 @@ library(gcoWrapR)
 #'
 #' @import gcoWrapR
 #' @export
-GraphCutHellinger2D_new3 <- function(
+GraphCutHellinger <- function(
   pdf_models_future,
   h_dist,
   weight_data,
@@ -161,11 +161,18 @@ GraphCutHellinger2D_new3 <- function(
 
   # Initializing randomly
 
-  set.seed(seed)
   for(z in 0:((width*height)-1)){
     random_label <- sample(0:(n_labs-1), 1) # Sample a random index uniformly
     gco$setLabel(z, random_label)
   }
+
+  # Print the data energy with descriptive text
+  cat("Data Energy of Current Labeling:\n")
+  cat("  Total data energy: ", gco$giveDataEnergy(), "\n\n")
+
+  # Print the smooth energy with descriptive text
+  cat("Smooth Energy of Current Labeling:\n")
+  cat("  Total smoothness energy: ", gco$giveSmoothEnergy(), "\n\n")
 
   # for(z in 0:(length(width*height)-1)){
   #  gco$setLabel(z, 0)
