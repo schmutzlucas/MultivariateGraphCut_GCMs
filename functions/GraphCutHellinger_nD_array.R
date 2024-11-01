@@ -41,7 +41,7 @@ library(gcoWrapR)
 #'
 #' @import gcoWrapR
 #' @export
-GraphCutHellinger_ND <- function(
+GraphCutHellinger_xD_array <- function(
   pdf_models_future,
   h_dist,
   weight_data,
@@ -55,14 +55,16 @@ GraphCutHellinger_ND <- function(
   n_labs      <- length(model_names)
   width       <- ncol(pdf_models_future[,,,1])
   height      <- nrow(pdf_models_future[,,,1])
+  print(width)
+  print(height)
 
 
   # Permuting longitude and latitude since the indexing isn't the same in R and in C++
   # changed: c(aperm(sum_h_dist, c(2, 1, 3))) call was redundant
   # when go from matrix to vector
   h_dist_cpp <- c(aperm(h_dist, c(2, 1, 3)))
-  kde_models_cpp <- c(aperm(pdf_models_future, c(4, 2, 1, 3)))
-  # kde_models_cpp <- c(pdf_models_future)
+  # pdf_models_cpp <- c(aperm(pdf_models_future, c(4, 2, 1, 3)))
+  pdf_models_cpp <- c(pdf_models_future)
 
 
   # Instanciation of the GraphCut environment
@@ -112,25 +114,49 @@ GraphCutHellinger_ND <- function(
   cat("Creating SmoothCost function...  ")
   ptrSmoothCost <- cppXPtr(
     code = 'float smoothFn(int p1, int p2, int l1, int l2, Rcpp::List extraData)
-    {
-      int numPix = extraData["numPix"];
-      float weight = extraData["weight"];
-      NumericVector data = extraData["data"];
-      int nBins = extraData["nBins"];
+{
+    // Extract data from extraData
+    NumericVector pdf_models = extraData["pdf_models"];
+    int nBins = extraData["nBins"];
+    int width = extraData["width"];
+    int height = extraData["height"];
 
-      float cost  = 0;
-      float tmp1  = 0;
-      float tmp2  = 0;
+    // Compute longitude (x) and latitude (y) indices using width and height
+    int p1_lon = p1 % width;  // Longitude (x-coordinate) for p1
+    int p1_lat = p1 / width;  // Latitude (y-coordinate) for p1
+    int p2_lon = p2 % width;  // Longitude (x-coordinate) for p2
+    int p2_lat = p2 / width;  // Latitude (y-coordinate) for p2
 
-      for (int i = 0; i < nBins; i++) {
-        tmp1 += pow(sqrt(data[(p1 + numPix * l1) * nBins + i]) - sqrt(data[(p1 + numPix * l2) * nBins + i]), 2);
-        tmp2 += pow(sqrt(data[(p2 + numPix * l1) * nBins + i]) - sqrt(data[(p2 + numPix * l2) * nBins + i]), 2);
-      }
+    float cost = 0.0f;
+    float tmp1 = 0.0f;
+    float tmp2 = 0.0f;
+    float diff1 = 0.0f;
+    float diff2 = 0.0f;
 
-      cost = (sqrt(tmp1) / sqrt(2)) + (sqrt(tmp2) / sqrt(2));
+    // Define the number of models (assumed from the last dimension of pdf_models)
+    int model_dim = 2;  // Update if necessary based on the number of models
 
-      return(weight * cost);
-    }',
+    // Helper function to access the 4D array-like structure
+    auto getBinValue = [&](int lon, int lat, int model, int bin) {
+        return pdf_models[bin + nBins * (model + model_dim * (lat + height * lon))];
+    };
+
+    // Compute Hellinger distance for both p1 and p2
+    for (int i = 0; i < nBins; i++) {
+        diff1 = sqrt(getBinValue(p1_lon, p1_lat, l1, i)) - sqrt(getBinValue(p1_lon, p1_lat, l2, i));
+        tmp1 += diff1 * diff1;
+
+        diff2 = sqrt(getBinValue(p2_lon, p2_lat, l1, i)) - sqrt(getBinValue(p2_lon, p2_lat, l2, i));
+        tmp2 += diff2 * diff2;
+    }
+
+    // Calculate the total Hellinger distance
+    cost = (sqrt(tmp1) + sqrt(tmp2)) / sqrt(2.0f);
+
+    return weight * cost;
+}
+
+',
     includes = c("#include <math.h>", "#include <Rcpp.h>"),
     rebuild = rebuild, showOutput = FALSE, verbose = FALSE
   )
@@ -142,7 +168,7 @@ GraphCutHellinger_ND <- function(
                                     weight  = weight_data))
 
   gco$setSmoothCost(ptrSmoothCost, list(numPix  = width * height,
-                                        data    = kde_models_cpp,
+                                        data    = pdf_models_cpp,
                                         weight  = weight_smooth,
                                         nBins   = nBins))
 

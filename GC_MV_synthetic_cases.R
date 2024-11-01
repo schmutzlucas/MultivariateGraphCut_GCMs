@@ -203,17 +203,24 @@ image(GC_result_hellinger_new$label_attribution)
 
 
 
+
 # Case 3: Chessboard Pattern with Larger Squares
 # Ref: Chessboard pattern where each "square" is larger than 1x1 (e.g., 3x3),
 #      alternating between two different PDF patterns for even and odd squares.
 # Model 1: Uniform PDF pattern matching the even "squares" of the reference (bins 100-109)
 # Model 2: Uniform PDF pattern matching the odd "squares" of the reference (bins 410-419)
 
+# Bins for the pdfs
+nbins1d <<- 8
+
+# Create a list of models
+model_names <- c("model1", "model2")
+
 # Initialize dimensions
-lon <- 360
-lat <- 300
+lon <- 2
+lat <- 2
 pdf_bins <- 512
-square_size <- 3  # Size of each "chessboard" square (3x3)
+square_size <- 1  # Size of each "chessboard" square (3x3)
 
 # Define the bins for the pdf (10 bins at 0.1 for even/odd squares)
 even_bins <- 100:109
@@ -278,13 +285,14 @@ h_dist[,,] <- replace(h_dist_unchecked[,,], is.nan(h_dist_unchecked), 0)
 hist(h_dist)
 rm(h_dist_unchecked)
 
+
 # GraphCut Hellinger labelling
 GC_result_hellinger_new <- list()
-GC_result_hellinger_new <- GraphCutHellinger(
+GC_result_hellinger_new <- GraphCutHellinger_xD(
   pdf_models_future = pdf_models,
   h_dist = h_dist,
   weight_data = 1,
-  weight_smooth = 0.101,
+  weight_smooth = 0.1,
   nBins = nbins1d^3,
   seed = 10,
   verbose = TRUE,
