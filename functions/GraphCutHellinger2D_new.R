@@ -160,7 +160,7 @@ GraphCutHellinger <- function(
   # }
 
   # Initializing randomly
-
+  set.seed(seed)
   for(z in 0:((width*height)-1)){
     random_label <- sample(0:(n_labs-1), 1) # Sample a random index uniformly
     gco$setLabel(z, random_label)

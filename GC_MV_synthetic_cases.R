@@ -284,7 +284,7 @@ GC_result_hellinger_new <- GraphCutHellinger(
   pdf_models_future = pdf_models,
   h_dist = h_dist,
   weight_data = 1,
-  weight_smooth = 1,
+  weight_smooth = 0.101,
   nBins = nbins1d^3,
   seed = 10,
   verbose = TRUE,
@@ -293,3 +293,50 @@ GC_result_hellinger_new <- GraphCutHellinger(
 
 # Visualize label attribution result
 image(GC_result_hellinger_new$label_attribution)
+
+
+
+#  Now systematically testing
+# Create a directory for saving images if it doesn't exist
+if (!dir.exists("figure")) dir.create("figure")
+
+# Initialize a list to store results if needed (consider reducing stored data if memory is limited)
+GC_results <- list()
+
+# Loop through smooth cost values from 0 to 1 in increments of 0.05
+for (smooth_cost in seq(0, 1, by = 0.05)) {
+  # Wrap each iteration in tryCatch to handle errors gracefully
+  tryCatch({
+    # Run Graph Cut with the varying smooth cost
+    GC_result_hellinger_new <- GraphCutHellinger(
+      pdf_models_future = pdf_models,
+      h_dist = h_dist,
+      weight_data = 1,              # Fixed data weight
+      weight_smooth = smooth_cost,   # Varying smoothness cost
+      nBins = nbins1d^3,
+      seed = 1,
+      verbose = TRUE,
+      rebuild = TRUE
+    )
+
+    # Store only essential results if memory is limited (optional)
+    GC_results[[paste0("smooth_", smooth_cost)]] <- GC_result_hellinger_new$label_attribution
+
+    # Plot using image with a title and save
+    image(GC_result_hellinger_new$label_attribution,
+          main = paste("Label Attribution (Smooth Cost =", smooth_cost, ")"))
+
+    # Save the plot as a PNG
+    file_name <- paste0("figure/LabelAttribution_smooth_", smooth_cost, ".png")
+    dev.copy(png, filename = file_name, width = 35 * 96, height = 25 * 96, res = 300)
+    dev.off()
+
+    # Run garbage collection to free memory
+    gc()
+
+  }, error = function(e) {
+    cat("Error encountered with smooth cost =", smooth_cost, ": ", e$message, "\n")
+  })
+}
+
+# If not required, the GC_results list can be reduced or stored externally if memory usage is an issue
