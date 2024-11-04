@@ -178,6 +178,7 @@ filename <- paste0(formatted_time, "_my_workspace_ERA5_allModels_beforeOptim_3v.
 # Save the workspace using the generated filename
 save.image(file = filename, compress = FALSE)
 
+
 # Graphcut hellinger labelling
 GC_result_hellinger_new <- list()
 GC_result_hellinger_new <- GraphCutHellinger_xD(pdf_models_future = pdf_models_future,

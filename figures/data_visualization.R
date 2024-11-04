@@ -4,7 +4,7 @@ color_palette <- pals::glasbey(length(model_names))
 GC_labels <- GC_result_hellinger_new$label_attribution
 
 label_df <- melt(GC_labels, c("lon", "lat"), value.name = "label_attribution")
-label_df$lat <- label_df$lat - 71
+label_df$lat <- label_df$lat - 90
 
 h <- ggplot() +
   geom_tile(data = label_df, aes(x = lon, y = lat, fill = factor(label_attribution))) +
