@@ -100,10 +100,10 @@ rm(h_dist_unchecked)
 
 # Graphcut hellinger labelling
 GC_result_hellinger_new <- list()
-GC_result_hellinger_new <- GraphCutHellinger(pdf_models_future = pdf_models,
+GC_result_hellinger_new <- GraphCutHellinger_xD_par(pdf_models_future = pdf_models,
                                                     h_dist = h_dist,
                                                     weight_data = 1,
-                                                    weight_smooth = 0.1,
+                                                    weight_smooth = 0.5,
                                                     nBins = nbins1d^3,
                                                     seed = 1,
                                                     verbose = TRUE,
@@ -187,10 +187,10 @@ rm(h_dist_unchecked)
 
 # GraphCut Hellinger labelling
 GC_result_hellinger_new <- list()
-GC_result_hellinger_new <- GraphCutHellinger(pdf_models_future = pdf_models,
+GC_result_hellinger_new <- GraphCutHellinger_xD_array(pdf_models_future = pdf_models,
                                                     h_dist = h_dist,
                                                     weight_data = 1,
-                                                    weight_smooth = 0.1,
+                                                    weight_smooth = 10,
                                                     nBins = nbins1d^3,
                                                     seed = 11,
                                                     verbose = TRUE,
@@ -217,10 +217,10 @@ nbins1d <<- 8
 model_names <- c("model1", "model2")
 
 # Initialize dimensions
-lon <- 2
-lat <- 2
+lon <- 100
+lat <- 100
 pdf_bins <- 512
-square_size <- 1  # Size of each "chessboard" square (3x3)
+square_size <- 5  # Size of each "chessboard" square (3x3)
 
 # Define the bins for the pdf (10 bins at 0.1 for even/odd squares)
 even_bins <- 100:109
@@ -288,11 +288,11 @@ rm(h_dist_unchecked)
 
 # GraphCut Hellinger labelling
 GC_result_hellinger_new <- list()
-GC_result_hellinger_new <- GraphCutHellinger_xD(
+GC_result_hellinger_new <- GraphCutHellinger_xD_par(
   pdf_models_future = pdf_models,
   h_dist = h_dist,
   weight_data = 1,
-  weight_smooth = 0.1,
+  weight_smooth = 0.2,
   nBins = nbins1d^3,
   seed = 10,
   verbose = TRUE,
@@ -316,7 +316,7 @@ for (smooth_cost in seq(0, 1, by = 0.05)) {
   # Wrap each iteration in tryCatch to handle errors gracefully
   tryCatch({
     # Run Graph Cut with the varying smooth cost
-    GC_result_hellinger_new <- GraphCutHellinger(
+    GC_result_hellinger_new <- GraphCutHellinger_xD(
       pdf_models_future = pdf_models,
       h_dist = h_dist,
       weight_data = 1,              # Fixed data weight

@@ -63,8 +63,8 @@ GraphCutHellinger_xD <- function(
   # changed: c(aperm(sum_h_dist, c(2, 1, 3))) call was redundant
   # when go from matrix to vector
   h_dist_cpp <- c(aperm(h_dist, c(2, 1, 3)))
-  # pdf_models_cpp <- c(aperm(pdf_models_future, c(4, 2, 1, 3)))
-  pdf_models_cpp <- c(pdf_models_future)
+  pdf_models_cpp <- c(aperm(pdf_models_future, c(3, 2, 1, 4)))
+  # pdf_models_cpp <- c(pdf_models_future)
 
 
   # Instanciation of the GraphCut environment
@@ -115,24 +115,48 @@ GraphCutHellinger_xD <- function(
   ptrSmoothCost <- cppXPtr(
     code = 'float smoothFn(int p1, int p2, int l1, int l2, Rcpp::List extraData)
 {
-      int numPix = extraData["numPix"];
-      float weight = extraData["weight"];
-      NumericVector data = extraData["data"];
-      int nBins = extraData["nBins"];
+    int numPix = extraData["numPix"];
+    float weight = extraData["weight"];
+    NumericVector data = extraData["data"];
+    int nBins = extraData["nBins"];
 
-      float cost  = 0;
-      float tmp1  = 0;
-      float tmp2  = 0;
+    float cost  = 0.0f;
+    float tmp1  = 0.0f;
+    float tmp2  = 0.0f;
+    float diff1 = 0.0f;
+    float diff2 = 0.0f;
+    int index1, index2;
 
-      for (int i = 0; i < nBins; i++) {
-        tmp1 += pow(sqrt(data[(p1 + numPix * l1) * nBins + i]) - sqrt(data[(p1 + numPix * l2) * nBins + i]), 2);
-        tmp2 += pow(sqrt(data[(p2 + numPix * l1) * nBins + i]) - sqrt(data[(p2 + numPix * l2) * nBins + i]), 2);
-      }
+    // Precompute common terms to reduce redundant calculations
+    int offset_p1_l1 = (p1 + numPix * l1) * nBins;
+    int offset_p1_l2 = (p1 + numPix * l2) * nBins;
+    int offset_p2_l1 = (p2 + numPix * l1) * nBins;
+    int offset_p2_l2 = (p2 + numPix * l2) * nBins;
 
-      cost = (sqrt(tmp1) / sqrt(2)) + (sqrt(tmp2) / sqrt(2));
+    for (int i = 0; i < nBins; i++) {
+        // Compute indices for data access
+        index1 = offset_p1_l1 + i;
+        index2 = offset_p1_l2 + i;
+
+        // Compute the difference of square roots
+        diff1 = sqrt(data[index1]) - sqrt(data[index2]);
+
+        // Accumulate the squared difference
+        tmp1 += diff1 * diff1;
+
+        // Repeat for p2
+        index1 = offset_p2_l1 + i;
+        index2 = offset_p2_l2 + i;
+
+        diff2 = sqrt(data[index1]) - sqrt(data[index2]);
+        tmp2 += diff2 * diff2;
+    }
+
+    // Compute the Hellinger distances and total cost
+    cost = (sqrt(tmp1) + sqrt(tmp2)) / sqrt(2.0f);
 
     // Debugging: Print each individual cost
-    Rcpp::Rcout << "Cost between (" << p1 << ", " << p2 << ") with labels (" << l1 << ", " << l2 << "): " << weight * cost << std::endl;
+    // Rcpp::Rcout << "Cost between (" << p1 << ", " << p2 << ") with labels (" << l1 << ", " << l2 << "): " << weight * cost << std::endl;
 
     return(weight * cost);
 }
@@ -189,7 +213,8 @@ GraphCutHellinger_xD <- function(
   cat("Starting GraphCut optimization...  ")
   print(format(Sys.time(), "%Y-%m-%d %H:%M:%S"))
   begin <- Sys.time()
-  gco$swap(-1)
+  gco_exec <- gco$swap(-1)
+  print(gco_exec)
   time_spent <- Sys.time()-begin
   print(format(Sys.time(), "%Y-%m-%d %H:%M:%S"))
   cat("GraphCut optimization done :  ")

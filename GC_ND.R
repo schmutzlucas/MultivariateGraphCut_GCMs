@@ -180,14 +180,16 @@ save.image(file = filename, compress = FALSE)
 
 # Graphcut hellinger labelling
 GC_result_hellinger_new <- list()
-GC_result_hellinger_new <- GraphCutHellinger2D_new3(pdf_models_future = pdf_models_future[,,, ] ,
+GC_result_hellinger_new <- GraphCutHellinger_xD(pdf_models_future = pdf_models_future,
                                                     h_dist = h_dist,
                                                     weight_data = 1,
-                                                    weight_smooth = 1,
+                                                    weight_smooth = 0.1,
                                                     nBins = nbins1d^3,
-                                                    seed = 1,
+                                                    seed = 2,
                                                     verbose = TRUE,
                                                     rebuild = TRUE)
+
+image(GC_result_hellinger_new$label_attribution)
 
 
 

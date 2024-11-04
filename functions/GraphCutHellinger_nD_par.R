@@ -41,7 +41,7 @@ library(gcoWrapR)
 #'
 #' @import gcoWrapR
 #' @export
-GraphCutHellinger_xD_array <- function(
+GraphCutHellinger_xD_par <- function(
   pdf_models_future,
   h_dist,
   weight_data,
@@ -63,8 +63,8 @@ GraphCutHellinger_xD_array <- function(
   # changed: c(aperm(sum_h_dist, c(2, 1, 3))) call was redundant
   # when go from matrix to vector
   h_dist_cpp <- c(aperm(h_dist, c(2, 1, 3)))
-  # pdf_models_cpp <- c(aperm(pdf_models_future, c(4, 2, 1, 3)))
-  pdf_models_cpp <- c(pdf_models_future)
+  pdf_models_cpp <- c(aperm(pdf_models_future, c(3, 2, 1, 4)))
+  # pdf_models_cpp <- c(pdf_models_future)
 
 
   # Instanciation of the GraphCut environment
@@ -115,50 +115,58 @@ GraphCutHellinger_xD_array <- function(
   ptrSmoothCost <- cppXPtr(
     code = 'float smoothFn(int p1, int p2, int l1, int l2, Rcpp::List extraData)
 {
-    // Extract data from extraData
-    NumericVector pdf_models = extraData["pdf_models"];
+    int numPix = extraData["numPix"];
+    float weight = extraData["weight"];
+    NumericVector data = extraData["data"];
     int nBins = extraData["nBins"];
-    int width = extraData["width"];
-    int height = extraData["height"];
 
-    // Compute longitude (x) and latitude (y) indices using width and height
-    int p1_lon = p1 % width;  // Longitude (x-coordinate) for p1
-    int p1_lat = p1 / width;  // Latitude (y-coordinate) for p1
-    int p2_lon = p2 % width;  // Longitude (x-coordinate) for p2
-    int p2_lat = p2 / width;  // Latitude (y-coordinate) for p2
-
-    float cost = 0.0f;
-    float tmp1 = 0.0f;
-    float tmp2 = 0.0f;
+    float cost  = 0.0f;
+    float tmp1  = 0.0f;
+    float tmp2  = 0.0f;
     float diff1 = 0.0f;
     float diff2 = 0.0f;
+    int index1, index2;
 
-    // Define the number of models (assumed from the last dimension of pdf_models)
-    int model_dim = 2;  // Update if necessary based on the number of models
+    // Precompute common terms to reduce redundant calculations
+    int offset_p1_l1 = (p1 + numPix * l1) * nBins;
+    int offset_p1_l2 = (p1 + numPix * l2) * nBins;
+    int offset_p2_l1 = (p2 + numPix * l1) * nBins;
+    int offset_p2_l2 = (p2 + numPix * l2) * nBins;
 
-    // Helper function to access the 4D array-like structure
-    auto getBinValue = [&](int lon, int lat, int model, int bin) {
-        return pdf_models[bin + nBins * (model + model_dim * (lat + height * lon))];
-    };
-
-    // Compute Hellinger distance for both p1 and p2
+    #pragma omp simd reduction(+:tmp1, tmp2)
     for (int i = 0; i < nBins; i++) {
-        diff1 = sqrt(getBinValue(p1_lon, p1_lat, l1, i)) - sqrt(getBinValue(p1_lon, p1_lat, l2, i));
+        // Compute indices for data access
+        index1 = offset_p1_l1 + i;
+        index2 = offset_p1_l2 + i;
+
+        // Compute the difference of square roots
+        diff1 = sqrt(data[index1]) - sqrt(data[index2]);
+
+        // Accumulate the squared difference
         tmp1 += diff1 * diff1;
 
-        diff2 = sqrt(getBinValue(p2_lon, p2_lat, l1, i)) - sqrt(getBinValue(p2_lon, p2_lat, l2, i));
+        // Repeat for p2
+        index1 = offset_p2_l1 + i;
+        index2 = offset_p2_l2 + i;
+
+        diff2 = sqrt(data[index1]) - sqrt(data[index2]);
         tmp2 += diff2 * diff2;
     }
 
-    // Calculate the total Hellinger distance
+    // Compute the Hellinger distances and total cost
     cost = (sqrt(tmp1) + sqrt(tmp2)) / sqrt(2.0f);
 
-    return weight * cost;
-}
+    // Debugging: Print each individual cost
+    // Rcpp::Rcout << "Cost between (" << p1 << ", " << p2 << ") with labels (" << l1 << ", " << l2 << "): " << weight * cost << std::endl;
 
+    return(weight * cost);
+}
 ',
-    includes = c("#include <math.h>", "#include <Rcpp.h>"),
-    rebuild = rebuild, showOutput = FALSE, verbose = FALSE
+    includes = c("#include <math.h>", "#include <Rcpp.h>", "#include <omp.h>"),
+    rebuild = rebuild,
+    showOutput = FALSE,
+    verbose = FALSE,
+    plugins = c("cpp11", "openmp")
   )
 
 
@@ -209,7 +217,8 @@ GraphCutHellinger_xD_array <- function(
   cat("Starting GraphCut optimization...  ")
   print(format(Sys.time(), "%Y-%m-%d %H:%M:%S"))
   begin <- Sys.time()
-  gco$swap(-1)
+  gco_exec <- gco$swap(-1)
+  print(gco_exec)
   time_spent <- Sys.time()-begin
   print(format(Sys.time(), "%Y-%m-%d %H:%M:%S"))
   cat("GraphCut optimization done :  ")
