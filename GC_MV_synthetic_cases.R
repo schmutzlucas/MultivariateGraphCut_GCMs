@@ -296,7 +296,7 @@ GC_result_hellinger_new <- GraphCutHellinger_xD(
   nBins = nbins1d^3,
   seed = 10,
   verbose = TRUE,
-  rebuild = TRUE
+  rebuild = FALSE
 )
 
 # Visualize label attribution result
@@ -314,9 +314,9 @@ GC_results <- list()
 # Loop through smooth cost values from 0 to 1 in increments of 0.05
 for (smooth_cost in seq(0, 1, by = 0.1)) {
   # Wrap each iteration in tryCatch to handle errors gracefully
-  # tryCatch({
+  tryCatch({
     # Run Graph Cut with the varying smooth cost
-    GC_result_hellinger_new <- GraphCutHellinger_xD(
+    GC_result_hellinger_new <- GraphCutHellinger_nD(
       pdf_models_future = pdf_models,
       h_dist = h_dist,
       weight_data = 1,              # Fixed data weight
@@ -328,21 +328,13 @@ for (smooth_cost in seq(0, 1, by = 0.1)) {
     )
 
     # Store only essential results if memory is limited (optional)
-    GC_results[[paste0("smooth_", smooth_cost)]] <- GC_result_hellinger_new$label_attribution
-
-    # Plot using image with a title and save
-    image(GC_result_hellinger_new$label_attribution,
-          main = paste("Label Attribution (Smooth Cost =", smooth_cost, ")"))
-
-    # Save the plot as a PNG
-    file_name <- paste0("figure/LabelAttribution_smooth_", smooth_cost, ".png")
-    dev.copy(png, filename = file_name, width = 35 * 96, height = 25 * 96, res = 300)
-    dev.off()
+    GC_results[[paste0("smooth_", smooth_cost)]] <- GC_result_hellinger_new$`Data and smooth cost`
 
 
-  # }, error = function(e) {
-  #   cat("Error encountered with smooth cost =", smooth_cost, ": ", e$message, "\n")
-  # })
+  }, error = function(e) {
+    cat("Error encountered with smooth cost =", smooth_cost, ": ", e$message, "\n")
+  })
 }
 
 # If not required, the GC_results list can be reduced or stored externally if memory usage is an issue
+summary(h_dist)

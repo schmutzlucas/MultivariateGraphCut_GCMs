@@ -41,7 +41,7 @@ library(gcoWrapR)
 #'
 #' @import gcoWrapR
 #' @export
-GraphCutHellinger_xD <- function(
+GraphCutHellinger_nD <- function(
   pdf_models_future,
   h_dist,
   weight_data,

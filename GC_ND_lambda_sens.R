@@ -128,15 +128,94 @@ save.image(file = filename, compress = FALSE)
 
 
 # Graphcut hellinger labelling
-GC_result_hellinger_new <- list()
-GC_result_hellinger_new <- GraphCutHellinger2D_new3(pdf_models_future = pdf_models_future[,,, ] ,
+GC_result_hellinger <- list()
+GC_result_hellinger <- GraphCutHellinger_nD(pdf_models_future = pdf_models_future ,
                                                     h_dist = h_dist,
                                                     weight_data = 1,
-                                                    weight_smooth = 1,
+                                                    weight_smooth = 2,
                                                     nBins = nbins1d^3,
                                                     seed = 1,
                                                     verbose = TRUE,
                                                     rebuild = TRUE)
 
+image(GC_result_hellinger$label_attribution)
 
+# Loop through smooth cost values from 0 to 1 in increments of 0.05
+for (smooth_cost in seq(0, 2, by = 0.05)) {
+  # Wrap each iteration in tryCatch to handle errors gracefully
+  tryCatch({
+    # Run Graph Cut with the varying smooth cost
+    GC_result_hellinger <- GraphCutHellinger_nD(
+      pdf_models_future = pdf_models_present,
+      h_dist = h_dist,
+      weight_data = 1,               # Fixed data weight
+      weight_smooth = smooth_cost,   # Varying smooth cost
+      nBins = nbins1d^3,
+      seed = 1,
+      verbose = TRUE,
+      rebuild = FALSE
+    )
+
+    # Store only essential results if memory is limited (optional)
+    GC_results[[paste0("smooth_", smooth_cost)]] <- GC_result_hellinger
+
+    save(GC_results, file = "GC_result_hellinger_lambda.RData", compress = FALSE)
+
+  }, error = function(e) {
+    cat("Error encountered with smooth cost =", smooth_cost, ": ", e$message, "\n")
+  })
+}
+
+# Initialize empty vectors to store the costs
+data_costs <- numeric(length(GC_results))
+smooth_costs <- numeric(length(GC_results))
+
+# Loop through each result in GC_results and extract the costs
+for (i in seq_along(GC_results)) {
+  data_costs[i] <- GC_results[[i]]$`Data and smooth cost`$`Data cost`
+  smooth_costs[i] <- GC_results[[i]]$`Data and smooth cost`$`Smooth cost`
+}
+
+# Print the vectors to check the results
+print(data_costs)
+print(smooth_costs)
+
+
+# Extract the smooth cost values from the names
+smooth_cost_names <- names(GC_results)
+smooth_cost_values <- as.numeric(sub("smooth_", "", smooth_cost_names))
+
+# Get the order of the smooth cost values
+order_indices <- order(smooth_cost_values)
+
+# Reorder GC_results, data_costs, and smooth_costs based on the order_indices
+GC_results <- GC_results[order_indices]
+data_costs <- sapply(GC_results, function(x) x$`Data and smooth cost`$`Data cost`)
+smooth_costs <- sapply(GC_results, function(x) x$`Data and smooth cost`$`Smooth cost`)
+
+# Adjust data costs by subtracting the data cost at smooth cost = 0
+data_cost_at_zero <- data_costs[which(smooth_cost_values == 0)]
+data_costs <- data_costs - data_cost_at_zero
+
+# Normalize smooth costs by dividing by smooth cost values
+smooth_costs <- smooth_costs / smooth_cost_values
+
+# Handle cases where smooth_cost_values is 0 to avoid division by zero
+smooth_costs[is.nan(smooth_costs) | is.infinite(smooth_costs)] <- 0
+
+# Reorder smooth cost values
+smooth_cost_values <- smooth_cost_values[order_indices]
+
+# Plot data costs
+plot(smooth_cost_values, data_costs, type = "o", col = "blue",
+     xlab = "Smooth Cost", ylab = "Cost",
+     main = "Data Cost and Normalized Smooth Cost vs Smoothness Weight",
+     pch = 16, ylim = range(c(data_costs, smooth_costs)))
+
+# Add normalized smooth costs to the same plot
+lines(smooth_cost_values, smooth_costs, type = "o", col = "red", pch = 16)
+
+# Add a legend
+legend("topright", legend = c("Data Cost", "Normalized Smooth Cost"),
+       col = c("blue", "red"), pch = 16, lty = 1)
 
