@@ -219,3 +219,60 @@ lines(smooth_cost_values, smooth_costs, type = "o", col = "red", pch = 16)
 legend("topright", legend = c("Data Cost", "Normalized Smooth Cost"),
        col = c("blue", "red"), pch = 16, lty = 1)
 
+# Load necessary packages
+library(ggplot2)
+library(pals)
+library(reshape2)
+
+# Generate the polychrome color palette and create a named color mapping
+color_palette <- pals::glasbey(length(model_names))
+names(color_palette) <- model_names  # Associate each color with a model name
+
+# Loop through each smooth cost result in GC_results
+for (smooth_cost in names(GC_results)) {
+  # Extract the label attribution for the current smooth cost
+  GC_labels <- GC_results[[smooth_cost]]$label_attribution
+
+  # Convert the label matrix to a data frame for plotting
+  label_df <- melt(GC_labels, c("lon", "lat"), value.name = "label_attribution")
+  label_df$lat <- label_df$lat - 90  # Adjust latitudes if necessary
+
+  # Convert label_attribution to a factor with ALL model names as levels
+  label_df$label_attribution <- factor(label_df$label_attribution, levels = seq_along(model_names), labels = model_names)
+
+  # Create the plot
+  p <- ggplot() +
+    geom_tile(data = label_df, aes(x = lon, y = lat, fill = label_attribution)) +
+    scale_fill_manual(values = color_palette, na.value = "white", guide = guide_legend(title = "Model Names", ncol = 2)) +  # Keep all model names in the legend
+    ggtitle(paste("Label GC Hellinger - Smooth Weight:", smooth_cost)) +
+    borders("world2", colour = 'black', lwd = 0.12) +
+    scale_x_continuous(expand = c(0, 0)) +
+    scale_y_continuous(limits = c(-90, 90), expand = c(0, 0)) +  # Set y-axis limits
+    theme(legend.position = 'bottom') +
+    theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
+    theme(panel.background = element_blank()) +
+    xlab('Longitude') +
+    ylab('Latitude') +
+    theme_bw() +
+    theme(
+      legend.key.size = unit(0.5, 'cm'),        # Reduce legend key size
+      legend.key.height = unit(0.5, 'cm'),      # Reduce legend key height
+      legend.key.width = unit(0.5, 'cm'),       # Reduce legend key width
+      legend.title = element_text(size = 10),   # Reduce legend title font size
+      legend.text = element_text(size = 8),     # Reduce legend text font size
+      plot.title = element_text(size = 16),
+      plot.subtitle = element_text(size = 12, hjust = 0.5),
+      axis.text = element_text(size = 10),
+      axis.title = element_text(size = 12)
+    ) +
+    easy_center_title()
+
+  # Generate file name based on the smooth cost
+  name <- paste0("figure/Labels_GC_Hellinger_smooth_", smooth_cost)
+
+  # Save the plot as both PDF and PNG
+  ggsave(paste0(name, ".pdf"), plot = p, width = 20, height = 15, units = "cm", dpi = 300)
+  ggsave(paste0(name, ".png"), plot = p, width = 20, height = 15, units = "cm", dpi = 300)
+}
+
+

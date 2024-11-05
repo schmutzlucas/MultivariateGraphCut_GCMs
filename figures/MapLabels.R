@@ -2,7 +2,7 @@
 color_palette <- pals::glasbey(length(model_names))
 
 # Correct latitudes: adjust for the fact that your latitude values are from -70 to 70
-GC_labels <- GC_result_hellinger_new$label_attribution
+GC_labels <- GC_results$smooth_0$label_attribution
 label_df <- melt(GC_labels, c("lon", "lat"), value.name = "label_attribution")
 label_df$lat <- label_df$lat -90  # Adjust latitudes if necessary
 
@@ -32,6 +32,10 @@ h <- ggplot() +
         axis.title = element_text(size = 16)) +
   easy_center_title()
 h
+
+name <- paste0('figure/Labels_GC_Hellinger_smooth_0.0')
+ggsave(paste0(name, '.pdf'), plot = p, width = 35, height = 25, units = "cm", dpi = 300)
+ggsave(paste0(name, '.png'), plot = p, width = 35, height = 25, units = "cm", dpi = 300)
 
 
 # Generate the polychrome color palette with 26 colors
