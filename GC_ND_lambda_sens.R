@@ -94,6 +94,11 @@ h_dist <- array(data = 0, dim = c(length(lon), length(lat),
 h_dist_unchecked <- array(data = 0, dim = c(length(lon), length(lat),
                                             length(model_names)))
 
+h_dist_future <- array(data = 0, dim = c(length(lon), length(lat),
+                                         length(model_names)))
+h_dist_unchecked_future <- array(data = 0, dim = c(length(lon), length(lat),
+                                                   length(model_names)))
+
 # Loop through variables and models
 m <- 1
 for (model_name in model_names) {
@@ -101,6 +106,7 @@ for (model_name in model_names) {
     for (j in seq_along(lat)) {
       # Compute Hellinger distance
       h_dist_unchecked[i, j, m] <- sqrt(sum((sqrt(pdf_models_present[i, j, , m]) - sqrt(pdf_ref_present[i, j, ]))^2)) / sqrt(2)
+      h_dist_unchecked_future[i, j, m] <- sqrt(sum((sqrt(pdf_models_future[i, j, , m]) - sqrt(pdf_ref_future[i, j, ]))^2)) / sqrt(2)
     }
   }
   m <- m + 1
@@ -109,8 +115,9 @@ for (model_name in model_names) {
 hist(h_dist_unchecked)
 # Replace NaN with 0
 h_dist[,,] <- replace(h_dist_unchecked[,,], is.nan(h_dist_unchecked), 0)
+h_dist_future[,,] <- replace(h_dist_unchecked_future[,,], is.nan(h_dist_unchecked), 0)
 hist(h_dist)
-rm(h_dist_unchecked)
+rm(h_dist_unchecked, h_dist_unchecked_future)
 
 
 # Get the current date and time
@@ -130,18 +137,20 @@ save.image(file = filename, compress = FALSE)
 # Graphcut hellinger labelling
 GC_result_hellinger <- list()
 GC_result_hellinger <- GraphCutHellinger_nD(pdf_models_future = pdf_models_future ,
-                                                    h_dist = h_dist,
-                                                    weight_data = 1,
-                                                    weight_smooth = 2,
-                                                    nBins = nbins1d^3,
-                                                    seed = 1,
-                                                    verbose = TRUE,
-                                                    rebuild = TRUE)
+                                            h_dist = h_dist,
+                                            weight_data = 1,
+                                            weight_smooth = 2,
+                                            nBins = nbins1d^3,
+                                            seed = 1,
+                                            verbose = TRUE,
+                                            rebuild = TRUE)
 
 image(GC_result_hellinger$label_attribution)
 
+GC_results <- list()
+GC_result_hellinger <- list()
 # Loop through smooth cost values from 0 to 1 in increments of 0.05
-for (smooth_cost in seq(0, 2, by = 0.05)) {
+for (smooth_cost in seq(0, 0.8, by = 0.2)) {
   # Wrap each iteration in tryCatch to handle errors gracefully
   tryCatch({
     # Run Graph Cut with the varying smooth cost
@@ -165,6 +174,18 @@ for (smooth_cost in seq(0, 2, by = 0.05)) {
     cat("Error encountered with smooth cost =", smooth_cost, ": ", e$message, "\n")
   })
 }
+
+# Get the current date and time
+current_time <- Sys.time()
+
+# Format the date and time as a string in the format 'yyyymmddhhmm'
+formatted_time <- format(current_time, "%Y%m%d%H%M")
+
+# Concatenate the formatted time string with your desired filename
+filename <- paste0(formatted_time, "_my_workspace_ERA5_allModels_beforeOptim_3v.RData")
+
+# Save the workspace using the generated filename
+save.image(file = filename, compress = FALSE)
 
 # Initialize empty vectors to store the costs
 data_costs <- numeric(length(GC_results))
@@ -276,3 +297,139 @@ for (smooth_cost in names(GC_results)) {
 }
 
 
+
+GC_hdist_future <- list()
+GC_hdist <- list()
+
+for (smooth_cost in names(GC_results)) {
+  # Initialize a lon x lat matrix for each smooth cost
+  GC_hdist[[smooth_cost]] <- matrix(NA, nrow = length(lon), ncol = length(lat))
+  GC_hdist_future[[smooth_cost]] <- matrix(NA, nrow = length(lon), ncol = length(lat))
+
+  for(l in 1:(length(model_names))){  # Ensure that indexing aligns with model names
+    islabel <- which(GC_results[[smooth_cost]]$label_attribution == l)
+    GC_hdist[[smooth_cost]][islabel] <- h_dist[,,l][islabel]
+    GC_hdist_future[[smooth_cost]][islabel] <- h_dist_future[,,l][islabel]
+  }
+}
+
+library(ggplot2)
+library(reshape2)
+
+# Prepare a data frame for plotting
+plot_data <- data.frame()
+
+for (smooth_cost in names(GC_results)) {
+  # Extract present and future distances as vectors
+  h_dist_present_vect <- as.vector(GC_hdist[[smooth_cost]])
+  h_dist_future_vect <- as.vector(GC_hdist_future[[smooth_cost]])
+
+  # Create a data frame with both present and future distances, along with smooth cost and type labels
+  smooth_cost_data <- data.frame(
+    h_dist = c(h_dist_present_vect, h_dist_future_vect),
+    Type = rep(c("Present", "Future"), each = length(h_dist_present_vect)),
+    Smooth_Cost = smooth_cost
+  )
+
+  # Bind this to the main data frame
+  plot_data <- rbind(plot_data, smooth_cost_data)
+}
+
+# Convert smooth cost to a factor for better plotting order
+plot_data$Smooth_Cost <- factor(plot_data$Smooth_Cost, levels = names(GC_results))
+
+# Plotting the data with ggplot2
+ggplot(plot_data, aes(x = Smooth_Cost, y = h_dist, fill = Type)) +
+  geom_boxplot(position = position_dodge(width = 0.75)) +  # Dodge to make side-by-side box plots
+  labs(
+    title = "Hellinger Distance Comparison for Present and Future",
+    x = "Smooth Cost",
+    y = "Hellinger Distance",
+    fill = "Type"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 16, hjust = 0.5),
+    axis.title = element_text(size = 14),
+    axis.text = element_text(size = 10)
+  )
+
+library(ggplot2)
+library(reshape2)
+
+
+for (smooth_cost in names(GC_results)) {
+  # Plot for present Hellinger distance
+  h_dist_map <- GC_hdist[[smooth_cost]]
+  present_df <- melt(h_dist_map, c("lon", "lat"), value.name = "Bias")
+
+  p_present <- ggplot() +
+    geom_tile(data = present_df, aes(x = lon, y = lat - 90, fill = Bias)) +
+    labs(subtitle = '',
+         title = paste0('GraphCut Hellinger - Present - Smooth Weight: ', smooth_cost,
+                        '\nMean Hellinger distance = ', round(mean(h_dist_map, na.rm = TRUE), 2))) +
+    scale_fill_gradient(low = "white", high = "#015a8c", limits = c(0.1, 0.70), oob = scales::squish) +
+    borders("world2", colour = 'black', lwd = 0.12) +
+    scale_x_continuous(expand = c(0, 0)) +
+    scale_y_continuous(expand = c(0, 0)) +
+    theme(legend.position = 'bottom',
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          panel.background = element_blank()) +
+    xlab('Longitude') +
+    ylab('Latitude') +
+    labs(fill = 'Hellinger \nDistance') +
+    theme_bw() +
+    theme(legend.key.size = unit(1, 'cm'),
+          legend.key.height = unit(1.4, 'cm'),
+          legend.key.width = unit(0.4, 'cm'),
+          legend.title = element_text(size = 16),
+          legend.text = element_text(size = 12),
+          plot.title = element_text(size = 24),
+          plot.subtitle = element_text(size = 20, hjust = 0.5),
+          axis.text = element_text(size = 14),
+          axis.title = element_text(size = 16)) +
+    easy_center_title()
+
+  # Save present plot
+  name_present <- paste0('figure/H_dist_present_GC_hellinger_smooth_', smooth_cost)
+  ggsave(paste0(name_present, '.pdf'), plot = p_present, width = 35, height = 25, units = "cm", dpi = 300)
+  ggsave(paste0(name_present, '.png'), plot = p_present, width = 35, height = 25, units = "cm", dpi = 300)
+
+  # Plot for future Hellinger distance
+  h_dist_map_future <- GC_hdist_future[[smooth_cost]]
+  future_df <- melt(h_dist_map_future, c("lon", "lat"), value.name = "Bias")
+
+  p_future <- ggplot() +
+    geom_tile(data = future_df, aes(x = lon, y = lat - 90, fill = Bias)) +
+    labs(subtitle = 'Projection period: 1999 - 2014',
+         title = paste0('GraphCut Hellinger - Future - Smooth Weight: ', smooth_cost,
+                        '\nMean Hellinger distance = ', round(mean(h_dist_map_future, na.rm = TRUE), 2))) +
+    scale_fill_gradient(low = "white", high = "#015a8c", limits = c(0.1, 0.70), oob = scales::squish) +
+    borders("world2", colour = 'black', lwd = 0.12) +
+    scale_x_continuous(expand = c(0, 0)) +
+    scale_y_continuous(expand = c(0, 0)) +
+    theme(legend.position = 'bottom',
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          panel.background = element_blank()) +
+    xlab('Longitude') +
+    ylab('Latitude') +
+    labs(fill = 'Hellinger \nDistance') +
+    theme_bw() +
+    theme(legend.key.size = unit(1, 'cm'),
+          legend.key.height = unit(1.4, 'cm'),
+          legend.key.width = unit(0.4, 'cm'),
+          legend.title = element_text(size = 16),
+          legend.text = element_text(size = 12),
+          plot.title = element_text(size = 24),
+          plot.subtitle = element_text(size = 20, hjust = 0.5),
+          axis.text = element_text(size = 14),
+          axis.title = element_text(size = 16)) +
+    easy_center_title()
+
+  # Save future plot
+  name_future <- paste0('figure/H_dist_future_GC_hellinger_smooth_', smooth_cost)
+  ggsave(paste0(name_future, '.pdf'), plot = p_future, width = 35, height = 25, units = "cm", dpi = 300)
+  ggsave(paste0(name_future, '.png'), plot = p_future, width = 35, height = 25, units = "cm", dpi = 300)
+}

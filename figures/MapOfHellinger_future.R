@@ -1,11 +1,9 @@
 # new color : #004DAB
 h_dist_map <- array(NA, dim = dim(GC_result_hellinger$label_attribution))
 
-for(j in seq_along(variables)){
-  for(l in 0:(length(model_names))){
-    islabel <- which(GC_result_hellinger$label_attribution == l)
-    h_dist_map[islabel] <- h_dist_future[,,(l)][islabel]
-  }
+for(l in 0:(length(model_names))){
+  islabel <- which(GC_result_hellinger$label_attribution == l)
+  h_dist_map[islabel] <- h_dist_future[,,(l)][islabel]
 }
 
 test_df <- melt(h_dist_map, c("lon", "lat"), value.name = "Bias")

@@ -20,8 +20,8 @@ range_var_final <- readRDS('ranges/range_var_final_allModelsPar_1950-2023_90deg_
 lon <- 0:359
 lat <- -90:90
 # Temporal ranges
-year_present <<- 1940:1969
-year_future <<- 1994:2023
+year_present <<- 1940:1975
+year_future <<- 1998:2023
 # data directory
 data_dir <<- 'data/CMIP6_merged_all/'
 
@@ -53,6 +53,7 @@ format_time <- function(time_seconds) {
 
 # Time the execution of the optimized function
 time_optimized <- system.time({
+  # todo add number of workers as argument
   tmp <- compute_nd_pdf_optimized(variables, model_names, data_dir, year_present, year_future,
                                   lon, lat, aperm(abind(range_var_final, along = 4), c(1, 2, 4, 3)), nbins1d)
 })
@@ -75,60 +76,6 @@ filename <- paste0(formatted_time, "_my_workspace_ERA5_allModels_beforeOptim_3v.
 # Save the workspace using the generated filename
 save.image(file = filename, compress = FALSE)
 
-
-# Step 1: Extract the PDF for the desired pixel (i = 54, j = 56) and model 1
-pdf_present_pixel <- tmp$present[54, 56, , 1]  # Present period for model 1
-pdf_future_pixel <- tmp$future[54, 56, , 1]    # Future period for model 1
-
-# Step 2: Reshape the 1D PDF vector into a 3D array
-# Assuming we have 8 bins per variable (as set in nbins1d)
-nbins <- nbins1d  # Number of bins
-pdf_present_3d <- array(pdf_present_pixel, dim = c(nbins, nbins, nbins))
-pdf_future_3d <- array(pdf_future_pixel, dim = c(nbins, nbins, nbins))
-
-# Step 3: Prepare data for 3D plotting
-# Convert the 3D array into a format suitable for plotly
-plot_data_present <- melt(pdf_present_3d)
-plot_data_present <- subset(plot_data_present, value > 0)  # Filter non-zero values
-
-
-# Example pixel and model to plot
-lon_idx <- 54
-lat_idx <- 56
-model_idx <- 1
-
-# Extract the 3D histogram values for the specific pixel and model
-hist_values <- tmp$present[lon_idx, lat_idx, , model_idx]
-
-# Extract the range values for the specific pixel from the list structure
-pr_range_pixel <- range_var_final$pr[lon_idx, lat_idx, ]
-tas_range_pixel <- range_var_final$tas[lon_idx, lat_idx, ]
-psl_range_pixel <- range_var_final$psl[lon_idx, lat_idx, ]
-
-# Compute the bin edges using the extracted ranges
-pr_bins <- seq(pr_range_pixel[1], pr_range_pixel[2], length.out = 9)  # nbins + 1
-tas_bins <- seq(tas_range_pixel[1], tas_range_pixel[2], length.out = 9)
-psl_bins <- seq(psl_range_pixel[1], psl_range_pixel[2], length.out = 9)
-
-# Create a data frame for the 3D scatter plot based on the histogram values
-plot_data <- expand.grid(Pr = pr_bins[-length(pr_bins)],
-                         Tas = tas_bins[-length(tas_bins)],
-                         Psl = psl_bins[-length(psl_bins)])
-plot_data$Value <- as.vector(hist_values)
-
-# Remove zero values to focus on non-empty bins
-plot_data <- subset(plot_data, Value > 0)
-
-# Create a 3D scatter plot with appropriate axes and color scale
-plot_ly(data = plot_data, x = ~Pr, y = ~Tas, z = ~Psl, size = ~Value, color = ~Value, colors = c("blue", "red")) %>%
-  add_markers(sizemode = "diameter", marker = list(sizeref = 0.1)) %>%  # Adjust sizeref for better scaling
-  layout(scene = list(xaxis = list(title = 'Precipitation (pr)', range = c(min(pr_bins), max(pr_bins))),
-                      yaxis = list(title = 'Temperature (tas)', range = c(min(tas_bins), max(tas_bins))),
-                      zaxis = list(title = 'Pressure (psl)', range = c(min(psl_bins), max(psl_bins)))),
-         title = paste("3D Histogram at Pixel (", lon_idx, ",", lat_idx, ") for Model", model_idx))
-
-
-
 pdf_present <- tmp$present
 pdf_future <- tmp$future
 
@@ -147,6 +94,11 @@ h_dist <- array(data = 0, dim = c(length(lon), length(lat),
 h_dist_unchecked <- array(data = 0, dim = c(length(lon), length(lat),
                                             length(model_names)))
 
+h_dist_future <- array(data = 0, dim = c(length(lon), length(lat),
+                                         length(model_names)))
+h_dist_unchecked_future <- array(data = 0, dim = c(length(lon), length(lat),
+                                                   length(model_names)))
+
 # Loop through variables and models
 m <- 1
 for (model_name in model_names) {
@@ -154,6 +106,7 @@ for (model_name in model_names) {
     for (j in seq_along(lat)) {
       # Compute Hellinger distance
       h_dist_unchecked[i, j, m] <- sqrt(sum((sqrt(pdf_models_present[i, j, , m]) - sqrt(pdf_ref_present[i, j, ]))^2)) / sqrt(2)
+      h_dist_unchecked_future[i, j, m] <- sqrt(sum((sqrt(pdf_models_future[i, j, , m]) - sqrt(pdf_ref_future[i, j, ]))^2)) / sqrt(2)
     }
   }
   m <- m + 1
@@ -162,8 +115,9 @@ for (model_name in model_names) {
 hist(h_dist_unchecked)
 # Replace NaN with 0
 h_dist[,,] <- replace(h_dist_unchecked[,,], is.nan(h_dist_unchecked), 0)
+h_dist_future[,,] <- replace(h_dist_unchecked_future[,,], is.nan(h_dist_unchecked), 0)
 hist(h_dist)
-rm(h_dist_unchecked)
+rm(h_dist_unchecked, h_dist_unchecked_future)
 
 
 # Get the current date and time
@@ -179,18 +133,74 @@ filename <- paste0(formatted_time, "_my_workspace_ERA5_allModels_beforeOptim_3v.
 save.image(file = filename, compress = FALSE)
 
 
-# Graphcut hellinger labelling
-GC_result_hellinger_new <- list()
-GC_result_hellinger_new <- GraphCutHellinger_xD(pdf_models_future = pdf_models_future,
-                                                    h_dist = h_dist,
-                                                    weight_data = 1,
-                                                    weight_smooth = 0.1,
-                                                    nBins = nbins1d^3,
-                                                    seed = 2,
-                                                    verbose = TRUE,
-                                                    rebuild = TRUE)
 
-image(GC_result_hellinger_new$label_attribution)
+library(ncdf4)
+
+# Load the file
+nc_file <- "data_download/ERA5/msl/day/msl_ERA5_194001-202410.nc"
+nc <- nc_open(nc_file)
+
+# Check time units and attributes
+time_units <- ncatt_get(nc, "valid_time", "units")
+print(time_units$value)  # Should be "seconds since 1970-01-01"
+
+# Check a few time values
+time_raw <- ncvar_get(nc, "valid_time")
+print(head(time_raw))
+
+yyyy <- nc.get.time.series(nc)
+
+
+# Load the file
+nc_model <- "data/CMIP6_merged_all/ACCESS-CM2/psl/psl_ACCESS-CM2_19500101-21001230.nc"
+nc_m <- nc_open(nc_model)
+
+# Check time units and attributes
+time_units <- ncatt_get(nc_m, "time", "units")
+print(time_units$value)  # Should be "seconds since 1970-01-01"
+
+# Check a few time values
+time_raw <- ncvar_get(nc_m, "time")
+print(head(time_raw))
+
+yyyy <- substr(as.character(nc.get.time.series(nc_m, return.bounds = TRUE)), 1, 4)
+yyyy <- as.character(nc.get.time.series(nc_m, return.bounds = TRUE))
+
+iyyyy_present <- which(yyyy %in% year_present)
 
 
 
+
+# Load necessary libraries
+library(ncdf4)
+library(PCICt)  # For handling different calendar types if needed
+
+# Open the NetCDF file and get the time variable
+nc_var <- nc_open("data/CMIP6_merged_all/ACCESS-CM2/psl/psl_ACCESS-CM2_19500101-21001230.nc")
+time_raw <- ncvar_get(nc_var, "time")
+
+# Get the units attribute of the time variable to know the reference date
+time_units <- ncatt_get(nc_var, "time", "units")$value
+
+# Convert time to actual dates
+if (grepl("since", time_units)) {
+  # Extract the reference date from the units (e.g., "days since 1850-01-01")
+  reference_date <- as.Date(sub(".*since ", "", time_units))
+
+  # Check if units are in days or seconds, and adjust conversion accordingly
+  if (grepl("days", time_units)) {
+    dates <- reference_date + time_raw
+  } else if (grepl("seconds", time_units)) {
+    dates <- reference_date + as.difftime(time_raw, units = "secs")
+  }
+
+  # Extract the year part from the dates
+  yyyy <- format(dates, "%Y")
+} else {
+  stop("Unrecognized time units format.")
+}
+
+iyyyy_future <- which(yyyy %in% year_present)
+
+# yyyy now contains the year component for each time point
+print(yyyy)
