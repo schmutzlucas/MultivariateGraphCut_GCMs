@@ -20,7 +20,7 @@ range_var_final <- readRDS('ranges/range_var_final_allModelsPar_1950-2023_90deg_
 lon <- 0:359
 lat <- -90:90
 # Temporal ranges
-year_present <<- 1940:1975
+year_present <<- 1950:1975
 year_future <<- 1998:2023
 # data directory
 data_dir <<- 'data/CMIP6_merged_all/'
@@ -131,76 +131,3 @@ filename <- paste0(formatted_time, "_my_workspace_ERA5_allModels_beforeOptim_3v.
 
 # Save the workspace using the generated filename
 save.image(file = filename, compress = FALSE)
-
-
-
-library(ncdf4)
-
-# Load the file
-nc_file <- "data_download/ERA5/msl/day/msl_ERA5_194001-202410.nc"
-nc <- nc_open(nc_file)
-
-# Check time units and attributes
-time_units <- ncatt_get(nc, "valid_time", "units")
-print(time_units$value)  # Should be "seconds since 1970-01-01"
-
-# Check a few time values
-time_raw <- ncvar_get(nc, "valid_time")
-print(head(time_raw))
-
-yyyy <- nc.get.time.series(nc)
-
-
-# Load the file
-nc_model <- "data/CMIP6_merged_all/ACCESS-CM2/psl/psl_ACCESS-CM2_19500101-21001230.nc"
-nc_m <- nc_open(nc_model)
-
-# Check time units and attributes
-time_units <- ncatt_get(nc_m, "time", "units")
-print(time_units$value)  # Should be "seconds since 1970-01-01"
-
-# Check a few time values
-time_raw <- ncvar_get(nc_m, "time")
-print(head(time_raw))
-
-yyyy <- substr(as.character(nc.get.time.series(nc_m, return.bounds = TRUE)), 1, 4)
-yyyy <- as.character(nc.get.time.series(nc_m, return.bounds = TRUE))
-
-iyyyy_present <- which(yyyy %in% year_present)
-
-
-
-
-# Load necessary libraries
-library(ncdf4)
-library(PCICt)  # For handling different calendar types if needed
-
-# Open the NetCDF file and get the time variable
-nc_var <- nc_open("data/CMIP6_merged_all/ACCESS-CM2/psl/psl_ACCESS-CM2_19500101-21001230.nc")
-time_raw <- ncvar_get(nc_var, "time")
-
-# Get the units attribute of the time variable to know the reference date
-time_units <- ncatt_get(nc_var, "time", "units")$value
-
-# Convert time to actual dates
-if (grepl("since", time_units)) {
-  # Extract the reference date from the units (e.g., "days since 1850-01-01")
-  reference_date <- as.Date(sub(".*since ", "", time_units))
-
-  # Check if units are in days or seconds, and adjust conversion accordingly
-  if (grepl("days", time_units)) {
-    dates <- reference_date + time_raw
-  } else if (grepl("seconds", time_units)) {
-    dates <- reference_date + as.difftime(time_raw, units = "secs")
-  }
-
-  # Extract the year part from the dates
-  yyyy <- format(dates, "%Y")
-} else {
-  stop("Unrecognized time units format.")
-}
-
-iyyyy_future <- which(yyyy %in% year_present)
-
-# yyyy now contains the year component for each time point
-print(yyyy)
