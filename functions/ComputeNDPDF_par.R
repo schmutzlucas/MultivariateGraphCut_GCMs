@@ -47,7 +47,7 @@ compute_nd_pdf_optimized <- function(variables, model_names, data_dir, year_pres
   pdf_matrix_future <- array(NA, dim = c(length(lon), length(lat), nbins^n_var, num_models))   # PDF matrix for future period
 
   # Set up parallel processing for each model
-  plan(multisession, workers = 4)  # Use a limited number of workers
+  plan(multisession, workers = 3)  # Use a limited number of workers
   options(future.globals.maxSize = 8 * 1024^3)  # Allow up to 8 GiB for exporting globals
 
   # Process models in parallel for each time period
