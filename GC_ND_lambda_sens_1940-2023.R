@@ -131,3 +131,47 @@ filename <- paste0(formatted_time, "_my_workspace_ERA5_allModels_beforeOptim_3v.
 
 # Save the workspace using the generated filename
 save.image(file = filename, compress = FALSE)
+
+
+
+
+
+GC_results <- list()
+GC_result_hellinger <- list()
+# Loop through smooth cost values from 0 to 1 in increments of 0.05
+for (smooth_cost in seq(0, 1.2, by = 0.1)) {
+  # Wrap each iteration in tryCatch to handle errors gracefully
+  tryCatch({
+    # Run Graph Cut with the varying smooth cost
+    GC_result_hellinger <- GraphCutHellinger_nD(
+      pdf_models_future = pdf_models_present,
+      h_dist = h_dist,
+      weight_data = 1,               # Fixed data weight
+      weight_smooth = smooth_cost,   # Varying smooth cost
+      nBins = nbins1d^3,
+      seed = 1,
+      verbose = TRUE,
+      rebuild = FALSE
+    )
+
+    # Store only essential results if memory is limited (optional)
+    GC_results[[paste0("smooth_", smooth_cost)]] <- GC_result_hellinger
+
+    save(GC_results, file = "GC_result_hellinger_lambda.RData", compress = FALSE)
+
+  }, error = function(e) {
+    cat("Error encountered with smooth cost =", smooth_cost, ": ", e$message, "\n")
+  })
+}
+
+# Get the current date and time
+current_time <- Sys.time()
+
+# Format the date and time as a string in the format 'yyyymmddhhmm'
+formatted_time <- format(current_time, "%Y%m%d%H%M")
+
+# Concatenate the formatted time string with your desired filename
+filename <- paste0(formatted_time, "_my_workspace_ERA5_allModels_beforeOptim_3v.RData")
+
+# Save the workspace using the generated filename
+save.image(file = filename, compress = FALSE)
