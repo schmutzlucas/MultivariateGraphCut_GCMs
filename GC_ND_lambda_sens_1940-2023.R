@@ -355,10 +355,6 @@ ggplot(plot_data, aes(x = Smooth_Cost, y = h_dist, fill = Type)) +
 #
 
 
-library(ggplot2)
-library(reshape2)
-
-
 for (smooth_cost in names(GC_results)) {
   # Plot for present Hellinger distance
   h_dist_map <- GC_hdist[[smooth_cost]]
@@ -437,8 +433,13 @@ for (smooth_cost in names(GC_results)) {
 
 
 
+
 # Initialize a data frame to store average errors for each smooth cost
 average_errors <- data.frame(Smooth_Cost = numeric(), Average_Error = numeric())
+
+# Define fixed color scale limits
+limits <- c(0, 0.4)
+v_limits <- signif(seq(limits[1], limits[2], length.out = 5), 2)  # Legend ticks with 2 significant figures
 
 # Loop through each smooth cost
 for (smooth_cost in names(GC_hdist_future)) {
@@ -457,14 +458,9 @@ for (smooth_cost in names(GC_hdist_future)) {
     Average_Error = average_error
   ))
 
-  # Prepare data for visualization (apply limits)
+  # Prepare data for visualization
   plot_df <- melt(gradient_error_map, varnames = c("lon", "lat"), value.name = "Error")
   plot_df$lat <- plot_df$lat - 90  # Adjust latitude for plotting, if necessary
-
-  # Define the color scale and limits for visualization
-  limits <- c(0, max(gradient_error_map, na.rm = TRUE))  # Dynamically set limits
-  limits[2] <- limits[2] * 0.5  # Scale down the upper limit
-  v_limits <- signif(seq(limits[1], limits[2], length.out = 5), 2)  # Legend ticks with 2 significant figures
   plot_df$Error[plot_df$Error > limits[2]] <- limits[2]  # Cap values at the upper limit
 
   # Create the plot
@@ -474,13 +470,13 @@ for (smooth_cost in names(GC_hdist_future)) {
     labs(
       subtitle = paste0(
         "Lambda : ", lambda,
-        " | Average Error: ", round(average_error, 4)  # Use the original average error here
+        " | Average Error: ", round(average_error, 4)
       )
     ) +
     scale_fill_gradientn(
       colors = c("white", "red"),  # Gradient from white to red
       breaks = v_limits,          # Legend breaks with 2 significant figures
-      limits = limits             # Color scale limits
+      limits = limits             # Fixed color scale limits
     ) +
     borders("world2", colour = "black", lwd = 0.12) +
     scale_x_continuous(expand = c(0, 0)) +
