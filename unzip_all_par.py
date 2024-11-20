@@ -79,7 +79,7 @@ def unzip_folders_parallel(base_path, output_base_path, max_workers=8):
 if __name__ == "__main__":
     # Define paths
     path_to_folders = 'data_download/CMIP6_data'
-    output_base_path = 'download_day_unzip_new'
+    output_base_path = 'data_download/download_day_unzip_new'
 
     # Start unzipping process with parallelization
     unzip_folders_parallel(path_to_folders, output_base_path, max_workers=8)

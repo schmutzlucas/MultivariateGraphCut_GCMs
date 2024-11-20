@@ -355,81 +355,146 @@ ggplot(plot_data, aes(x = Smooth_Cost, y = h_dist, fill = Type)) +
 #
 
 
-for (smooth_cost in names(GC_results)) {
-  # Plot for present Hellinger distance
-  h_dist_map <- GC_hdist[[smooth_cost]]
-  present_df <- melt(h_dist_map, c("lon", "lat"), value.name = "Bias")
 
+# Initialize separate data frames for present and future average Hellinger distances
+average_hdist_present <- data.frame(Smooth_Cost = numeric(), Average_Hellinger = numeric())
+average_hdist_future <- data.frame(Smooth_Cost = numeric(), Average_Hellinger = numeric())
+
+for (smooth_cost in names(GC_results)) {
+  # Extract the numeric value of lambda (smooth weight)
+  lambda <- as.numeric(sub("smooth_", "", smooth_cost))
+
+  # Compute average Hellinger distance for present
+  h_dist_map <- GC_hdist[[smooth_cost]]
+  avg_hdist_present <- mean(h_dist_map, na.rm = TRUE)
+
+  # Store the average Hellinger distance for present
+  average_hdist_present <- rbind(average_hdist_present, data.frame(
+    Smooth_Cost = lambda,
+    Average_Hellinger = avg_hdist_present
+  ))
+
+  # Prepare data for present visualization
+  present_df <- melt(h_dist_map, varnames = c("lon", "lat"), value.name = "Hellinger_Distance")
+  present_df$lat <- present_df$lat - 90  # Adjust latitude for plotting
+
+  # Create the plot for present Hellinger distance
   p_present <- ggplot() +
-    geom_tile(data = present_df, aes(x = lon, y = lat - 90, fill = Bias)) +
-    labs(subtitle = '',
-         title = paste0('GraphCut Hellinger - Present - Smooth Weight: ', smooth_cost,
-                        '\nMean Hellinger distance = ', round(mean(h_dist_map, na.rm = TRUE), 3))) +
-    scale_fill_gradient(low = "white", high = "#015a8c", limits = c(0.1, 0.70), oob = scales::squish) +
-    borders("world2", colour = 'black', lwd = 0.12) +
+    geom_tile(data = present_df, aes(x = lon, y = lat, fill = Hellinger_Distance)) +
+    ggtitle("GraphCut Hellinger Distance - Present") +
+    labs(
+      subtitle = paste0("Lambda : ", lambda, "\nMean Hellinger Distance: ", round(avg_hdist_present, 4))
+    ) +
+    scale_fill_gradient(
+      low = "white", high = "#015a8c", oob = scales::squish  # Use existing color scheme
+    ) +
+    borders("world2", colour = "black", lwd = 0.12) +
     scale_x_continuous(expand = c(0, 0)) +
     scale_y_continuous(expand = c(0, 0)) +
-    theme(legend.position = 'bottom',
-          panel.grid.major = element_blank(),
-          panel.grid.minor = element_blank(),
-          panel.background = element_blank()) +
-    xlab('Longitude') +
-    ylab('Latitude') +
-    labs(fill = 'Hellinger \nDistance') +
+    theme(legend.position = "bottom") +
+    theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
+    theme(panel.background = element_blank()) +
+    xlab("Longitude") +
+    ylab("Latitude") +
+    labs(fill = "Hellinger \nDistance") +
     theme_bw() +
-    theme(legend.key.size = unit(1, 'cm'),
-          legend.key.height = unit(1.4, 'cm'),
-          legend.key.width = unit(0.4, 'cm'),
-          legend.title = element_text(size = 16),
-          legend.text = element_text(size = 12),
-          plot.title = element_text(size = 24),
-          plot.subtitle = element_text(size = 20, hjust = 0.5),
-          axis.text = element_text(size = 14),
-          axis.title = element_text(size = 16)) +
+    theme(
+      legend.key.size = unit(1, "cm"),
+      legend.key.height = unit(1.4, "cm"),
+      legend.key.width = unit(0.4, "cm"),
+      legend.title = element_text(size = 16),
+      legend.text = element_text(size = 12),
+      plot.title = element_text(size = 24),
+      plot.subtitle = element_text(size = 20, hjust = 0.5),
+      axis.text = element_text(size = 14),
+      axis.title = element_text(size = 16)
+    ) +
     easy_center_title()
 
   # Save present plot
-  name_present <- paste0('figure/H_dist_present_GC_hellinger_1950-1975_smooth_', smooth_cost)
-  ggsave(paste0(name_present, '.pdf'), plot = p_present, width = 35, height = 25, units = "cm", dpi = 300)
-  ggsave(paste0(name_present, '.png'), plot = p_present, width = 35, height = 25, units = "cm", dpi = 300)
+  name_present <- paste0("figure/H_dist_present_GC_hellinger_smooth_", smooth_cost)
+  ggsave(paste0(name_present, ".pdf"), plot = p_present, width = 35, height = 25, units = "cm", dpi = 300)
+  ggsave(paste0(name_present, ".png"), plot = p_present, width = 35, height = 25, units = "cm", dpi = 300)
 
-  # Plot for future Hellinger distance
+  # Compute average Hellinger distance for future
   h_dist_map_future <- GC_hdist_future[[smooth_cost]]
-  future_df <- melt(h_dist_map_future, c("lon", "lat"), value.name = "Bias")
+  avg_hdist_future <- mean(h_dist_map_future, na.rm = TRUE)
 
+  # Store the average Hellinger distance for future
+  average_hdist_future <- rbind(average_hdist_future, data.frame(
+    Smooth_Cost = lambda,
+    Average_Hellinger = avg_hdist_future
+  ))
+
+  # Prepare data for future visualization
+  future_df <- melt(h_dist_map_future, varnames = c("lon", "lat"), value.name = "Hellinger_Distance")
+  future_df$lat <- future_df$lat - 90  # Adjust latitude for plotting
+
+  # Create the plot for future Hellinger distance
   p_future <- ggplot() +
-    geom_tile(data = future_df, aes(x = lon, y = lat - 90, fill = Bias)) +
-    labs(subtitle = 'Projection period: 1999 - 2014',
-         title = paste0('GraphCut Hellinger - Future - Smooth Weight: ', smooth_cost,
-                        '\nMean Hellinger distance = ', round(mean(h_dist_map_future, na.rm = TRUE), 3))) +
-    scale_fill_gradient(low = "white", high = "#015a8c", limits = c(0.1, 0.70), oob = scales::squish) +
-    borders("world2", colour = 'black', lwd = 0.12) +
+    geom_tile(data = future_df, aes(x = lon, y = lat, fill = Hellinger_Distance)) +
+    ggtitle("GraphCut Hellinger Distance - Future") +
+    labs(
+      subtitle = paste0("Lambda : ", lambda, "\nMean Hellinger Distance: ", round(avg_hdist_future, 4))
+    ) +
+    scale_fill_gradient(
+      low = "white", high = "#015a8c", oob = scales::squish  # Use existing color scheme
+    ) +
+    borders("world2", colour = "black", lwd = 0.12) +
     scale_x_continuous(expand = c(0, 0)) +
     scale_y_continuous(expand = c(0, 0)) +
-    theme(legend.position = 'bottom',
-          panel.grid.major = element_blank(),
-          panel.grid.minor = element_blank(),
-          panel.background = element_blank()) +
-    xlab('Longitude') +
-    ylab('Latitude') +
-    labs(fill = 'Hellinger \nDistance') +
+    theme(legend.position = "bottom") +
+    theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
+    theme(panel.background = element_blank()) +
+    xlab("Longitude") +
+    ylab("Latitude") +
+    labs(fill = "Hellinger \nDistance") +
     theme_bw() +
-    theme(legend.key.size = unit(1, 'cm'),
-          legend.key.height = unit(1.4, 'cm'),
-          legend.key.width = unit(0.4, 'cm'),
-          legend.title = element_text(size = 16),
-          legend.text = element_text(size = 12),
-          plot.title = element_text(size = 24),
-          plot.subtitle = element_text(size = 20, hjust = 0.5),
-          axis.text = element_text(size = 14),
-          axis.title = element_text(size = 16)) +
+    theme(
+      legend.key.size = unit(1, "cm"),
+      legend.key.height = unit(1.4, "cm"),
+      legend.key.width = unit(0.4, "cm"),
+      legend.title = element_text(size = 16),
+      legend.text = element_text(size = 12),
+      plot.title = element_text(size = 24),
+      plot.subtitle = element_text(size = 20, hjust = 0.5),
+      axis.text = element_text(size = 14),
+      axis.title = element_text(size = 16)
+    ) +
     easy_center_title()
 
   # Save future plot
-  name_future <- paste0('figure/H_dist_future_GC_hellinger_1950-1975_smooth_', smooth_cost)
-  ggsave(paste0(name_future, '.pdf'), plot = p_future, width = 35, height = 25, units = "cm", dpi = 300)
-  ggsave(paste0(name_future, '.png'), plot = p_future, width = 35, height = 25, units = "cm", dpi = 300)
+  name_future <- paste0("figure/H_dist_future_GC_hellinger_smooth_", smooth_cost)
+  ggsave(paste0(name_future, ".pdf"), plot = p_future, width = 35, height = 25, units = "cm", dpi = 300)
+  ggsave(paste0(name_future, ".png"), plot = p_future, width = 35, height = 25, units = "cm", dpi = 300)
 }
+
+# Print the average Hellinger distances for verification
+print("Average Hellinger Distance for Present:")
+print(average_hdist_present)
+
+print("Average Hellinger Distance for Future:")
+print(average_hdist_future)
+
+
+# Extract values for plotting
+smooth_cost_values <- average_hdist_present$Smooth_Cost  # Smooth cost (lambda) values
+h_dist_present <- average_hdist_present$Average_Hellinger  # Average Hellinger distances for present
+h_dist_future <- average_hdist_future$Average_Hellinger  # Average Hellinger distances for future
+
+# Plot the average Hellinger distance for present
+plot(smooth_cost_values, h_dist_present, type = "o", col = "blue",
+     xlab = "Lambda (Smooth Weight)", ylab = "Average Hellinger Distance",
+     main = "Average Hellinger Distance vs Smoothness Weight",
+     pch = 16, ylim = range(c(h_dist_present, h_dist_future)))
+
+# Add the average Hellinger distance for future to the same plot
+lines(smooth_cost_values, h_dist_future, type = "o", col = "red", pch = 16)
+
+# Add a legend
+legend("topleft", legend = c("Present", "Future"),
+       col = c("blue", "red"), pch = 16, lty = 1)
+
 
 
 
@@ -511,3 +576,4 @@ for (smooth_cost in names(GC_hdist_future)) {
 
 # Print the average errors for verification
 print(average_errors)
+
