@@ -436,32 +436,35 @@ for (smooth_cost in names(GC_results)) {
 }
 
 
-library(ggplot2)
-library(reshape2)
 
 # Initialize a data frame to store average errors for each smooth cost
 average_errors <- data.frame(Smooth_Cost = numeric(), Average_Error = numeric())
 
 # Loop through each smooth cost
 for (smooth_cost in names(GC_hdist_future)) {
+  # Extract the numeric value of lambda (smooth weight)
+  lambda <- as.numeric(sub("smooth_", "", smooth_cost))
+
   # Compute the gradient error for the current smooth cost
   gradient_error_map <- gradient_hdist(GC_hdist_future[[smooth_cost]])
 
-  # Store the average error for later plotting
+  # Compute the average error from the original data (unlimited)
   average_error <- mean(abs(gradient_error_map), na.rm = TRUE)
+
+  # Store the average error in the results table
   average_errors <- rbind(average_errors, data.frame(
-    Smooth_Cost = as.numeric(sub("smooth_", "", smooth_cost)),
+    Smooth_Cost = lambda,
     Average_Error = average_error
   ))
 
-  # Convert the gradient error map to a data frame for plotting
+  # Prepare data for visualization (apply limits)
   plot_df <- melt(gradient_error_map, varnames = c("lon", "lat"), value.name = "Error")
   plot_df$lat <- plot_df$lat - 90  # Adjust latitude for plotting, if necessary
 
-  # Define the color scale and limits
+  # Define the color scale and limits for visualization
   limits <- c(0, max(gradient_error_map, na.rm = TRUE))  # Dynamically set limits
   limits[2] <- limits[2] * 0.5  # Scale down the upper limit
-  v_limits <- seq(limits[1], limits[2], length.out = 5)  # Break points for the legend
+  v_limits <- signif(seq(limits[1], limits[2], length.out = 5), 2)  # Legend ticks with 2 significant figures
   plot_df$Error[plot_df$Error > limits[2]] <- limits[2]  # Cap values at the upper limit
 
   # Create the plot
@@ -469,11 +472,14 @@ for (smooth_cost in names(GC_hdist_future)) {
     geom_tile(data = plot_df, aes(x = lon, y = lat, fill = Error)) +
     ggtitle("GraphCut Hellinger Gradient Error") +
     labs(
-      subtitle = paste0("Average Error: ", round(average_error, 4))
+      subtitle = paste0(
+        "Lambda : ", lambda,
+        " | Average Error: ", round(average_error, 4)  # Use the original average error here
+      )
     ) +
     scale_fill_gradientn(
       colors = c("white", "red"),  # Gradient from white to red
-      breaks = v_limits,          # Legend breaks
+      breaks = v_limits,          # Legend breaks with 2 significant figures
       limits = limits             # Color scale limits
     ) +
     borders("world2", colour = "black", lwd = 0.12) +
@@ -502,7 +508,7 @@ for (smooth_cost in names(GC_hdist_future)) {
     easy_center_title()
 
   # Save the plot as PDF and PNG
-  name <- paste0("figure/Hellinger_Gradient_Error_", smooth_cost)
+  name <- paste0("figure/Hellinger_Gradient_Error_Lambda_", lambda)
   ggsave(paste0(name, ".pdf"), plot = p, width = 35, height = 25, units = "cm", dpi = 300)
   ggsave(paste0(name, ".png"), plot = p, width = 35, height = 25, units = "cm", dpi = 300)
 }
