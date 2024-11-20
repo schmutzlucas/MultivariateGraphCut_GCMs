@@ -216,7 +216,7 @@ smooth_cost_values <- smooth_cost_values[order_indices]
 
 # Plot data costs
 plot(smooth_cost_values, data_costs, type = "o", col = "blue",
-     xlab = "Smooth Cost", ylab = "Cost",
+     xlab = "Lambda", ylab = "Cost",
      main = "Data Cost and Normalized Smooth Cost vs Smoothness Weight",
      pch = 16, ylim = range(c(data_costs, smooth_costs)))
 
@@ -224,8 +224,9 @@ plot(smooth_cost_values, data_costs, type = "o", col = "blue",
 lines(smooth_cost_values, smooth_costs, type = "o", col = "red", pch = 16)
 
 # Add a legend
-legend("topright", legend = c("Data Cost", "Normalized Smooth Cost"),
+legend("topright", legend = c("Standardized Data Cost", "Normalized Smooth Cost"),
        col = c("blue", "red"), pch = 16, lty = 1)
+
 
 
 
@@ -289,9 +290,6 @@ for (smooth_cost in names(GC_results)) {
 
 
 
-
-
-
 GC_hdist_future <- list()
 GC_hdist <- list()
 
@@ -338,7 +336,7 @@ ggplot(plot_data, aes(x = Smooth_Cost, y = h_dist, fill = Type)) +
   geom_boxplot(position = position_dodge(width = 0.75), outlier.shape = NA) +  # Remove outliers from boxplot
   labs(
     title = "Hellinger Distance Comparison for Present and Future",
-    x = "Smooth Cost",
+    x = "Lambda",
     y = "Hellinger Distance",
     fill = "Type"
   ) +
@@ -353,6 +351,8 @@ ggplot(plot_data, aes(x = Smooth_Cost, y = h_dist, fill = Type)) +
   )
 
 
+
+#
 
 
 library(ggplot2)
@@ -434,3 +434,78 @@ for (smooth_cost in names(GC_results)) {
   ggsave(paste0(name_future, '.pdf'), plot = p_future, width = 35, height = 25, units = "cm", dpi = 300)
   ggsave(paste0(name_future, '.png'), plot = p_future, width = 35, height = 25, units = "cm", dpi = 300)
 }
+
+
+library(ggplot2)
+library(reshape2)
+
+# Initialize a data frame to store average errors for each smooth cost
+average_errors <- data.frame(Smooth_Cost = numeric(), Average_Error = numeric())
+
+# Loop through each smooth cost
+for (smooth_cost in names(GC_hdist_future)) {
+  # Compute the gradient error for the current smooth cost
+  gradient_error_map <- gradient_hdist(GC_hdist_future[[smooth_cost]])
+
+  # Store the average error for later plotting
+  average_error <- mean(abs(gradient_error_map), na.rm = TRUE)
+  average_errors <- rbind(average_errors, data.frame(
+    Smooth_Cost = as.numeric(sub("smooth_", "", smooth_cost)),
+    Average_Error = average_error
+  ))
+
+  # Convert the gradient error map to a data frame for plotting
+  plot_df <- melt(gradient_error_map, varnames = c("lon", "lat"), value.name = "Error")
+  plot_df$lat <- plot_df$lat - 90  # Adjust latitude for plotting, if necessary
+
+  # Define the color scale and limits
+  limits <- c(0, max(gradient_error_map, na.rm = TRUE))  # Dynamically set limits
+  limits[2] <- limits[2] * 0.5  # Scale down the upper limit
+  v_limits <- seq(limits[1], limits[2], length.out = 5)  # Break points for the legend
+  plot_df$Error[plot_df$Error > limits[2]] <- limits[2]  # Cap values at the upper limit
+
+  # Create the plot
+  p <- ggplot() +
+    geom_tile(data = plot_df, aes(x = lon, y = lat, fill = Error)) +
+    ggtitle("GraphCut Hellinger Gradient Error") +
+    labs(
+      subtitle = paste0("Average Error: ", round(average_error, 4))
+    ) +
+    scale_fill_gradientn(
+      colors = c("white", "red"),  # Gradient from white to red
+      breaks = v_limits,          # Legend breaks
+      limits = limits             # Color scale limits
+    ) +
+    borders("world2", colour = "black", lwd = 0.12) +
+    scale_x_continuous(expand = c(0, 0)) +
+    scale_y_continuous(expand = c(0, 0)) +
+    theme(legend.position = "bottom") +
+    theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
+    theme(panel.background = element_blank()) +
+    xlab("Longitude") +
+    ylab("Latitude") +
+    labs(fill = "Error \n") +  # Updated label for the legend
+    theme_bw() +
+    theme(
+      legend.key.size = unit(1, "cm"),       # Change legend key size
+      legend.key.height = unit(1.4, "cm"),  # Change legend key height
+      legend.key.width = unit(0.4, "cm"),   # Change legend key width
+      legend.title = element_text(size = 16),  # Change legend title font size
+      legend.text = element_text(size = 12)    # Change legend text font size
+    ) +
+    theme(
+      plot.title = element_text(size = 24),
+      plot.subtitle = element_text(size = 20, hjust = 0.5, margin = margin(b = 10)),  # Ensure spacing for subtitle
+      axis.text = element_text(size = 14),
+      axis.title = element_text(size = 16)
+    ) +
+    easy_center_title()
+
+  # Save the plot as PDF and PNG
+  name <- paste0("figure/Hellinger_Gradient_Error_", smooth_cost)
+  ggsave(paste0(name, ".pdf"), plot = p, width = 35, height = 25, units = "cm", dpi = 300)
+  ggsave(paste0(name, ".png"), plot = p, width = 35, height = 25, units = "cm", dpi = 300)
+}
+
+# Print the average errors for verification
+print(average_errors)
