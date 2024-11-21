@@ -256,7 +256,7 @@ for (smooth_cost in names(GC_results)) {
   p <- ggplot() +
     geom_tile(data = label_df, aes(x = lon, y = lat, fill = label_attribution)) +
     scale_fill_manual(values = color_palette, na.value = "white", guide = guide_legend(title = "Model Names", ncol = 2)) +  # Keep all model names in the legend
-    ggtitle(paste("Label GC Hellinger - Smooth Weight:", smooth_cost)) +
+    ggtitle(paste("Label GC Hellinger - Lambda:", smooth_cost)) +
     borders("world2", colour = 'black', lwd = 0.12) +
     scale_x_continuous(expand = c(0, 0)) +
     scale_y_continuous(limits = c(-90, 90), expand = c(0, 0)) +  # Set y-axis limits
@@ -351,8 +351,6 @@ ggplot(plot_data, aes(x = Smooth_Cost, y = h_dist, fill = Type)) +
   )
 
 
-
-#
 
 
 
@@ -484,8 +482,8 @@ h_dist_future <- average_hdist_future$Average_Hellinger  # Average Hellinger dis
 
 # Plot the average Hellinger distance for present
 plot(smooth_cost_values, h_dist_present, type = "o", col = "blue",
-     xlab = "Lambda (Smooth Weight)", ylab = "Average Hellinger Distance",
-     main = "Average Hellinger Distance vs Smoothness Weight",
+     xlab = "Lambda", ylab = "Average Hellinger Distance",
+     main = "Average Hellinger Distance",
      pch = 16, ylim = range(c(h_dist_present, h_dist_future)))
 
 # Add the average Hellinger distance for future to the same plot
@@ -531,11 +529,11 @@ for (smooth_cost in names(GC_hdist_future)) {
   # Create the plot
   p <- ggplot() +
     geom_tile(data = plot_df, aes(x = lon, y = lat, fill = Error)) +
-    ggtitle("GraphCut Hellinger Gradient Error") +
+    ggtitle("GraphCut Hellinger Gradient") +
     labs(
       subtitle = paste0(
         "Lambda : ", lambda,
-        " | Average Error: ", round(average_error, 4)
+        " | Average Gradient: ", round(average_error, 4)
       )
     ) +
     scale_fill_gradientn(
@@ -577,3 +575,16 @@ for (smooth_cost in names(GC_hdist_future)) {
 # Print the average errors for verification
 print(average_errors)
 
+# Extract values for plotting
+smooth_cost_values <- average_errors$Smooth_Cost  # Smooth cost (lambda) values
+gradient_future <- average_errors$Average_Error  # Average gradient errors for future
+
+# Plot the average gradient error for future
+plot(smooth_cost_values, gradient_future, type = "o", col = "red",
+     xlab = "Lambda", ylab = "Average Hellinger Gradient",
+     main = "Average Hellinger Gradient",
+     pch = 16)
+
+# Add a legend
+legend("topleft", legend = "Future",
+       col = "red", pch = 16, lty = 1)
