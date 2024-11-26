@@ -135,7 +135,7 @@ save.image(file = filename, compress = FALSE)
 GC_results <- list()
 GC_result_hellinger <- list()
 # Loop through smooth cost values from 0 to 1 in increments of 0.05
-for (smooth_cost in seq(0, 1.2, by = 0.1)) {
+for (smooth_cost in seq(0, 0.8, by = 0.1)) {
   # Wrap each iteration in tryCatch to handle errors gracefully
   tryCatch({
     # Run Graph Cut with the varying smooth cost
