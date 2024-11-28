@@ -88,36 +88,33 @@ pdf_models_future <- pdf_future[ , , , -1]
 rm(pdf_present, pdf_future)
 
 
-# Computing the sum of hellinger distances between models and reference --> used as datacost
-h_dist <- array(data = 0, dim = c(length(lon), length(lat),
-                                  length(model_names)))
-h_dist_unchecked <- array(data = 0, dim = c(length(lon), length(lat),
-                                            length(model_names)))
+# Initialize arrays for Hellinger distances
+h_dist <- array(NA, dim = c(length(lon), length(lat), length(model_names)))
+h_dist_future <- array(NA, dim = c(length(lon), length(lat), length(model_names)))
 
-h_dist_future <- array(data = 0, dim = c(length(lon), length(lat),
-                                         length(model_names)))
-h_dist_unchecked_future <- array(data = 0, dim = c(length(lon), length(lat),
-                                                   length(model_names)))
-
-# Loop through variables and models
+# Compute Hellinger distances for each model
 m <- 1
 for (model_name in model_names) {
   for (i in seq_along(lon)) {
     for (j in seq_along(lat)) {
-      # Compute Hellinger distance
-      h_dist_unchecked[i, j, m] <- sqrt(sum((sqrt(pdf_models_present[i, j, , m]) - sqrt(pdf_ref_present[i, j, ]))^2)) / sqrt(2)
-      h_dist_unchecked_future[i, j, m] <- sqrt(sum((sqrt(pdf_models_future[i, j, , m]) - sqrt(pdf_ref_future[i, j, ]))^2)) / sqrt(2)
+      # Compute Hellinger distance for the present
+      h_dist[i, j, m] <- sqrt(sum((sqrt(pdf_models_present[i, j, , m]) - sqrt(pdf_ref_present[i, j, ]))^2)) / sqrt(2)
+
+      # Compute Hellinger distance for the future
+      h_dist_future[i, j, m] <- sqrt(sum((sqrt(pdf_models_future[i, j, , m]) - sqrt(pdf_ref_future[i, j, ]))^2)) / sqrt(2)
     }
   }
   m <- m + 1
 }
 
-hist(h_dist_unchecked)
-# Replace NaN with 0
-h_dist[,,] <- replace(h_dist_unchecked[,,], is.nan(h_dist_unchecked), 0)
-h_dist_future[,,] <- replace(h_dist_unchecked_future[,,], is.nan(h_dist_unchecked), 0)
+# Replace NaN values with 0 in Hellinger distance arrays
+h_dist <- replace(h_dist, is.nan(h_dist), 0)
+h_dist_future <- replace(h_dist_future, is.nan(h_dist_future), 0)
+
+# Check distributions
 hist(h_dist)
-rm(h_dist_unchecked, h_dist_unchecked_future)
+hist(h_dist_future)
+
 
 
 # Get the current date and time
@@ -184,148 +181,448 @@ save.image(file = filename, compress = FALSE)
 
 
 # Creating figure of data and smooth cost with min max interval
-library(ggplot2)
+{
+  library(ggplot2)
 
-# Initialize lists to store costs across iterations for each lambda
-data_costs_all <- list()
-smooth_costs_all <- list()
+  # Initialize lists to store costs across iterations for each lambda
+  data_costs_all <- list()
+  smooth_costs_all <- list()
 
-# Loop through each lambda and extract the costs across iterations
-for (i in seq_along(GC_results_stoch)) {
-  # Extract all iterations for the current lambda
-  iterations <- GC_results_stoch[[i]]
+  # Loop through each lambda and extract the costs across iterations
+  for (i in seq_along(GC_results_stoch)) {
+    # Extract all iterations for the current lambda
+    iterations <- GC_results_stoch[[i]]
 
-  # Initialize vectors to store costs for each iteration
-  data_costs_iter <- numeric(length(iterations))
-  smooth_costs_iter <- numeric(length(iterations))
+    # Initialize vectors to store costs for each iteration
+    data_costs_iter <- numeric(length(iterations))
+    smooth_costs_iter <- numeric(length(iterations))
 
-  # Extract costs for each iteration
-  for (j in seq_along(iterations)) {
-    data_costs_iter[j] <- iterations[[j]]$`Data and smooth cost`$`Data cost`
-    smooth_costs_iter[j] <- iterations[[j]]$`Data and smooth cost`$`Smooth cost`
+    # Extract costs for each iteration
+    for (j in seq_along(iterations)) {
+      data_costs_iter[j] <- iterations[[j]]$`Data and smooth cost`$`Data cost`
+      smooth_costs_iter[j] <- iterations[[j]]$`Data and smooth cost`$`Smooth cost`
+    }
+
+    # Store the costs for the current lambda
+    data_costs_all[[i]] <- data_costs_iter
+    smooth_costs_all[[i]] <- smooth_costs_iter
   }
 
-  # Store the costs for the current lambda
-  data_costs_all[[i]] <- data_costs_iter
-  smooth_costs_all[[i]] <- smooth_costs_iter
-}
+  # Compute mean and standard deviation for data costs and smooth costs
+  lambda_values <- as.numeric(sub("lambda_", "", names(GC_results_stoch)))
+  data_costs_mean <- sapply(data_costs_all, mean)
+  data_costs_sd <- sapply(data_costs_all, sd)
+  smooth_costs_mean <- sapply(smooth_costs_all, mean)
+  smooth_costs_sd <- sapply(smooth_costs_all, sd)
 
-# Compute mean and standard deviation for data costs and smooth costs
-lambda_values <- as.numeric(sub("lambda_", "", names(GC_results_stoch)))
-data_costs_mean <- sapply(data_costs_all, mean)
-data_costs_sd <- sapply(data_costs_all, sd)
-smooth_costs_mean <- sapply(smooth_costs_all, mean)
-smooth_costs_sd <- sapply(smooth_costs_all, sd)
+  # Adjust data costs by subtracting the mean at lambda = 0
+  data_cost_at_zero <- data_costs_mean[which(lambda_values == 0)]
+  data_costs_mean <- data_costs_mean - data_cost_at_zero
 
-# Adjust data costs by subtracting the mean at lambda = 0
-data_cost_at_zero <- data_costs_mean[which(lambda_values == 0)]
-data_costs_mean <- data_costs_mean - data_cost_at_zero
+  # Normalize smooth costs by dividing by lambda values
+  normalized_smooth_costs_mean <- smooth_costs_mean / lambda_values
+  normalized_smooth_costs_sd <- smooth_costs_sd / lambda_values
 
-# Normalize smooth costs by dividing by lambda values
-normalized_smooth_costs_mean <- smooth_costs_mean / lambda_values
-normalized_smooth_costs_sd <- smooth_costs_sd / lambda_values
+  # Handle cases where lambda_values is 0 to avoid division by zero
+  normalized_smooth_costs_mean[is.nan(normalized_smooth_costs_mean) | is.infinite(normalized_smooth_costs_mean)] <- 0
+  normalized_smooth_costs_sd[is.nan(normalized_smooth_costs_sd) | is.infinite(normalized_smooth_costs_sd)] <- 0
 
-# Handle cases where lambda_values is 0 to avoid division by zero
-normalized_smooth_costs_mean[is.nan(normalized_smooth_costs_mean) | is.infinite(normalized_smooth_costs_mean)] <- 0
-normalized_smooth_costs_sd[is.nan(normalized_smooth_costs_sd) | is.infinite(normalized_smooth_costs_sd)] <- 0
-
-# Create a data frame for ggplot
-plot_data <- data.frame(
-  lambda = lambda_values,
-  data_cost_mean = data_costs_mean,
-  data_cost_lower = data_costs_mean - data_costs_sd,
-  data_cost_upper = data_costs_mean + data_costs_sd,
-  smooth_cost_mean = normalized_smooth_costs_mean,
-  smooth_cost_lower = normalized_smooth_costs_mean - normalized_smooth_costs_sd,
-  smooth_cost_upper = normalized_smooth_costs_mean + normalized_smooth_costs_sd
-)
-
-# Plot the data with confidence intervals using ggplot2
-ggplot(plot_data, aes(x = lambda)) +
-  geom_line(aes(y = data_cost_mean, color = "Data Cost")) +
-  geom_ribbon(aes(ymin = data_cost_lower, ymax = data_cost_upper, fill = "Data Cost"), alpha = 0.2) +
-  geom_line(aes(y = smooth_cost_mean, color = "Normalized Smooth Cost")) +
-  geom_ribbon(aes(ymin = smooth_cost_lower, ymax = smooth_cost_upper, fill = "Normalized Smooth Cost"), alpha = 0.2) +
-  labs(
-    title = "Data Cost and Normalized Smooth Cost with Confidence Intervals",
-    x = "Lambda",
-    y = "Cost",
-    color = "Metric",
-    fill = "Metric"
-  ) +
-  theme_minimal() +
-  theme(
-    plot.title = element_text(size = 16, hjust = 0.5),
-    axis.title = element_text(size = 14),
-    axis.text = element_text(size = 12),
-    legend.position = "bottom"
+  # Create a data frame for ggplot
+  plot_data <- data.frame(
+    lambda = lambda_values,
+    data_cost_mean = data_costs_mean,
+    data_cost_lower = data_costs_mean - data_costs_sd,
+    data_cost_upper = data_costs_mean + data_costs_sd,
+    smooth_cost_mean = normalized_smooth_costs_mean,
+    smooth_cost_lower = normalized_smooth_costs_mean - normalized_smooth_costs_sd,
+    smooth_cost_upper = normalized_smooth_costs_mean + normalized_smooth_costs_sd
   )
 
+  # Plot the data with confidence intervals using ggplot2
+  ggplot(plot_data, aes(x = lambda)) +
+    geom_line(aes(y = data_cost_mean, color = "Data Cost")) +
+    geom_ribbon(aes(ymin = data_cost_lower, ymax = data_cost_upper, fill = "Data Cost"), alpha = 0.2) +
+    geom_line(aes(y = smooth_cost_mean, color = "Normalized Smooth Cost")) +
+    geom_ribbon(aes(ymin = smooth_cost_lower, ymax = smooth_cost_upper, fill = "Normalized Smooth Cost"), alpha = 0.2) +
+    labs(
+      title = "Data Cost and Normalized Smooth Cost with Confidence Intervals",
+      x = "Lambda",
+      y = "Cost",
+      color = "Metric",
+      fill = "Metric"
+    ) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(size = 16, hjust = 0.5),
+      axis.title = element_text(size = 14),
+      axis.text = element_text(size = 12),
+      legend.position = "bottom"
+    )
+}
+
 # Figure of the labelling maps
+{
+  # Load necessary packages
+  library(ggplot2)
+  library(pals)
+  library(reshape2)
+  library(fs)  # To handle folder creation
 
-# Load necessary packages
-library(ggplot2)
-library(pals)
-library(reshape2)
-library(fs)  # To handle folder creation
+  # Generate the polychrome color palette and create a named color mapping
+  color_palette <- pals::glasbey(length(model_names))
+  names(color_palette) <- model_names  # Associate each color with a model name
 
-# Generate the polychrome color palette and create a named color mapping
-color_palette <- pals::glasbey(length(model_names))
-names(color_palette) <- model_names  # Associate each color with a model name
+  # Loop through each lambda and its iterations in GC_results_stoch
+  for (lambda in names(GC_results_stoch)) {
+    # Create a folder for the current lambda
+    lambda_folder <- paste0("figure/labelling/", lambda)
+    dir_create(lambda_folder)  # Create the lambda folder if it doesn't exist
 
-# Loop through each lambda and its iterations in GC_results_stoch
-for (lambda in names(GC_results_stoch)) {
-  # Create a folder for the current lambda
-  lambda_folder <- paste0("figure/labelling/", lambda)
-  dir_create(lambda_folder)  # Create the lambda folder if it doesn't exist
+    # Loop through each iteration for the current lambda
+    for (iteration in names(GC_results_stoch[[lambda]])) {
+      # Extract the label attribution for the current iteration
+      GC_labels <- GC_results_stoch[[lambda]][[iteration]]$label_attribution
 
-  # Loop through each iteration for the current lambda
-  for (iteration in names(GC_results_stoch[[lambda]])) {
-    # Extract the label attribution for the current iteration
-    GC_labels <- GC_results_stoch[[lambda]][[iteration]]$label_attribution
+      # Convert the label matrix to a data frame for plotting
+      label_df <- melt(GC_labels, c("lon", "lat"), value.name = "label_attribution")
+      label_df$lat <- label_df$lat - 90  # Adjust latitudes if necessary
 
-    # Convert the label matrix to a data frame for plotting
-    label_df <- melt(GC_labels, c("lon", "lat"), value.name = "label_attribution")
-    label_df$lat <- label_df$lat - 90  # Adjust latitudes if necessary
+      # Convert label_attribution to a factor with ALL model names as levels
+      label_df$label_attribution <- factor(label_df$label_attribution, levels = seq_along(model_names), labels = model_names)
 
-    # Convert label_attribution to a factor with ALL model names as levels
-    label_df$label_attribution <- factor(label_df$label_attribution, levels = seq_along(model_names), labels = model_names)
+      # Create the plot
+      p <- ggplot() +
+        geom_tile(data = label_df, aes(x = lon, y = lat, fill = label_attribution)) +
+        scale_fill_manual(values = color_palette, na.value = "white", guide = guide_legend(title = "Model Names", ncol = 2)) +  # Keep all model names in the legend
+        ggtitle(paste("Label GC Hellinger - Lambda:", lambda)) +
+        labs(subtitle = paste("Seed:", iteration)) +
+        borders("world2", colour = 'black', lwd = 0.12) +
+        scale_x_continuous(expand = c(0, 0)) +
+        scale_y_continuous(limits = c(-90, 90), expand = c(0, 0)) +  # Set y-axis limits
+        theme(legend.position = 'bottom') +
+        theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
+        theme(panel.background = element_blank()) +
+        xlab('Longitude') +
+        ylab('Latitude') +
+        theme_bw() +
+        theme(
+          legend.key.size = unit(0.5, 'cm'),        # Reduce legend key size
+          legend.key.height = unit(0.5, 'cm'),      # Reduce legend key height
+          legend.key.width = unit(0.5, 'cm'),       # Reduce legend key width
+          legend.title = element_text(size = 10),   # Reduce legend title font size
+          legend.text = element_text(size = 8),     # Reduce legend text font size
+          plot.title = element_text(size = 16),
+          plot.subtitle = element_text(size = 12, hjust = 0.5),
+          axis.text = element_text(size = 10),
+          axis.title = element_text(size = 12)
+        ) +
+        easy_center_title()
 
-    # Create the plot
-    p <- ggplot() +
-      geom_tile(data = label_df, aes(x = lon, y = lat, fill = label_attribution)) +
-      scale_fill_manual(values = color_palette, na.value = "white", guide = guide_legend(title = "Model Names", ncol = 2)) +  # Keep all model names in the legend
-      ggtitle(paste("Label GC Hellinger - Lambda:", lambda)) +
-      labs(subtitle = paste("Seed:", iteration)) +
-      borders("world2", colour = 'black', lwd = 0.12) +
-      scale_x_continuous(expand = c(0, 0)) +
-      scale_y_continuous(limits = c(-90, 90), expand = c(0, 0)) +  # Set y-axis limits
-      theme(legend.position = 'bottom') +
-      theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
-      theme(panel.background = element_blank()) +
-      xlab('Longitude') +
-      ylab('Latitude') +
-      theme_bw() +
-      theme(
-        legend.key.size = unit(0.5, 'cm'),        # Reduce legend key size
-        legend.key.height = unit(0.5, 'cm'),      # Reduce legend key height
-        legend.key.width = unit(0.5, 'cm'),       # Reduce legend key width
-        legend.title = element_text(size = 10),   # Reduce legend title font size
-        legend.text = element_text(size = 8),     # Reduce legend text font size
-        plot.title = element_text(size = 16),
-        plot.subtitle = element_text(size = 12, hjust = 0.5),
-        axis.text = element_text(size = 10),
-        axis.title = element_text(size = 12)
-      ) +
-      easy_center_title()
+      # Generate file name based on the lambda and iteration
+      name <- paste0(lambda_folder, "/Labels_GC_Hellinger_lambda_", lambda, "_seed_", iteration)
 
-    # Generate file name based on the lambda and iteration
-    name <- paste0(lambda_folder, "/Labels_GC_Hellinger_lambda_", lambda, "_seed_", iteration)
-
-    # Save the plot as both PDF and PNG
-    # ggsave(paste0(name, ".pdf"), plot = p, width = 20, height = 15, units = "cm", dpi = 300)
-    ggsave(paste0(name, ".png"), plot = p, width = 20, height = 15, units = "cm", dpi = 300)
+      # Save the plot as both PDF and PNG
+      # ggsave(paste0(name, ".pdf"), plot = p, width = 20, height = 15, units = "cm", dpi = 300)
+      ggsave(paste0(name, ".png"), plot = p, width = 20, height = 15, units = "cm", dpi = 300)
+    }
   }
 }
 
+
 # Computing the helling distance grid for each iteration
+{
+  GC_hdist_future <- list()
+  GC_hdist <- list()
+
+  for (lambda in names(GC_results_stoch)) {
+    # Initialize sub-lists to store gradient errors for each iteration under the current lambda
+    GC_hdist[[lambda]] <- list()
+    GC_hdist_future[[lambda]] <- list()
+
+    # Loop through each iteration for the current lambda
+    for (iteration in names(GC_results_stoch[[lambda]])) {
+      # Initialize a lon x lat matrix for the current iteration
+      GC_hdist[[lambda]][[iteration]] <- matrix(NA, nrow = length(lon), ncol = length(lat))
+      GC_hdist_future[[lambda]][[iteration]] <- matrix(NA, nrow = length(lon), ncol = length(lat))
+
+      # Compute the Hellinger distances for present and future for each model
+      for (l in 1:(length(model_names))) {  # Ensure that indexing aligns with model names
+        islabel <- which(GC_results_stoch[[lambda]][[iteration]]$label_attribution == l)
+        GC_hdist[[lambda]][[iteration]][islabel] <- h_dist[,,l][islabel]
+        GC_hdist_future[[lambda]][[iteration]][islabel] <- h_dist_future[,,l][islabel]
+      }
+    }
+  }
+}
+
+# Maps of Hellinger distance for each iteration and lambda
+
+{# Initialize separate data frames for present and future average Hellinger distances
+  average_hdist_present <- data.frame(Lambda = numeric(), Seed = numeric(), Average_Hellinger = numeric())
+  average_hdist_future <- data.frame(Lambda = numeric(), Seed = numeric(), Average_Hellinger = numeric())
+
+  # Loop through lambdas
+  for (lambda in names(GC_hdist)) {
+    # Extract the numeric value of lambda
+    lambda_value <- as.numeric(sub("lambda_", "", lambda))
+
+    # Create subfolders for present and future
+    dir.create(file.path("figure", "H_dist_present", lambda), recursive = TRUE, showWarnings = FALSE)
+    dir.create(file.path("figure", "H_dist_future", lambda), recursive = TRUE, showWarnings = FALSE)
+
+    # Loop through iterations
+    for (seed in names(GC_hdist[[lambda]])) {
+      # Process present Hellinger distances
+      h_dist_map <- GC_hdist[[lambda]][[seed]]
+      avg_hdist_present <- mean(h_dist_map, na.rm = TRUE)
+
+      # Store the average Hellinger distance for present
+      average_hdist_present <- rbind(average_hdist_present, data.frame(
+        Lambda = lambda_value,
+        Seed = as.numeric(sub("iteration_", "", seed)),
+        Average_Hellinger = avg_hdist_present
+      ))
+
+      # Prepare data for present visualization
+      present_df <- melt(h_dist_map, varnames = c("lon", "lat"), value.name = "Hellinger_Distance")
+      present_df$lat <- present_df$lat - 90  # Adjust latitude for plotting
+
+      # Create the plot for present Hellinger distance
+      p_present <- ggplot() +
+        geom_tile(data = present_df, aes(x = lon, y = lat, fill = Hellinger_Distance)) +
+        ggtitle("GraphCut Hellinger Distance - Present") +
+        labs(
+          subtitle = paste0("Lambda: ", lambda_value, " | Seed: ", seed,
+                            "\nMean Hellinger Distance: ", round(avg_hdist_present, 4))
+        ) +
+        scale_fill_gradient(low = "white", high = "#015a8c", oob = scales::squish) +
+        borders("world2", colour = "black", lwd = 0.12) +
+        scale_x_continuous(expand = c(0, 0)) +
+        scale_y_continuous(expand = c(0, 0)) +
+        theme_minimal() +
+        xlab("Longitude") +
+        ylab("Latitude") +
+        labs(fill = "Hellinger \nDistance") +
+        theme(
+          plot.title = element_text(size = 18),
+          plot.subtitle = element_text(size = 12),
+          axis.title = element_text(size = 14),
+          axis.text = element_text(size = 10),
+          legend.title = element_text(size = 12),
+          legend.text = element_text(size = 10)
+        )
+
+      # Save present plot
+      name_present <- file.path("figure", "H_dist_present", lambda, paste0("seed_", seed))
+      # ggsave(paste0(name_present, ".pdf"), plot = p_present, width = 20, height = 15, units = "cm", dpi = 300)
+      ggsave(paste0(name_present, ".png"), plot = p_present, width = 20, height = 15, units = "cm", dpi = 300)
+
+      # Process future Hellinger distances
+      h_dist_map_future <- GC_hdist_future[[lambda]][[seed]]
+      avg_hdist_future <- mean(h_dist_map_future, na.rm = TRUE)
+
+      # Store the average Hellinger distance for future
+      average_hdist_future <- rbind(average_hdist_future, data.frame(
+        Lambda = lambda_value,
+        Seed = as.numeric(sub("iteration_", "", seed)),
+        Average_Hellinger = avg_hdist_future
+      ))
+
+      # Prepare data for future visualization
+      future_df <- melt(h_dist_map_future, varnames = c("lon", "lat"), value.name = "Hellinger_Distance")
+      future_df$lat <- future_df$lat - 90  # Adjust latitude for plotting
+
+      # Create the plot for future Hellinger distance
+      p_future <- ggplot() +
+        geom_tile(data = future_df, aes(x = lon, y = lat, fill = Hellinger_Distance)) +
+        ggtitle("GraphCut Hellinger Distance - Future") +
+        labs(
+          subtitle = paste0("Lambda: ", lambda_value, " | Seed: ", seed,
+                            "\nMean Hellinger Distance: ", round(avg_hdist_future, 4))
+        ) +
+        scale_fill_gradient(low = "white", high = "#015a8c", oob = scales::squish) +
+        borders("world2", colour = "black", lwd = 0.12) +
+        scale_x_continuous(expand = c(0, 0)) +
+        scale_y_continuous(expand = c(0, 0)) +
+        theme_minimal() +
+        xlab("Longitude") +
+        ylab("Latitude") +
+        labs(fill = "Hellinger \nDistance") +
+        theme(
+          plot.title = element_text(size = 18),
+          plot.subtitle = element_text(size = 12),
+          axis.title = element_text(size = 14),
+          axis.text = element_text(size = 10),
+          legend.title = element_text(size = 12),
+          legend.text = element_text(size = 10)
+        )
+
+      # Save future plot
+      name_future <- file.path("figure", "H_dist_future", lambda, paste0("seed_", seed))
+      # ggsave(paste0(name_future, ".pdf"), plot = p_future, width = 20, height = 15, units = "cm", dpi = 300)
+      ggsave(paste0(name_future, ".png"), plot = p_future, width = 20, height = 15, units = "cm", dpi = 300)
+    }
+  }
+
+  # Save average Hellinger distances
+  save(average_hdist_present, file = "average_hdist_present.RData")
+  save(average_hdist_future, file = "average_hdist_future.RData")
+}
+
+# Average Hellinger distance with min max interval
+{
+  library(ggplot2)
+
+  # Compute min, max, and mean for present and future
+  summary_hdist_present <- aggregate(Average_Hellinger ~ Lambda, data = average_hdist_present,
+                                     FUN = function(x) c(mean = mean(x), min = min(x), max = max(x)))
+  summary_hdist_future <- aggregate(Average_Hellinger ~ Lambda, data = average_hdist_future,
+                                    FUN = function(x) c(mean = mean(x), min = min(x), max = max(x)))
+
+  # Expand the results into separate columns
+  summary_hdist_present <- do.call(data.frame, summary_hdist_present)
+  names(summary_hdist_present) <- c("Lambda", "Mean", "Min", "Max")
+
+  summary_hdist_future <- do.call(data.frame, summary_hdist_future)
+  names(summary_hdist_future) <- c("Lambda", "Mean", "Min", "Max")
+
+  # Create the plot with ggplot2
+  p <- ggplot() +
+    # Add the observed range shaded area for present
+    geom_ribbon(
+      data = summary_hdist_present,
+      aes(x = Lambda, ymin = Min, ymax = Max),
+      fill = "blue", alpha = 0.2
+    ) +
+    # Add the line for present
+    geom_line(data = summary_hdist_present, aes(x = Lambda, y = Mean), color = "blue", linewidth = 1) +
+    geom_point(data = summary_hdist_present, aes(x = Lambda, y = Mean), color = "blue", size = 2) +
+
+    # Add the observed range shaded area for future
+    geom_ribbon(
+      data = summary_hdist_future,
+      aes(x = Lambda, ymin = Min, ymax = Max),
+      fill = "red", alpha = 0.2
+    ) +
+    # Add the line for future
+    geom_line(data = summary_hdist_future, aes(x = Lambda, y = Mean), color = "red", linewidth = 1) +
+    geom_point(data = summary_hdist_future, aes(x = Lambda, y = Mean), color = "red", size = 2) +
+
+    labs(
+      title = "Observed Range of Hellinger Distance Across Iterations",
+      x = "Lambda",
+      y = "Average Hellinger Distance",
+      fill = "Legend"
+    ) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(size = 16, hjust = 0.5),
+      axis.title = element_text(size = 14),
+      axis.text = element_text(size = 12),
+      legend.position = "top"
+    )
+
+  # Save the plot as both PDF and PNG
+  name <- "figure/average_hdist_vs_lambda"
+  # ggsave(paste0(name, ".pdf"), plot = p, width = 35, height = 25, units = "cm", dpi = 300)
+  ggsave(paste0(name, ".png"), plot = p, width = 35, height = 25, units = "cm", dpi = 300)
+
+}
+
+
+# Maps of the gradients of Hellinger distance
+{
+  # Initialize a data frame to store average gradients for each lambda
+  average_gradients <- data.frame(Lambda = numeric(), Average_Gradient = numeric())
+
+  # Define fixed color scale limits
+  limits <- c(0, 0.4)
+  v_limits <- signif(seq(limits[1], limits[2], length.out = 5), 2)  # Legend ticks with 2 significant figures
+
+  # Loop through each lambda
+  for (lambda in names(GC_hdist_future)) {
+    # Create a folder for the current lambda
+    lambda_value <- as.numeric(sub("lambda_", "", lambda))
+    dir.create(file.path("figure", "Gradient_Hellinger", paste0("lambda_", lambda_value)), recursive = TRUE, showWarnings = FALSE)
+
+    # Initialize a data frame to store iteration-wise average gradients
+    iteration_gradients <- data.frame(Iteration = integer(), Average_Gradient = numeric())
+
+    # Loop through iterations for the current lambda
+    for (iteration in names(GC_hdist_future[[lambda]])) {
+      # Compute the gradient of the Hellinger distance for the current iteration
+      gradient_map <- gradient_hdist(GC_hdist_future[[lambda]][[iteration]])
+
+      # Compute the average gradient from the original data (unlimited)
+      average_gradient <- mean(abs(gradient_map), na.rm = TRUE)
+
+      # Store the average gradient for the iteration
+      iteration_gradients <- rbind(iteration_gradients, data.frame(
+        Iteration = as.integer(sub("iteration_", "", iteration)),
+        Average_Gradient = average_gradient
+      ))
+
+      # Prepare data for visualization
+      plot_df <- melt(gradient_map, varnames = c("lon", "lat"), value.name = "Gradient")
+      plot_df$lat <- plot_df$lat - 90  # Adjust latitude for plotting
+      plot_df$Gradient[plot_df$Gradient > limits[2]] <- limits[2]  # Cap values at the upper limit
+
+      # Create the plot
+      p <- ggplot() +
+        geom_tile(data = plot_df, aes(x = lon, y = lat, fill = Gradient)) +
+        ggtitle("GraphCut Gradient of Hellinger Distance") +
+        labs(
+          subtitle = paste0(
+            "Lambda: ", lambda_value,
+            " | Iteration: ", sub("iteration_", "", iteration),
+            " | Average Gradient: ", round(average_gradient, 4)
+          )
+        ) +
+        scale_fill_gradientn(
+          colors = c("white", "red"),  # Gradient from white to red
+          breaks = v_limits,          # Legend breaks with 2 significant figures
+          limits = limits             # Fixed color scale limits
+        ) +
+        borders("world2", colour = "black", lwd = 0.12) +
+        scale_x_continuous(expand = c(0, 0)) +
+        scale_y_continuous(expand = c(0, 0)) +
+        theme(legend.position = "bottom") +
+        theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
+        theme(panel.background = element_blank()) +
+        xlab("Longitude") +
+        ylab("Latitude") +
+        labs(fill = "Gradient \n") +  # Updated label for the legend
+        theme_bw() +
+        theme(
+          legend.key.size = unit(1, "cm"),
+          legend.key.height = unit(1.4, "cm"),
+          legend.key.width = unit(0.4, "cm"),
+          legend.title = element_text(size = 16),
+          legend.text = element_text(size = 12),
+          plot.title = element_text(size = 24),
+          plot.subtitle = element_text(size = 20, hjust = 0.5, margin = margin(b = 10)),
+          axis.text = element_text(size = 14),
+          axis.title = element_text(size = 16)
+        ) +
+        easy_center_title()
+
+      # Save the plot for the current iteration
+      file_name <- file.path("figure", "Gradient_Hellinger", paste0("lambda_", lambda_value), paste0("Gradient_Hellinger_Lambda_", lambda_value, "_Iteration_", sub("iteration_", "", iteration)))
+      # ggsave(paste0(file_name, ".pdf"), plot = p, width = 35, height = 25, units = "cm", dpi = 300)
+      ggsave(paste0(file_name, ".png"), plot = p, width = 35, height = 25, units = "cm", dpi = 300)
+    }
+
+    # Compute the overall average gradient across iterations for the current lambda
+    lambda_avg_gradient <- mean(iteration_gradients$Average_Gradient)
+
+    # Store the overall average gradient in the results table
+    average_gradients <- rbind(average_gradients, data.frame(
+      Lambda = lambda_value,
+      Average_Gradient = lambda_avg_gradient
+    ))
+  }
+
+  # Save the overall average gradients for later analysis
+  write.csv(average_gradients, file = "figure/Gradient_Hellinger/Average_Gradients.csv", row.names = FALSE)
+
+}
