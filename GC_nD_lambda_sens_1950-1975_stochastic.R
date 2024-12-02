@@ -267,6 +267,7 @@ save.image(file = filename, compress = FALSE)
   library(pals)
   library(reshape2)
   library(fs)  # To handle folder creation
+  library(ggeasy)
 
   # Generate the polychrome color palette and create a named color mapping
   color_palette <- pals::glasbey(length(model_names))

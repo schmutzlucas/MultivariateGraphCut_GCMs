@@ -24,3 +24,4 @@ SBCK
 abind
 plotly
 PCICt
+ggeasy
