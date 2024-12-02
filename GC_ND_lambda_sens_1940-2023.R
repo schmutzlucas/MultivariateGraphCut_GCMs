@@ -588,3 +588,5 @@ plot(smooth_cost_values, gradient_future, type = "o", col = "red",
 # Add a legend
 legend("topleft", legend = "Future",
        col = "red", pch = 16, lty = 1)
+
+
