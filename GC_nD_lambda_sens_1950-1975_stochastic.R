@@ -331,7 +331,7 @@ save.image(file = filename, compress = FALSE)
       legend.position = "bottom"
     )
   p
-    # Save the plot in the figure folder
+  # Save the plot in the figure folder
   output_dir <- "figure/Total_Cost"
   dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
   file_name_pdf <- file.path(output_dir, "data_smooth_cost_Lambda.pdf")
@@ -839,3 +839,67 @@ save.image(file = filename, compress = FALSE)
   print(p)
 }
 
+# Compute the floor of gradients (min, max, mean) for all models
+{
+  gradient_floor <- data.frame(
+    Model = seq(1, 22),
+    Mean_Gradient = numeric(22),
+    Min_Gradient = numeric(22),
+    Max_Gradient = numeric(22)
+  )
+
+  # Loop through each model and compute gradients
+  for (m in seq_len(dim(h_dist)[3])) {
+    gradients_present <- gradient_hdist(h_dist[,,m])
+    gradients_future <- gradient_hdist(h_dist_future[,,m])
+
+    # Store statistics for each model
+    gradient_floor[m, "Mean_Gradient"] <- mean(c(mean(abs(gradients_present), na.rm = TRUE), mean(abs(gradients_future), na.rm = TRUE)))
+    gradient_floor[m, "Min_Gradient"] <- min(c(min(abs(gradients_present), na.rm = TRUE), min(abs(gradients_future), na.rm = TRUE)))
+    gradient_floor[m, "Max_Gradient"] <- max(c(max(abs(gradients_present), na.rm = TRUE), max(abs(gradients_future), na.rm = TRUE)))
+  }
+
+  # Compute the overall floor statistics
+  floor_mean <- mean(gradient_floor$Mean_Gradient)
+  floor_min <- mean(gradient_floor$Min_Gradient)
+  floor_max <- mean(gradient_floor$Max_Gradient)
+
+  # Plot average Hellinger gradients for present and future with ranges and floor
+  p <- ggplot() +
+    # Present
+    geom_line(data = gradient_stats, aes(x = Lambda, y = Mean_Gradient_Present), color = "blue", size = 1) +
+    geom_point(data = gradient_stats, aes(x = Lambda, y = Mean_Gradient_Present), color = "blue", size = 2) +
+    geom_ribbon(data = gradient_stats, aes(x = Lambda, ymin = Min_Gradient_Present, ymax = Max_Gradient_Present), fill = "blue", alpha = 0.2) +
+    # Future
+    geom_line(data = gradient_stats, aes(x = Lambda, y = Mean_Gradient_Future), color = "red", size = 1) +
+    geom_point(data = gradient_stats, aes(x = Lambda, y = Mean_Gradient_Future), color = "red", size = 2) +
+    geom_ribbon(data = gradient_stats, aes(x = Lambda, ymin = Min_Gradient_Future, ymax = Max_Gradient_Future), fill = "red", alpha = 0.2) +
+    # Gradient floor (constant line with grey range)
+    geom_line(aes(x = gradient_stats$Lambda, y = floor_mean), color = "black", linetype = "dashed", size = 1) +
+    geom_ribbon(aes(x = gradient_stats$Lambda, ymin = floor_min, ymax = floor_max), fill = "grey", alpha = 0.3) +
+    # Labels and theme
+    labs(
+      title = "Average Hellinger Gradient with Range and Floor",
+      subtitle = "Blue: Present | Red: Future | Grey: Gradient Floor (Min-Max)",
+      x = "Lambda",
+      y = "Average Hellinger Gradient"
+    ) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(size = 16, hjust = 0.5),
+      plot.subtitle = element_text(size = 14, hjust = 0.5),
+      axis.title = element_text(size = 14),
+      axis.text = element_text(size = 12)
+    )
+
+  # Save the plot
+  output_dir <- "figure/Gradient_Hellinger/Average"
+  dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
+  file_name_pdf <- file.path(output_dir, "Average_Gradient_Hellinger_Present_Future_Floor.pdf")
+  ggsave(file_name_pdf, plot = p, width = 25, height = 20, units = "cm", dpi = 300)
+  file_name_png <- file.path(output_dir, "Average_Gradient_Hellinger_Present_Future_Floor.png")
+  ggsave(file_name_png, plot = p, width = 25, height = 20, units = "cm", dpi = 300)
+
+  # Print the plot
+  print(p)
+}
