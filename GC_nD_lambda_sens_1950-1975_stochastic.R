@@ -179,8 +179,81 @@ filename <- paste0(formatted_time, "_my_workspace_ERA5_allModels_beforeOptim_3v.
 save.image(file = filename, compress = FALSE)
 
 
-
 # Creating figure of data and smooth cost with min max interval
+# Creating figure for the total cost (Data + Smooth) with min-max range
+{
+  library(ggplot2)
+
+  # Initialize lists to store total costs across iterations for each lambda
+  total_costs_all <- list()
+
+  # Loop through each lambda and extract the costs across iterations
+  for (i in seq_along(GC_results_stoch)) {
+    # Extract all iterations for the current lambda
+    iterations <- GC_results_stoch[[i]]
+
+    # Initialize vector to store total costs for each iteration
+    total_costs_iter <- numeric(length(iterations))
+
+    # Extract costs for each iteration
+    for (j in seq_along(iterations)) {
+      data_cost <- iterations[[j]]$`Data and smooth cost`$`Data cost`
+      smooth_cost <- iterations[[j]]$`Data and smooth cost`$`Smooth cost`
+      total_costs_iter[j] <- data_cost + smooth_cost  # Sum raw data and smooth costs
+    }
+
+    # Store the total costs for the current lambda
+    total_costs_all[[i]] <- total_costs_iter
+  }
+
+  # Compute mean, min, and max for total costs
+  lambda_values <- as.numeric(sub("lambda_", "", names(GC_results_stoch)))
+  total_costs_mean <- sapply(total_costs_all, mean)
+  total_costs_min <- sapply(total_costs_all, min)
+  total_costs_max <- sapply(total_costs_all, max)
+
+  # Create a data frame for ggplot
+  plot_data <- data.frame(
+    lambda = lambda_values,
+    total_cost_mean = total_costs_mean,
+    total_cost_min = total_costs_min,
+    total_cost_max = total_costs_max
+  )
+
+  # Plot the total cost with min-max range using ggplot2
+  p <- ggplot(plot_data, aes(x = lambda)) +
+    geom_line(aes(y = total_cost_mean, color = "Total Cost"), size = 1) +
+    geom_point(aes(y = total_cost_mean, color = "Total Cost"), size = 2) +
+    geom_ribbon(aes(ymin = total_cost_min, ymax = total_cost_max, fill = "Total Cost"), alpha = 0.2) +
+    labs(
+      title = "Total Cost (Data + Smooth) with Min-Max Range",
+      x = "Lambda",
+      y = "Total Cost",
+      color = "Metric",
+      fill = "Metric"
+    ) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(size = 16, hjust = 0.5),
+      axis.title = element_text(size = 14),
+      axis.text = element_text(size = 12),
+      legend.position = "bottom"
+    )
+
+  # Save the plot in the figure folder
+  output_dir <- "figure/Total_Cost"
+  dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
+  file_name_pdf <- file.path(output_dir, "Total_Cost_Lambda.pdf")
+  ggsave(file_name_pdf, plot = p, width = 25, height = 20, units = "cm", dpi = 300)
+  file_name_png <- file.path(output_dir, "Total_Cost_Lambda.png")
+  ggsave(file_name_png, plot = p, width = 25, height = 20, units = "cm", dpi = 300)
+
+  # Print the plot
+  print(p)
+}
+
+
+# Creating figure of data (standardized) and smooth (normalized) cost with min max interval
 {
   library(ggplot2)
 
@@ -329,8 +402,7 @@ save.image(file = filename, compress = FALSE)
   }
 }
 
-
-# Computing the helling distance grid for each iteration
+# Computing the hellinger distance grid for each iteration
 {
   GC_hdist_future <- list()
   GC_hdist <- list()
@@ -357,7 +429,6 @@ save.image(file = filename, compress = FALSE)
 }
 
 # Maps of Hellinger distance for each iteration and lambda
-
 {# Initialize separate data frames for present and future average Hellinger distances
   average_hdist_present <- data.frame(Lambda = numeric(), Seed = numeric(), Average_Hellinger = numeric())
   average_hdist_future <- data.frame(Lambda = numeric(), Seed = numeric(), Average_Hellinger = numeric())
@@ -527,238 +598,237 @@ save.image(file = filename, compress = FALSE)
   name <- "figure/average_hdist_vs_lambda"
   # ggsave(paste0(name, ".pdf"), plot = p, width = 35, height = 25, units = "cm", dpi = 300)
   ggsave(paste0(name, ".png"), plot = p, width = 35, height = 25, units = "cm", dpi = 300)
-
+  p
 }
-
 
 # Maps of the gradients of Hellinger distance
 {
-# Initialize a data frame to store average gradients for present and future
-average_gradients <- data.frame(Lambda = numeric(), Average_Gradient_Present = numeric(), Average_Gradient_Future = numeric())
+  # Initialize a data frame to store average gradients for present and future
+  average_gradients <- data.frame(Lambda = numeric(), Average_Gradient_Present = numeric(), Average_Gradient_Future = numeric())
 
-# Define fixed color scale limits
-limits <- c(0, 0.4)
-v_limits <- signif(seq(limits[1], limits[2], length.out = 5), 2)  # Legend ticks with 2 significant figures
+  # Define fixed color scale limits
+  limits <- c(0, 0.4)
+  v_limits <- signif(seq(limits[1], limits[2], length.out = 5), 2)  # Legend ticks with 2 significant figures
 
-# Loop through each lambda
-for (lambda in names(GC_hdist_future)) {
-  # Create folders for the current lambda
-  lambda_value <- as.numeric(sub("lambda_", "", lambda))
-  dir.create(file.path("figure", "Gradient_Hellinger", "Present", paste0("lambda_", lambda_value)), recursive = TRUE, showWarnings = FALSE)
-  dir.create(file.path("figure", "Gradient_Hellinger", "Future", paste0("lambda_", lambda_value)), recursive = TRUE, showWarnings = FALSE)
+  # Loop through each lambda
+  for (lambda in names(GC_hdist_future)) {
+    # Create folders for the current lambda
+    lambda_value <- as.numeric(sub("lambda_", "", lambda))
+    dir.create(file.path("figure", "Gradient_Hellinger", "Present", paste0("lambda_", lambda_value)), recursive = TRUE, showWarnings = FALSE)
+    dir.create(file.path("figure", "Gradient_Hellinger", "Future", paste0("lambda_", lambda_value)), recursive = TRUE, showWarnings = FALSE)
 
-  # Initialize data frames to store iteration-wise average gradients for present and future
-  iteration_gradients_present <- data.frame(Iteration = integer(), Average_Gradient = numeric())
-  iteration_gradients_future <- data.frame(Iteration = integer(), Average_Gradient = numeric())
+    # Initialize data frames to store iteration-wise average gradients for present and future
+    iteration_gradients_present <- data.frame(Iteration = integer(), Average_Gradient = numeric())
+    iteration_gradients_future <- data.frame(Iteration = integer(), Average_Gradient = numeric())
 
-  # Loop through iterations for the current lambda
-  for (iteration in names(GC_hdist_future[[lambda]])) {
-    # Compute the gradient of the Hellinger distance for present
-    gradient_map_present <- gradient_hdist(GC_hdist[[lambda]][[iteration]])
-    avg_gradient_present <- mean(abs(gradient_map_present), na.rm = TRUE)
+    # Loop through iterations for the current lambda
+    for (iteration in names(GC_hdist_future[[lambda]])) {
+      # Compute the gradient of the Hellinger distance for present
+      gradient_map_present <- gradient_hdist(GC_hdist[[lambda]][[iteration]])
+      avg_gradient_present <- mean(abs(gradient_map_present), na.rm = TRUE)
 
-    # Compute the gradient of the Hellinger distance for future
-    gradient_map_future <- gradient_hdist(GC_hdist_future[[lambda]][[iteration]])
-    avg_gradient_future <- mean(abs(gradient_map_future), na.rm = TRUE)
+      # Compute the gradient of the Hellinger distance for future
+      gradient_map_future <- gradient_hdist(GC_hdist_future[[lambda]][[iteration]])
+      avg_gradient_future <- mean(abs(gradient_map_future), na.rm = TRUE)
 
-    # Store the average gradients for the iteration
-    iteration_gradients_present <- rbind(iteration_gradients_present, data.frame(
-      Iteration = as.integer(sub("iteration_", "", iteration)),
-      Average_Gradient = avg_gradient_present
+      # Store the average gradients for the iteration
+      iteration_gradients_present <- rbind(iteration_gradients_present, data.frame(
+        Iteration = as.integer(sub("iteration_", "", iteration)),
+        Average_Gradient = avg_gradient_present
+      ))
+
+      iteration_gradients_future <- rbind(iteration_gradients_future, data.frame(
+        Iteration = as.integer(sub("iteration_", "", iteration)),
+        Average_Gradient = avg_gradient_future
+      ))
+
+      # Prepare data for present visualization
+      plot_df_present <- melt(gradient_map_present, varnames = c("lon", "lat"), value.name = "Gradient")
+      plot_df_present$lat <- plot_df_present$lat - 90  # Adjust latitude for plotting
+      plot_df_present$Gradient[plot_df_present$Gradient > limits[2]] <- limits[2]  # Cap values at the upper limit
+
+      # Create the plot for present
+      p_present <- ggplot() +
+        geom_tile(data = plot_df_present, aes(x = lon, y = lat, fill = Gradient)) +
+        ggtitle("GraphCut Gradient of Hellinger Distance - Present") +
+        labs(
+          subtitle = paste0(
+            "Lambda: ", lambda_value,
+            " | Iteration: ", sub("iteration_", "", iteration),
+            " | Average Gradient: ", round(avg_gradient_present, 4)
+          )
+        ) +
+        scale_fill_gradientn(
+          colors = c("white", "red"),  # Gradient from white to red
+          breaks = v_limits,          # Legend breaks with 2 significant figures
+          limits = limits             # Fixed color scale limits
+        ) +
+        borders("world2", colour = "black", lwd = 0.12) +
+        scale_x_continuous(expand = c(0, 0)) +
+        scale_y_continuous(expand = c(0, 0)) +
+        theme(legend.position = "bottom") +
+        theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
+        theme(panel.background = element_blank()) +
+        xlab("Longitude") +
+        ylab("Latitude") +
+        labs(fill = "Gradient \n") +
+        theme_bw() +
+        theme(
+          legend.key.size = unit(1, "cm"),
+          legend.key.height = unit(1.4, "cm"),
+          legend.key.width = unit(0.4, "cm"),
+          legend.title = element_text(size = 16),
+          legend.text = element_text(size = 12),
+          plot.title = element_text(size = 24),
+          plot.subtitle = element_text(size = 20, hjust = 0.5, margin = margin(b = 10)),
+          axis.text = element_text(size = 14),
+          axis.title = element_text(size = 16)
+        ) +
+        easy_center_title()
+
+      # Save the plot for present iteration
+      file_name_present <- file.path("figure", "Gradient_Hellinger", "Present", paste0("lambda_", lambda_value), paste0("Gradient_Hellinger_Present_Lambda_", lambda_value, "_Iteration_", sub("iteration_", "", iteration)))
+      ggsave(paste0(file_name_present, ".png"), plot = p_present, width = 35, height = 25, units = "cm", dpi = 300)
+
+      # Prepare data for future visualization
+      plot_df_future <- melt(gradient_map_future, varnames = c("lon", "lat"), value.name = "Gradient")
+      plot_df_future$lat <- plot_df_future$lat - 90  # Adjust latitude for plotting
+      plot_df_future$Gradient[plot_df_future$Gradient > limits[2]] <- limits[2]  # Cap values at the upper limit
+
+      # Create the plot for future
+      p_future <- ggplot() +
+        geom_tile(data = plot_df_future, aes(x = lon, y = lat, fill = Gradient)) +
+        ggtitle("GraphCut Gradient of Hellinger Distance - Future") +
+        labs(
+          subtitle = paste0(
+            "Lambda: ", lambda_value,
+            " | Iteration: ", sub("iteration_", "", iteration),
+            " | Average Gradient: ", round(avg_gradient_future, 4)
+          )
+        ) +
+        scale_fill_gradientn(
+          colors = c("white", "red"),  # Gradient from white to red
+          breaks = v_limits,          # Legend breaks with 2 significant figures
+          limits = limits             # Fixed color scale limits
+        ) +
+        borders("world2", colour = "black", lwd = 0.12) +
+        scale_x_continuous(expand = c(0, 0)) +
+        scale_y_continuous(expand = c(0, 0)) +
+        theme(legend.position = "bottom") +
+        theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
+        theme(panel.background = element_blank()) +
+        xlab("Longitude") +
+        ylab("Latitude") +
+        labs(fill = "Gradient \n") +
+        theme_bw() +
+        theme(
+          legend.key.size = unit(1, "cm"),
+          legend.key.height = unit(1.4, "cm"),
+          legend.key.width = unit(0.4, "cm"),
+          legend.title = element_text(size = 16),
+          legend.text = element_text(size = 12),
+          plot.title = element_text(size = 24),
+          plot.subtitle = element_text(size = 20, hjust = 0.5, margin = margin(b = 10)),
+          axis.text = element_text(size = 14),
+          axis.title = element_text(size = 16)
+        ) +
+        easy_center_title()
+
+      # Save the plot for future iteration
+      file_name_future <- file.path("figure", "Gradient_Hellinger", "Future", paste0("lambda_", lambda_value), paste0("Gradient_Hellinger_Future_Lambda_", lambda_value, "_Iteration_", sub("iteration_", "", iteration)))
+      ggsave(paste0(file_name_future, ".png"), plot = p_future, width = 35, height = 25, units = "cm", dpi = 300)
+    }
+
+    # Compute the overall average gradients across iterations for the current lambda
+    lambda_avg_gradient_present <- mean(iteration_gradients_present$Average_Gradient)
+    lambda_avg_gradient_future <- mean(iteration_gradients_future$Average_Gradient)
+
+    # Store the overall average gradients in the results table
+    average_gradients <- rbind(average_gradients, data.frame(
+      Lambda = lambda_value,
+      Average_Gradient_Present = lambda_avg_gradient_present,
+      Average_Gradient_Future = lambda_avg_gradient_future
     ))
-
-    iteration_gradients_future <- rbind(iteration_gradients_future, data.frame(
-      Iteration = as.integer(sub("iteration_", "", iteration)),
-      Average_Gradient = avg_gradient_future
-    ))
-
-    # Prepare data for present visualization
-    plot_df_present <- melt(gradient_map_present, varnames = c("lon", "lat"), value.name = "Gradient")
-    plot_df_present$lat <- plot_df_present$lat - 90  # Adjust latitude for plotting
-    plot_df_present$Gradient[plot_df_present$Gradient > limits[2]] <- limits[2]  # Cap values at the upper limit
-
-    # Create the plot for present
-    p_present <- ggplot() +
-      geom_tile(data = plot_df_present, aes(x = lon, y = lat, fill = Gradient)) +
-      ggtitle("GraphCut Gradient of Hellinger Distance - Present") +
-      labs(
-        subtitle = paste0(
-          "Lambda: ", lambda_value,
-          " | Iteration: ", sub("iteration_", "", iteration),
-          " | Average Gradient: ", round(avg_gradient_present, 4)
-        )
-      ) +
-      scale_fill_gradientn(
-        colors = c("white", "red"),  # Gradient from white to red
-        breaks = v_limits,          # Legend breaks with 2 significant figures
-        limits = limits             # Fixed color scale limits
-      ) +
-      borders("world2", colour = "black", lwd = 0.12) +
-      scale_x_continuous(expand = c(0, 0)) +
-      scale_y_continuous(expand = c(0, 0)) +
-      theme(legend.position = "bottom") +
-      theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
-      theme(panel.background = element_blank()) +
-      xlab("Longitude") +
-      ylab("Latitude") +
-      labs(fill = "Gradient \n") +
-      theme_bw() +
-      theme(
-        legend.key.size = unit(1, "cm"),
-        legend.key.height = unit(1.4, "cm"),
-        legend.key.width = unit(0.4, "cm"),
-        legend.title = element_text(size = 16),
-        legend.text = element_text(size = 12),
-        plot.title = element_text(size = 24),
-        plot.subtitle = element_text(size = 20, hjust = 0.5, margin = margin(b = 10)),
-        axis.text = element_text(size = 14),
-        axis.title = element_text(size = 16)
-      ) +
-      easy_center_title()
-
-    # Save the plot for present iteration
-    file_name_present <- file.path("figure", "Gradient_Hellinger", "Present", paste0("lambda_", lambda_value), paste0("Gradient_Hellinger_Present_Lambda_", lambda_value, "_Iteration_", sub("iteration_", "", iteration)))
-    ggsave(paste0(file_name_present, ".png"), plot = p_present, width = 35, height = 25, units = "cm", dpi = 300)
-
-    # Prepare data for future visualization
-    plot_df_future <- melt(gradient_map_future, varnames = c("lon", "lat"), value.name = "Gradient")
-    plot_df_future$lat <- plot_df_future$lat - 90  # Adjust latitude for plotting
-    plot_df_future$Gradient[plot_df_future$Gradient > limits[2]] <- limits[2]  # Cap values at the upper limit
-
-    # Create the plot for future
-    p_future <- ggplot() +
-      geom_tile(data = plot_df_future, aes(x = lon, y = lat, fill = Gradient)) +
-      ggtitle("GraphCut Gradient of Hellinger Distance - Future") +
-      labs(
-        subtitle = paste0(
-          "Lambda: ", lambda_value,
-          " | Iteration: ", sub("iteration_", "", iteration),
-          " | Average Gradient: ", round(avg_gradient_future, 4)
-        )
-      ) +
-      scale_fill_gradientn(
-        colors = c("white", "red"),  # Gradient from white to red
-        breaks = v_limits,          # Legend breaks with 2 significant figures
-        limits = limits             # Fixed color scale limits
-      ) +
-      borders("world2", colour = "black", lwd = 0.12) +
-      scale_x_continuous(expand = c(0, 0)) +
-      scale_y_continuous(expand = c(0, 0)) +
-      theme(legend.position = "bottom") +
-      theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
-      theme(panel.background = element_blank()) +
-      xlab("Longitude") +
-      ylab("Latitude") +
-      labs(fill = "Gradient \n") +
-      theme_bw() +
-      theme(
-        legend.key.size = unit(1, "cm"),
-        legend.key.height = unit(1.4, "cm"),
-        legend.key.width = unit(0.4, "cm"),
-        legend.title = element_text(size = 16),
-        legend.text = element_text(size = 12),
-        plot.title = element_text(size = 24),
-        plot.subtitle = element_text(size = 20, hjust = 0.5, margin = margin(b = 10)),
-        axis.text = element_text(size = 14),
-        axis.title = element_text(size = 16)
-      ) +
-      easy_center_title()
-
-    # Save the plot for future iteration
-    file_name_future <- file.path("figure", "Gradient_Hellinger", "Future", paste0("lambda_", lambda_value), paste0("Gradient_Hellinger_Future_Lambda_", lambda_value, "_Iteration_", sub("iteration_", "", iteration)))
-    ggsave(paste0(file_name_future, ".png"), plot = p_future, width = 35, height = 25, units = "cm", dpi = 300)
   }
 
-  # Compute the overall average gradients across iterations for the current lambda
-  lambda_avg_gradient_present <- mean(iteration_gradients_present$Average_Gradient)
-  lambda_avg_gradient_future <- mean(iteration_gradients_future$Average_Gradient)
-
-  # Store the overall average gradients in the results table
-  average_gradients <- rbind(average_gradients, data.frame(
-    Lambda = lambda_value,
-    Average_Gradient_Present = lambda_avg_gradient_present,
-    Average_Gradient_Future = lambda_avg_gradient_future
-  ))
-}
-
-# Save the overall average gradients for later analysis
-write.csv(average_gradients, file = "figure/Gradient_Hellinger/Average_Gradients.csv", row.names = FALSE)
+  # Save the overall average gradients for later analysis
+  write.csv(average_gradients, file = "figure/Gradient_Hellinger/Average_Gradients.csv", row.names = FALSE)
 
 }
 
 # Plot of the average gradients
 {
- # Initialize a data frame to store min, max, and mean gradients for present and future
-gradient_stats <- data.frame(
-  Lambda = numeric(),
-  Mean_Gradient_Present = numeric(),
-  Min_Gradient_Present = numeric(),
-  Max_Gradient_Present = numeric(),
-  Mean_Gradient_Future = numeric(),
-  Min_Gradient_Future = numeric(),
-  Max_Gradient_Future = numeric()
-)
-
-# Loop through each lambda to compute statistics for present and future
-for (lambda in names(GC_hdist_future)) {
-  # Extract lambda value
-  lambda_value <- as.numeric(sub("lambda_", "", lambda))
-
-  # Compute gradients for all iterations for present
-  iteration_gradients_present <- sapply(GC_hdist[[lambda]], function(x) mean(abs(gradient_hdist(x)), na.rm = TRUE))
-
-  # Compute gradients for all iterations for future
-  iteration_gradients_future <- sapply(GC_hdist_future[[lambda]], function(x) mean(abs(gradient_hdist(x)), na.rm = TRUE))
-
-  # Add statistics to the data frame
-  gradient_stats <- rbind(gradient_stats, data.frame(
-    Lambda = lambda_value,
-    Mean_Gradient_Present = mean(iteration_gradients_present),
-    Min_Gradient_Present = min(iteration_gradients_present),
-    Max_Gradient_Present = max(iteration_gradients_present),
-    Mean_Gradient_Future = mean(iteration_gradients_future),
-    Min_Gradient_Future = min(iteration_gradients_future),
-    Max_Gradient_Future = max(iteration_gradients_future)
-  ))
-}
-
-# Sort by lambda for consistent plotting
-gradient_stats <- gradient_stats[order(gradient_stats$Lambda), ]
-
-# Plot average Hellinger gradients for present and future with ranges
-p <- ggplot() +
-  # Present
-  geom_line(data = gradient_stats, aes(x = Lambda, y = Mean_Gradient_Present), color = "blue", size = 1) +
-  geom_point(data = gradient_stats, aes(x = Lambda, y = Mean_Gradient_Present), color = "blue", size = 2) +
-  geom_ribbon(data = gradient_stats, aes(x = Lambda, ymin = Min_Gradient_Present, ymax = Max_Gradient_Present), fill = "blue", alpha = 0.2) +
-  # Future
-  geom_line(data = gradient_stats, aes(x = Lambda, y = Mean_Gradient_Future), color = "red", size = 1) +
-  geom_point(data = gradient_stats, aes(x = Lambda, y = Mean_Gradient_Future), color = "red", size = 2) +
-  geom_ribbon(data = gradient_stats, aes(x = Lambda, ymin = Min_Gradient_Future, ymax = Max_Gradient_Future), fill = "red", alpha = 0.2) +
-  # Labels and theme
-  labs(
-    title = "Average Hellinger Gradient with Range",
-    subtitle = "Blue: Present | Red: Future",
-    x = "Lambda",
-    y = "Average Hellinger Gradient"
-  ) +
-  theme_minimal() +
-  theme(
-    plot.title = element_text(size = 16, hjust = 0.5),
-    plot.subtitle = element_text(size = 14, hjust = 0.5),
-    axis.title = element_text(size = 14),
-    axis.text = element_text(size = 12)
+  # Initialize a data frame to store min, max, and mean gradients for present and future
+  gradient_stats <- data.frame(
+    Lambda = numeric(),
+    Mean_Gradient_Present = numeric(),
+    Min_Gradient_Present = numeric(),
+    Max_Gradient_Present = numeric(),
+    Mean_Gradient_Future = numeric(),
+    Min_Gradient_Future = numeric(),
+    Max_Gradient_Future = numeric()
   )
 
-# Save the plot
-output_dir <- "figure/Gradient_Hellinger/Average"
-dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
-file_name_pdf <- file.path(output_dir, "Average_Gradient_Hellinger_Present_Future.pdf")
-ggsave(file_name_pdf, plot = p, width = 25, height = 20, units = "cm", dpi = 300)
-file_name_png <- file.path(output_dir, "Average_Gradient_Hellinger_Present_Future.png")
-ggsave(file_name_png, plot = p, width = 25, height = 20, units = "cm", dpi = 300)
+  # Loop through each lambda to compute statistics for present and future
+  for (lambda in names(GC_hdist_future)) {
+    # Extract lambda value
+    lambda_value <- as.numeric(sub("lambda_", "", lambda))
 
-# Print the plot
-print(p)
+    # Compute gradients for all iterations for present
+    iteration_gradients_present <- sapply(GC_hdist[[lambda]], function(x) mean(abs(gradient_hdist(x)), na.rm = TRUE))
+
+    # Compute gradients for all iterations for future
+    iteration_gradients_future <- sapply(GC_hdist_future[[lambda]], function(x) mean(abs(gradient_hdist(x)), na.rm = TRUE))
+
+    # Add statistics to the data frame
+    gradient_stats <- rbind(gradient_stats, data.frame(
+      Lambda = lambda_value,
+      Mean_Gradient_Present = mean(iteration_gradients_present),
+      Min_Gradient_Present = min(iteration_gradients_present),
+      Max_Gradient_Present = max(iteration_gradients_present),
+      Mean_Gradient_Future = mean(iteration_gradients_future),
+      Min_Gradient_Future = min(iteration_gradients_future),
+      Max_Gradient_Future = max(iteration_gradients_future)
+    ))
+  }
+
+  # Sort by lambda for consistent plotting
+  gradient_stats <- gradient_stats[order(gradient_stats$Lambda), ]
+
+  # Plot average Hellinger gradients for present and future with ranges
+  p <- ggplot() +
+    # Present
+    geom_line(data = gradient_stats, aes(x = Lambda, y = Mean_Gradient_Present), color = "blue", size = 1) +
+    geom_point(data = gradient_stats, aes(x = Lambda, y = Mean_Gradient_Present), color = "blue", size = 2) +
+    geom_ribbon(data = gradient_stats, aes(x = Lambda, ymin = Min_Gradient_Present, ymax = Max_Gradient_Present), fill = "blue", alpha = 0.2) +
+    # Future
+    geom_line(data = gradient_stats, aes(x = Lambda, y = Mean_Gradient_Future), color = "red", size = 1) +
+    geom_point(data = gradient_stats, aes(x = Lambda, y = Mean_Gradient_Future), color = "red", size = 2) +
+    geom_ribbon(data = gradient_stats, aes(x = Lambda, ymin = Min_Gradient_Future, ymax = Max_Gradient_Future), fill = "red", alpha = 0.2) +
+    # Labels and theme
+    labs(
+      title = "Average Hellinger Gradient with Range",
+      subtitle = "Blue: Present | Red: Future",
+      x = "Lambda",
+      y = "Average Hellinger Gradient"
+    ) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(size = 16, hjust = 0.5),
+      plot.subtitle = element_text(size = 14, hjust = 0.5),
+      axis.title = element_text(size = 14),
+      axis.text = element_text(size = 12)
+    )
+
+  # Save the plot
+  output_dir <- "figure/Gradient_Hellinger/Average"
+  dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
+  file_name_pdf <- file.path(output_dir, "Average_Gradient_Hellinger_Present_Future.pdf")
+  ggsave(file_name_pdf, plot = p, width = 25, height = 20, units = "cm", dpi = 300)
+  file_name_png <- file.path(output_dir, "Average_Gradient_Hellinger_Present_Future.png")
+  ggsave(file_name_png, plot = p, width = 25, height = 20, units = "cm", dpi = 300)
+
+  # Print the plot
+  print(p)
 }
 
