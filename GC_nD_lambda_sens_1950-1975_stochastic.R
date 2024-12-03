@@ -179,7 +179,7 @@ filename <- paste0(formatted_time, "_my_workspace_ERA5_allModels_beforeOptim_3v.
 save.image(file = filename, compress = FALSE)
 
 
-# Creating figure of data and smooth cost with min max interval
+
 # Creating figure for the total cost (Data + Smooth) with min-max range
 {
   library(ggplot2)
@@ -252,7 +252,6 @@ save.image(file = filename, compress = FALSE)
   print(p)
 }
 
-
 # Creating figure of data (standardized) and smooth (normalized) cost with min max interval
 {
   library(ggplot2)
@@ -312,7 +311,7 @@ save.image(file = filename, compress = FALSE)
   )
 
   # Plot the data with confidence intervals using ggplot2
-  ggplot(plot_data, aes(x = lambda)) +
+  p <- ggplot(plot_data, aes(x = lambda)) +
     geom_line(aes(y = data_cost_mean, color = "Data Cost")) +
     geom_ribbon(aes(ymin = data_cost_lower, ymax = data_cost_upper, fill = "Data Cost"), alpha = 0.2) +
     geom_line(aes(y = smooth_cost_mean, color = "Normalized Smooth Cost")) +
@@ -331,6 +330,14 @@ save.image(file = filename, compress = FALSE)
       axis.text = element_text(size = 12),
       legend.position = "bottom"
     )
+  p
+    # Save the plot in the figure folder
+  output_dir <- "figure/Total_Cost"
+  dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
+  file_name_pdf <- file.path(output_dir, "data_smooth_cost_Lambda.pdf")
+  ggsave(file_name_pdf, plot = p, width = 25, height = 20, units = "cm", dpi = 300)
+  file_name_png <- file.path(output_dir, "data_smooth_cost_Lambda.png")
+  ggsave(file_name_png, plot = p, width = 25, height = 20, units = "cm", dpi = 300)
 }
 
 # Figure of the labelling maps
