@@ -16,12 +16,16 @@ for(path in file_paths){source(path)}
 
 range_var_final <- readRDS('ranges/range_var_final_allModelsPar_1950-2023_90deg_3v.rds')
 
+# Modifying the range to be able to capture climate change
+# TODO Modify be recomputing the appropriate ranges for the time period of interest
+
+
 # Setting global variables
 lon <- 0:359
 lat <- -90:90
 # Temporal ranges
 year_present <<- 1950:1975
-year_future <<- 1998:2023
+year_future <<- 2076:2100
 # data directory
 data_dir <<- 'data/CMIP6_merged_all/'
 
@@ -33,10 +37,10 @@ nbins1d <<- 8
 variables <- c('pr', 'tas', 'psl')
 
 # Obtains the list of models from the model names or from a file
-model_names <- read.table('model_names_pr_tas_psl.txt')
+model_names <- read.table('model_names_pr_tas_psl_perfect_model.txt')
 model_names <- as.list(model_names[['V1']])
 # Index of the reference
-ref_index <<- 1
+ref_index <<- 8
 # Custom function to format time into human-readable format
 format_time <- function(time_seconds) {
   hours <- floor(time_seconds / 3600)
@@ -173,7 +177,7 @@ current_time <- Sys.time()
 formatted_time <- format(current_time, "%Y%m%d%H%M")
 
 # Concatenate the formatted time string with your desired filename
-filename <- paste0(formatted_time, "_my_workspace_ERA5_allModels_lambda_sens.RData")
+filename <- paste0(formatted_time, "_my_workspace_ERA5_allModels_beforeOptim_3v.RData")
 
 # Save the workspace using the generated filename
 save.image(file = filename, compress = FALSE)
