@@ -839,32 +839,77 @@ save.image(file = filename, compress = FALSE)
   print(p)
 }
 
-# Compute the floor of gradients (min, max, mean) for all models
+# Plot of the average gradients
 {
-  gradient_floor <- data.frame(
-    Model = seq(1, 22),
-    Mean_Gradient = numeric(22),
-    Min_Gradient = numeric(22),
-    Max_Gradient = numeric(22)
+  # Initialize a data frame to store min, max, and mean gradients for present and future
+  gradient_stats <- data.frame(
+    Lambda = numeric(),
+    Mean_Gradient_Present = numeric(),
+    Min_Gradient_Present = numeric(),
+    Max_Gradient_Present = numeric(),
+    Mean_Gradient_Future = numeric(),
+    Min_Gradient_Future = numeric(),
+    Max_Gradient_Future = numeric()
   )
 
-  # Loop through each model and compute gradients
-  for (m in seq_len(dim(h_dist)[3])) {
-    gradients_present <- gradient_hdist(h_dist[,,m])
-    gradients_future <- gradient_hdist(h_dist_future[,,m])
+  # Initialize a data frame to store model-level gradient stats
+  model_gradient_stats <- data.frame(
+    Mean_Model_Gradient = numeric(),
+    Min_Model_Gradient = numeric(),
+    Max_Model_Gradient = numeric()
+  )
 
-    # Store statistics for each model
-    gradient_floor[m, "Mean_Gradient"] <- mean(c(mean(abs(gradients_present), na.rm = TRUE), mean(abs(gradients_future), na.rm = TRUE)))
-    gradient_floor[m, "Min_Gradient"] <- min(c(min(abs(gradients_present), na.rm = TRUE), min(abs(gradients_future), na.rm = TRUE)))
-    gradient_floor[m, "Max_Gradient"] <- max(c(max(abs(gradients_present), na.rm = TRUE), max(abs(gradients_future), na.rm = TRUE)))
+  # Compute model-level gradients for each model
+  for (model_idx in seq_len(dim(h_dist)[3])) {
+    present_gradients <- apply(h_dist[, , model_idx], 1:2, gradient_hdist)
+    future_gradients <- apply(h_dist_future[, , model_idx], 1:2, gradient_hdist)
+
+    avg_present_gradient <- mean(abs(present_gradients), na.rm = TRUE)
+    avg_future_gradient <- mean(abs(future_gradients), na.rm = TRUE)
+
+    # Store min, max, and mean across the model
+    model_gradient_stats <- rbind(
+      model_gradient_stats,
+      data.frame(
+        Mean_Model_Gradient = (avg_present_gradient + avg_future_gradient) / 2,
+        Min_Model_Gradient = min(c(avg_present_gradient, avg_future_gradient), na.rm = TRUE),
+        Max_Model_Gradient = max(c(avg_present_gradient, avg_future_gradient), na.rm = TRUE)
+      )
+    )
   }
 
-  # Compute the overall floor statistics
-  floor_mean <- mean(gradient_floor$Mean_Gradient)
-  floor_min <- mean(gradient_floor$Min_Gradient)
-  floor_max <- mean(gradient_floor$Max_Gradient)
+  # Overall stats for the gradient floor
+  floor_mean <- mean(model_gradient_stats$Mean_Model_Gradient)
+  floor_min <- min(model_gradient_stats$Min_Model_Gradient)
+  floor_max <- max(model_gradient_stats$Max_Model_Gradient)
 
-  # Plot average Hellinger gradients for present and future with ranges and floor
+  # Loop through each lambda to compute statistics for present and future
+  for (lambda in names(GC_hdist_future)) {
+    # Extract lambda value
+    lambda_value <- as.numeric(sub("lambda_", "", lambda))
+
+    # Compute gradients for all iterations for present
+    iteration_gradients_present <- sapply(GC_hdist[[lambda]], function(x) mean(abs(gradient_hdist(x)), na.rm = TRUE))
+
+    # Compute gradients for all iterations for future
+    iteration_gradients_future <- sapply(GC_hdist_future[[lambda]], function(x) mean(abs(gradient_hdist(x)), na.rm = TRUE))
+
+    # Add statistics to the data frame
+    gradient_stats <- rbind(gradient_stats, data.frame(
+      Lambda = lambda_value,
+      Mean_Gradient_Present = mean(iteration_gradients_present),
+      Min_Gradient_Present = min(iteration_gradients_present),
+      Max_Gradient_Present = max(iteration_gradients_present),
+      Mean_Gradient_Future = mean(iteration_gradients_future),
+      Min_Gradient_Future = min(iteration_gradients_future),
+      Max_Gradient_Future = max(iteration_gradients_future)
+    ))
+  }
+
+  # Sort by lambda for consistent plotting
+  gradient_stats <- gradient_stats[order(gradient_stats$Lambda), ]
+
+  # Plot average Hellinger gradients for present and future with ranges and model-level floor
   p <- ggplot() +
     # Present
     geom_line(data = gradient_stats, aes(x = Lambda, y = Mean_Gradient_Present), color = "blue", size = 1) +
@@ -874,13 +919,13 @@ save.image(file = filename, compress = FALSE)
     geom_line(data = gradient_stats, aes(x = Lambda, y = Mean_Gradient_Future), color = "red", size = 1) +
     geom_point(data = gradient_stats, aes(x = Lambda, y = Mean_Gradient_Future), color = "red", size = 2) +
     geom_ribbon(data = gradient_stats, aes(x = Lambda, ymin = Min_Gradient_Future, ymax = Max_Gradient_Future), fill = "red", alpha = 0.2) +
-    # Gradient floor (constant line with grey range)
+    # Model-Level Floor Gradient
     geom_line(aes(x = gradient_stats$Lambda, y = floor_mean), color = "black", linetype = "dashed", size = 1) +
     geom_ribbon(aes(x = gradient_stats$Lambda, ymin = floor_min, ymax = floor_max), fill = "grey", alpha = 0.3) +
     # Labels and theme
     labs(
       title = "Average Hellinger Gradient with Range and Floor",
-      subtitle = "Blue: Present | Red: Future | Grey: Gradient Floor (Min-Max)",
+      subtitle = "Blue: Present | Red: Future | Grey: Model-Level Gradient Floor (Min-Max)",
       x = "Lambda",
       y = "Average Hellinger Gradient"
     ) +
@@ -895,9 +940,9 @@ save.image(file = filename, compress = FALSE)
   # Save the plot
   output_dir <- "figure/Gradient_Hellinger/Average"
   dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
-  file_name_pdf <- file.path(output_dir, "Average_Gradient_Hellinger_Present_Future_Floor.pdf")
+  file_name_pdf <- file.path(output_dir, "Average_Gradient_Hellinger_Present_Future_Model_Floor.pdf")
   ggsave(file_name_pdf, plot = p, width = 25, height = 20, units = "cm", dpi = 300)
-  file_name_png <- file.path(output_dir, "Average_Gradient_Hellinger_Present_Future_Floor.png")
+  file_name_png <- file.path(output_dir, "Average_Gradient_Hellinger_Present_Future_Model_Floor.png")
   ggsave(file_name_png, plot = p, width = 25, height = 20, units = "cm", dpi = 300)
 
   # Print the plot
