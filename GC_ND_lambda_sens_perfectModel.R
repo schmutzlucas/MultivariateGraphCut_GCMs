@@ -18,6 +18,9 @@ range_var_final <- readRDS('ranges/range_var_final_allModelsPar_1950-2023_90deg_
 
 # Modifying the range to be able to capture climate change
 # TODO Modify be recomputing the appropriate ranges for the time period of interest
+# range_var_final$pr[,,2] <- range_var_final$pr[,,2]*1.1
+# range_var_final$tas[,,2] <- range_var_final$tas[,,2]*1.1
+# range_var_final$psl[,,2] <- range_var_final$psl[,,2]*1.1
 
 
 # Setting global variables
@@ -40,7 +43,7 @@ variables <- c('pr', 'tas', 'psl')
 model_names <- read.table('model_names_pr_tas_psl_perfect_model.txt')
 model_names <- as.list(model_names[['V1']])
 # Index of the reference
-ref_index <<- 8
+ref_index <<- 4
 # Custom function to format time into human-readable format
 format_time <- function(time_seconds) {
   hours <- floor(time_seconds / 3600)
@@ -136,14 +139,15 @@ save.image(file = filename, compress = FALSE)
 
 # Initialize lists to store results and seeds
 GC_results_stoch <- list()
+lambdas_loop <- c(0, 0.05, 0.1, 0.15, 0.2, 0.4, 0.6, 0.8, 1.0)
 
-# Loop through lambda values from 0 to 0.8 in increments of 0.1
-for (lambda in seq(0, 1.2, by = 0.05)) {
+# Loop through the specified lambda values
+for (lambda in lambdas_loop) {
   # Initialize a sub-list to store results for each lambda
   GC_results_stoch[[paste0("lambda_", lambda)]] <- list()
 
   # Run 10 iterations for each lambda with different seeds
-  for (i in 1:50) {
+  for (i in 1:3) {
     # Wrap each iteration in tryCatch to handle errors gracefully
     tryCatch({
       # Run Graph Cut with the current lambda and seed
