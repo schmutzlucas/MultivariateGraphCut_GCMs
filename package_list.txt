@@ -25,3 +25,4 @@ abind
 plotly
 PCICt
 ggeasy
+matrixStats
