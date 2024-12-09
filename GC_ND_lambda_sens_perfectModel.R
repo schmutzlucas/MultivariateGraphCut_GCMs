@@ -14,14 +14,7 @@ source_code_dir <- 'functions/' #The directory where all functions are saved.
 file_paths <- list.files(source_code_dir, full.names = T)
 for(path in file_paths){source(path)}
 
-range_var_final <- readRDS('ranges/range_var_final_allModelsPar_1950-2023_90deg_3v.rds')
-
-# Modifying the range to be able to capture climate change
-# TODO Modify be recomputing the appropriate ranges for the time period of interest
-# range_var_final$pr[,,2] <- range_var_final$pr[,,2]*1.1
-# range_var_final$tas[,,2] <- range_var_final$tas[,,2]*1.1
-# range_var_final$psl[,,2] <- range_var_final$psl[,,2]*1.1
-
+range_var_final <- readRDS('ranges/range_var_final_allModelsPar_1950-2100_90deg_3v.rds')
 
 # Setting global variables
 lon <- 0:359
