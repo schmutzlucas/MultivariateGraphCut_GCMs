@@ -76,25 +76,27 @@ for (ref_index in seq_along(model_names)) {
   h_dist <- array(NA, dim = c(length(lon), length(lat), length(other_model_names)))
   h_dist_future <- array(NA, dim = c(length(lon), length(lat), length(other_model_names)))
   system.time({
-    # Compute Hellinger distances
+    # Compute Hellinger distances using vectorization
     for (m in seq_along(other_model_names)) {
-      for (i in seq_along(lon)) {
-        for (j in seq_along(lat)) {
-          h_dist[i, j, m] <- sqrt(sum((sqrt(pdf_models_present[i, j, , m]) - sqrt(pdf_ref_present[i, j, ]))^2)) / sqrt(2)
-          h_dist_future[i, j, m] <- sqrt(sum((sqrt(pdf_models_future[i, j, , m]) - sqrt(pdf_ref_future[i, j, ]))^2)) / sqrt(2)
-        }
-      }
+      # Compute the difference between the square roots of PDFs for the present
+      diff_present <- sqrt(pdf_models_present[ , , , m]) - sqrt(pdf_ref_present)
+      h_dist[ , , m] <- sqrt(rowSums(diff_present^2, dims = 2)) / sqrt(2)  # Vectorized operation for present
+
+      # Compute the difference between the square roots of PDFs for the future
+      diff_future <- sqrt(pdf_models_future[ , , , m]) - sqrt(pdf_ref_future)
+      h_dist_future[ , , m] <- sqrt(rowSums(diff_future^2, dims = 2)) / sqrt(2)  # Vectorized operation for future
     }
   })
+  cat("Time taken for compute_nd_pdf_optimized: ", format_time(time_optimized["elapsed"]), "\n")
 
-  cat("Time taken for Hellinger distance computation: ", format_time(time_optimized["elapsed"]), "\n")
   # Replace NaN with 0
-  h_dist <- replace(h_dist, is.nan(h_dist), 0)
-  h_dist_future <- replace(h_dist_future, is.nan(h_dist_future), 0)
+  h_dist[is.nan(h_dist)] <- 0
+  h_dist_future[is.nan(h_dist_future)] <- 0
 
   # Store Hellinger distances
   results_list$h_dist[[reference_name]] <- h_dist
   results_list$h_dist_future[[reference_name]] <- h_dist_future
+
 
   # Initialize structure for GC results
   GC_results_stoch <- list()
@@ -113,7 +115,7 @@ for (ref_index in seq_along(model_names)) {
           nBins = nbins1d^3,
           seed = seed,
           verbose = TRUE,
-          rebuild = TRUE
+          rebuild = FALSE
         )
         GC_results_stoch[[paste0("lambda_", lambda)]][[paste0("iteration_", seed)]] <- GC_result_hellinger
       }, error = function(e) {
