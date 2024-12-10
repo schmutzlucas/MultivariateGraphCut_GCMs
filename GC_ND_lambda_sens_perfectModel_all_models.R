@@ -1,174 +1,134 @@
 # Install and load necessary libraries
-list_of_packages <- read.table("package_list.txt", sep="\n")$V1
-new.packages <- list_of_packages[!(list_of_packages %in% installed.packages()[,"Package"])]
-if(length(new.packages))
-  install.packages(new.packages, repos = "https://cloud.r-project.org")
+list_of_packages <- read.table("package_list.txt", sep = "\n")$V1
+new.packages <- list_of_packages[!(list_of_packages %in% installed.packages()[, "Package"])]
+if (length(new.packages)) install.packages(new.packages, repos = "https://cloud.r-project.org")
 
 library(devtools)
 lapply(list_of_packages, library, character.only = TRUE)
 install_github("thaos/gcoWrapR")
 
-
-# Loading local functions
-source_code_dir <- 'functions/' #The directory where all functions are saved.
+# Load local functions
+source_code_dir <- 'functions/' # The directory where all functions are saved.
 file_paths <- list.files(source_code_dir, full.names = T)
-for(path in file_paths){source(path)}
+for (path in file_paths) source(path)
 
 range_var_final <- readRDS('ranges/range_var_final_allModelsPar_1950-2100_90deg_3v.rds')
 
-# Setting global variables
+# Global variables
 lon <- 0:359
 lat <- -90:90
-# Temporal ranges
 year_present <<- 1950:1975
 year_future <<- 2076:2100
-# data directory
 data_dir <<- 'data/CMIP6_merged_all/'
+nbins1d <<- 8  # Bins for PDFs
+variables <- c('pr', 'tas', 'psl')  # Variables used
+model_names <- as.list(read.table('model_names_pr_tas_psl_perfect_model.txt')$V1)
 
-# Bins for the pdfs
-nbins1d <<- 8
-
-
-# List of the variable used
-variables <- c('pr', 'tas', 'psl')
-
-# Obtains the list of models from the model names or from a file
-model_names <- read.table('model_names_pr_tas_psl_perfect_model.txt')
-model_names <- as.list(model_names[['V1']])
-
-# Custom function to format time into human-readable format
+# Helper to format time
 format_time <- function(time_seconds) {
   hours <- floor(time_seconds / 3600)
   minutes <- floor((time_seconds %% 3600) / 60)
   seconds <- round(time_seconds %% 60, 2)
-  if (hours > 0) {
-    return(paste(hours, "hours", minutes, "minutes", seconds, "seconds"))
-  } else if (minutes > 0) {
-    return(paste(minutes, "minutes", seconds, "seconds"))
-  } else {
-    return(paste(seconds, "seconds"))
-  }
+  if (hours > 0) paste(hours, "hours", minutes, "minutes", seconds, "seconds")
+  else if (minutes > 0) paste(minutes, "minutes", seconds, "seconds")
+  else paste(seconds, "seconds")
 }
 
-# Time the execution of the optimized function
+# Add the number of workers as an argument for parallel processing
+num_workers <- 4  # Example, can be modified
 time_optimized <- system.time({
-  # todo add number of workers as argument
-  tmp <- compute_nd_pdf_optimized(variables, model_names, data_dir, year_present, year_future,
-                                  lon, lat, aperm(abind(range_var_final, along = 4), c(1, 2, 4, 3)), nbins1d)
+  tmp <- compute_nd_pdf_optimized(
+    variables, model_names, data_dir, year_present, year_future,
+    lon, lat, aperm(abind(range_var_final, along = 4), c(1, 2, 4, 3)), nbins1d,
+    workers = num_workers
+  )
 })
 cat("Time taken for compute_nd_pdf_optimized: ", format_time(time_optimized["elapsed"]), "\n")
 
-# Choose the reference in the models
-reference_name <<- model_names[ref_index]
-model_names <<- model_names[-ref_index]
-
-
-# Get the current date and time
+# Save workspace with timestamp
 current_time <- Sys.time()
-
-# Format the date and time as a string in the format 'yyyymmddhhmm'
-formatted_time <- format(current_time, "%Y%m%d%H%M")
-
-# Concatenate the formatted time string with your desired filename
-filename <- paste0(formatted_time, "_my_workspace_PerfectModel_pdf.RData")
-
-# Save the workspace using the generated filename
+filename <- paste0(format(current_time, "%Y%m%d%H%M"), "_my_workspace_PerfectModel_pdf.RData")
 save.image(file = filename, compress = FALSE)
 
 pdf_present <- tmp$present
 pdf_future <- tmp$future
 
-for (model_name in model_names) {
-  # Index of the reference
-  # todo modify to index for each model name
-  ref_index <<- "index of the model_name"
+# Structures to store results
+results_list <- list(
+  h_dist = list(),
+  h_dist_future = list(),
+  GC_results_stoch = list()
+)
 
-  pdf_ref_present <- pdf_present[ , , , ref_index]
-  pdf_models_present <- pdf_present[ , , , -ref_index]
+# Iterate over each model as the reference
+for (ref_index in seq_along(model_names)) {
+  reference_name <- model_names[[ref_index]]
+  other_model_names <- model_names[-ref_index]
 
-  pdf_ref_future <- pdf_future[ , , , ref_index]
-  pdf_models_future <- pdf_future[ , , , -ref_index]
-
+  # Reference PDFs
+  pdf_ref_present <- pdf_present[, , , ref_index]
+  pdf_models_present <- pdf_present[, , , -ref_index]
+  pdf_ref_future <- pdf_future[, , , ref_index]
+  pdf_models_future <- pdf_future[, , , -ref_index]
 
   # Initialize arrays for Hellinger distances
-  h_dist <- array(NA, dim = c(length(lon), length(lat), length(model_names)))
-  h_dist_future <- array(NA, dim = c(length(lon), length(lat), length(model_names)))
+  h_dist <- array(NA, dim = c(length(lon), length(lat), length(other_model_names)))
+  h_dist_future <- array(NA, dim = c(length(lon), length(lat), length(other_model_names)))
 
-  # Compute Hellinger distances for each model
-  m <- 1
-  for (model_name in model_names) {
+  # Compute Hellinger distances
+  for (m in seq_along(other_model_names)) {
     for (i in seq_along(lon)) {
       for (j in seq_along(lat)) {
-        # Compute Hellinger distance for the present
         h_dist[i, j, m] <- sqrt(sum((sqrt(pdf_models_present[i, j, , m]) - sqrt(pdf_ref_present[i, j, ]))^2)) / sqrt(2)
-
-        # Compute Hellinger distance for the future
         h_dist_future[i, j, m] <- sqrt(sum((sqrt(pdf_models_future[i, j, , m]) - sqrt(pdf_ref_future[i, j, ]))^2)) / sqrt(2)
       }
     }
-    m <- m + 1
   }
 
-  # Replace NaN values with 0 in Hellinger distance arrays
+  # Replace NaN with 0
   h_dist <- replace(h_dist, is.nan(h_dist), 0)
   h_dist_future <- replace(h_dist_future, is.nan(h_dist_future), 0)
 
-  # Check distributions
-  hist(h_dist)
-  hist(h_dist_future)
+  # Store Hellinger distances
+  results_list$h_dist[[reference_name]] <- h_dist
+  results_list$h_dist_future[[reference_name]] <- h_dist_future
 
-
-
-  # Get the current date and time
-  current_time <- Sys.time()
-
-  # Format the date and time as a string in the format 'yyyymmddhhmm'
-  formatted_time <- format(current_time, "%Y%m%d%H%M")
-
-  # Concatenate the formatted time string with your desired filename
-  filename <- paste0(formatted_time, "_my_workspace_PerfectModel_pdf_hdist.RData")
-
-  # Save the workspace using the generated filename
-  save.image(file = filename, compress = FALSE)
-
-
-  # Initialize lists to store results and seeds
+  # Initialize structure for GC results
   GC_results_stoch <- list()
   lambdas_loop <- c(0, 0.1, 0.2, 0.4, 0.6, 0.8, 1.0, 2)
 
-  # Loop through the specified lambda values
+  # Loop through lambdas
   for (lambda in lambdas_loop) {
-    # Initialize a sub-list to store results for each lambda
     GC_results_stoch[[paste0("lambda_", lambda)]] <- list()
-
-    # Run 10 iterations for each lambda with different seeds
-    for (i in 1:1) {
-      # Wrap each iteration in tryCatch to handle errors gracefully
+    for (seed in 1:10) {  # Example: 10 iterations
       tryCatch({
-        # Run Graph Cut with the current lambda and seed
         GC_result_hellinger <- GraphCutHellinger_nD(
           pdf_models_future = pdf_models_present,
           h_dist = h_dist,
-          weight_data = 1,               # Fixed data weight
-          weight_smooth = lambda,        # Varying lambda
+          weight_data = 1,
+          weight_smooth = lambda,
           nBins = nbins1d^3,
-          seed = i,               # Use the pre-generated seed
+          seed = seed,
           verbose = TRUE,
           rebuild = FALSE
         )
-
-        # Store the result in the sub-list for this lambda
-        GC_results_stoch[[paste0("lambda_", lambda)]][[paste0("iteration_", i)]] <- GC_result_hellinger
-
-        # Save results after each iteration to ensure progress is not lost
-        save(GC_results_stoch, file = "GC_result_hellinger_lambda.RData", compress = FALSE)
-
+        GC_results_stoch[[paste0("lambda_", lambda)]][[paste0("iteration_", seed)]] <- GC_result_hellinger
       }, error = function(e) {
-        cat("Error encountered with lambda =", lambda, "and iteration =", i, ": ", e$message, "\n")
+        cat("Error with lambda =", lambda, "iteration =", seed, ":", e$message, "\n")
       })
     }
   }
+
+  # Store GC results
+  results_list$GC_results_stoch[[reference_name]] <- GC_results_stoch
+
+  # Save intermediate results
+  save(results_list, file = paste0("PerfectModel/results_PerfectModel_", reference_name, ".RData"))
 }
+
+# Save final results
+save(results_list, file = "PerfectModel/results_PerfectModel_AllModels.RData")
+
 
 # Get the current date and time
 current_time <- Sys.time()
