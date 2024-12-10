@@ -79,93 +79,94 @@ pdf_present <- tmp$present
 pdf_future <- tmp$future
 
 for (model_name in model_names) {
-# Index of the reference
-# todo modify to index for each model name
-ref_index <<- index of the model_name
+  # Index of the reference
+  # todo modify to index for each model name
+  ref_index <<- "index of the model_name"
 
-pdf_ref_present <- pdf_present[ , , , ref_index]
-pdf_models_present <- pdf_present[ , , , -ref_index]
+  pdf_ref_present <- pdf_present[ , , , ref_index]
+  pdf_models_present <- pdf_present[ , , , -ref_index]
 
-pdf_ref_future <- pdf_future[ , , , ref_index]
-pdf_models_future <- pdf_future[ , , , -ref_index]
+  pdf_ref_future <- pdf_future[ , , , ref_index]
+  pdf_models_future <- pdf_future[ , , , -ref_index]
 
 
-# Initialize arrays for Hellinger distances
-h_dist <- array(NA, dim = c(length(lon), length(lat), length(model_names)))
-h_dist_future <- array(NA, dim = c(length(lon), length(lat), length(model_names)))
+  # Initialize arrays for Hellinger distances
+  h_dist <- array(NA, dim = c(length(lon), length(lat), length(model_names)))
+  h_dist_future <- array(NA, dim = c(length(lon), length(lat), length(model_names)))
 
-# Compute Hellinger distances for each model
-m <- 1
-for (model_name in model_names) {
-  for (i in seq_along(lon)) {
-    for (j in seq_along(lat)) {
-      # Compute Hellinger distance for the present
-      h_dist[i, j, m] <- sqrt(sum((sqrt(pdf_models_present[i, j, , m]) - sqrt(pdf_ref_present[i, j, ]))^2)) / sqrt(2)
+  # Compute Hellinger distances for each model
+  m <- 1
+  for (model_name in model_names) {
+    for (i in seq_along(lon)) {
+      for (j in seq_along(lat)) {
+        # Compute Hellinger distance for the present
+        h_dist[i, j, m] <- sqrt(sum((sqrt(pdf_models_present[i, j, , m]) - sqrt(pdf_ref_present[i, j, ]))^2)) / sqrt(2)
 
-      # Compute Hellinger distance for the future
-      h_dist_future[i, j, m] <- sqrt(sum((sqrt(pdf_models_future[i, j, , m]) - sqrt(pdf_ref_future[i, j, ]))^2)) / sqrt(2)
+        # Compute Hellinger distance for the future
+        h_dist_future[i, j, m] <- sqrt(sum((sqrt(pdf_models_future[i, j, , m]) - sqrt(pdf_ref_future[i, j, ]))^2)) / sqrt(2)
+      }
     }
+    m <- m + 1
   }
-  m <- m + 1
-}
 
-# Replace NaN values with 0 in Hellinger distance arrays
-h_dist <- replace(h_dist, is.nan(h_dist), 0)
-h_dist_future <- replace(h_dist_future, is.nan(h_dist_future), 0)
+  # Replace NaN values with 0 in Hellinger distance arrays
+  h_dist <- replace(h_dist, is.nan(h_dist), 0)
+  h_dist_future <- replace(h_dist_future, is.nan(h_dist_future), 0)
 
-# Check distributions
-hist(h_dist)
-hist(h_dist_future)
+  # Check distributions
+  hist(h_dist)
+  hist(h_dist_future)
 
 
 
-# Get the current date and time
-current_time <- Sys.time()
+  # Get the current date and time
+  current_time <- Sys.time()
 
-# Format the date and time as a string in the format 'yyyymmddhhmm'
-formatted_time <- format(current_time, "%Y%m%d%H%M")
+  # Format the date and time as a string in the format 'yyyymmddhhmm'
+  formatted_time <- format(current_time, "%Y%m%d%H%M")
 
-# Concatenate the formatted time string with your desired filename
-filename <- paste0(formatted_time, "_my_workspace_PerfectModel_pdf_hdist.RData")
+  # Concatenate the formatted time string with your desired filename
+  filename <- paste0(formatted_time, "_my_workspace_PerfectModel_pdf_hdist.RData")
 
-# Save the workspace using the generated filename
-save.image(file = filename, compress = FALSE)
+  # Save the workspace using the generated filename
+  save.image(file = filename, compress = FALSE)
 
 
-# Initialize lists to store results and seeds
-GC_results_stoch <- list()
-lambdas_loop <- c(0, 0.1, 0.2, 0.4, 0.6, 0.8, 1.0, 2)
+  # Initialize lists to store results and seeds
+  GC_results_stoch <- list()
+  lambdas_loop <- c(0, 0.1, 0.2, 0.4, 0.6, 0.8, 1.0, 2)
 
-# Loop through the specified lambda values
-for (lambda in lambdas_loop) {
-  # Initialize a sub-list to store results for each lambda
-  GC_results_stoch[[paste0("lambda_", lambda)]] <- list()
+  # Loop through the specified lambda values
+  for (lambda in lambdas_loop) {
+    # Initialize a sub-list to store results for each lambda
+    GC_results_stoch[[paste0("lambda_", lambda)]] <- list()
 
-  # Run 10 iterations for each lambda with different seeds
-  for (i in 1:1) {
-    # Wrap each iteration in tryCatch to handle errors gracefully
-    tryCatch({
-      # Run Graph Cut with the current lambda and seed
-      GC_result_hellinger <- GraphCutHellinger_nD(
-        pdf_models_future = pdf_models_present,
-        h_dist = h_dist,
-        weight_data = 1,               # Fixed data weight
-        weight_smooth = lambda,        # Varying lambda
-        nBins = nbins1d^3,
-        seed = i,               # Use the pre-generated seed
-        verbose = TRUE,
-        rebuild = FALSE
-      )
+    # Run 10 iterations for each lambda with different seeds
+    for (i in 1:1) {
+      # Wrap each iteration in tryCatch to handle errors gracefully
+      tryCatch({
+        # Run Graph Cut with the current lambda and seed
+        GC_result_hellinger <- GraphCutHellinger_nD(
+          pdf_models_future = pdf_models_present,
+          h_dist = h_dist,
+          weight_data = 1,               # Fixed data weight
+          weight_smooth = lambda,        # Varying lambda
+          nBins = nbins1d^3,
+          seed = i,               # Use the pre-generated seed
+          verbose = TRUE,
+          rebuild = FALSE
+        )
 
-      # Store the result in the sub-list for this lambda
-      GC_results_stoch[[paste0("lambda_", lambda)]][[paste0("iteration_", i)]] <- GC_result_hellinger
+        # Store the result in the sub-list for this lambda
+        GC_results_stoch[[paste0("lambda_", lambda)]][[paste0("iteration_", i)]] <- GC_result_hellinger
 
-      # Save results after each iteration to ensure progress is not lost
-      save(GC_results_stoch, file = "GC_result_hellinger_lambda.RData", compress = FALSE)
+        # Save results after each iteration to ensure progress is not lost
+        save(GC_results_stoch, file = "GC_result_hellinger_lambda.RData", compress = FALSE)
 
-    }, error = function(e) {
-      cat("Error encountered with lambda =", lambda, "and iteration =", i, ": ", e$message, "\n")
-    })
+      }, error = function(e) {
+        cat("Error encountered with lambda =", lambda, "and iteration =", i, ": ", e$message, "\n")
+      })
+    }
   }
 }
 
