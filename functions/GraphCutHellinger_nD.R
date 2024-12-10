@@ -51,7 +51,7 @@ GraphCutHellinger_nD <- function(
   verbose,
   rebuild
 ) {
-  n_labs <- length(model_names)
+  n_labs <- dim(h_dist)[3]
   width <- ncol(pdf_models_future[,,,1])
   height <- nrow(pdf_models_future[,,,1])
 

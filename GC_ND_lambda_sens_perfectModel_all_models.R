@@ -62,6 +62,7 @@ results_list <- list(
 
 # Iterate over each model as the reference
 for (ref_index in seq_along(model_names)) {
+  print(ref_index)
   reference_name <- model_names[[ref_index]]
   other_model_names <- model_names[-ref_index]
 
@@ -74,17 +75,19 @@ for (ref_index in seq_along(model_names)) {
   # Initialize arrays for Hellinger distances
   h_dist <- array(NA, dim = c(length(lon), length(lat), length(other_model_names)))
   h_dist_future <- array(NA, dim = c(length(lon), length(lat), length(other_model_names)))
-
-  # Compute Hellinger distances
-  for (m in seq_along(other_model_names)) {
-    for (i in seq_along(lon)) {
-      for (j in seq_along(lat)) {
-        h_dist[i, j, m] <- sqrt(sum((sqrt(pdf_models_present[i, j, , m]) - sqrt(pdf_ref_present[i, j, ]))^2)) / sqrt(2)
-        h_dist_future[i, j, m] <- sqrt(sum((sqrt(pdf_models_future[i, j, , m]) - sqrt(pdf_ref_future[i, j, ]))^2)) / sqrt(2)
+  system.time({
+    # Compute Hellinger distances
+    for (m in seq_along(other_model_names)) {
+      for (i in seq_along(lon)) {
+        for (j in seq_along(lat)) {
+          h_dist[i, j, m] <- sqrt(sum((sqrt(pdf_models_present[i, j, , m]) - sqrt(pdf_ref_present[i, j, ]))^2)) / sqrt(2)
+          h_dist_future[i, j, m] <- sqrt(sum((sqrt(pdf_models_future[i, j, , m]) - sqrt(pdf_ref_future[i, j, ]))^2)) / sqrt(2)
+        }
       }
     }
-  }
+  })
 
+  cat("Time taken for Hellinger distance computation: ", format_time(time_optimized["elapsed"]), "\n")
   # Replace NaN with 0
   h_dist <- replace(h_dist, is.nan(h_dist), 0)
   h_dist_future <- replace(h_dist_future, is.nan(h_dist_future), 0)
@@ -100,7 +103,7 @@ for (ref_index in seq_along(model_names)) {
   # Loop through lambdas
   for (lambda in lambdas_loop) {
     GC_results_stoch[[paste0("lambda_", lambda)]] <- list()
-    for (seed in 1:10) {  # Example: 10 iterations
+    for (seed in 1:1) {  # Example: 10 iterations
       tryCatch({
         GC_result_hellinger <- GraphCutHellinger_nD(
           pdf_models_future = pdf_models_present,
@@ -110,7 +113,7 @@ for (ref_index in seq_along(model_names)) {
           nBins = nbins1d^3,
           seed = seed,
           verbose = TRUE,
-          rebuild = FALSE
+          rebuild = TRUE
         )
         GC_results_stoch[[paste0("lambda_", lambda)]][[paste0("iteration_", seed)]] <- GC_result_hellinger
       }, error = function(e) {

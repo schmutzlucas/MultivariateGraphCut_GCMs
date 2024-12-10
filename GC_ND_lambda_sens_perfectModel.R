@@ -58,10 +58,6 @@ time_optimized <- system.time({
 })
 cat("Time taken for compute_nd_pdf_optimized: ", format_time(time_optimized["elapsed"]), "\n")
 
-# Choose the reference in the models
-reference_name <<- model_names[ref_index]
-model_names <<- model_names[-ref_index]
-
 
 # Get the current date and time
 current_time <- Sys.time()
@@ -80,6 +76,10 @@ pdf_future <- tmp$future
 
 # Index of the reference
 ref_index <<- 8
+
+# Choose the reference in the models
+reference_name <<- model_names[ref_index]
+model_names <<- model_names[-ref_index]
 
 pdf_ref_present <- pdf_present[ , , , ref_index]
 pdf_models_present <- pdf_present[ , , , -ref_index]
@@ -143,9 +143,11 @@ for (lambda in lambdas_loop) {
   for (i in 1:1) {
     # Wrap each iteration in tryCatch to handle errors gracefully
     tryCatch({
+      cat("Dimensions of pdf_models_present: ", dim(pdf_models_present), "\n")
+      cat("Dimensions of h_dist: ", dim(h_dist), "\n")
       # Run Graph Cut with the current lambda and seed
       GC_result_hellinger <- GraphCutHellinger_nD(
-        pdf_models_future = pdf_models_present,
+        pdf_models_future = pdf_models_future,
         h_dist = h_dist,
         weight_data = 1,               # Fixed data weight
         weight_smooth = lambda,        # Varying lambda
