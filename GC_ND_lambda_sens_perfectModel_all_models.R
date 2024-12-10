@@ -78,8 +78,10 @@ save.image(file = filename, compress = FALSE)
 pdf_present <- tmp$present
 pdf_future <- tmp$future
 
+for (model_name in model_names) {
 # Index of the reference
-ref_index <<- 8
+# todo modify to index for each model name
+ref_index <<- index of the model_name
 
 pdf_ref_present <- pdf_present[ , , , ref_index]
 pdf_models_present <- pdf_present[ , , , -ref_index]
