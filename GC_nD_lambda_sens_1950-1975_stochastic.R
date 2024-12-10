@@ -79,11 +79,11 @@ save.image(file = filename, compress = FALSE)
 pdf_present <- tmp$present
 pdf_future <- tmp$future
 
-pdf_ref_present <- pdf_present[ , , , 1]
-pdf_models_present <- pdf_present[ , , , -1]
+pdf_ref_present <- pdf_present[ , , , ref_index]
+pdf_models_present <- pdf_present[ , , , -ref_index]
 
-pdf_ref_future <- pdf_future[ , , , 1]
-pdf_models_future <- pdf_future[ , , , -1]
+pdf_ref_future <- pdf_future[ , , , ref_index]
+pdf_models_future <- pdf_future[ , , , -ref_index]
 
 rm(pdf_present, pdf_future)
 

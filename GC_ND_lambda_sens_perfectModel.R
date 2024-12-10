@@ -36,7 +36,7 @@ variables <- c('pr', 'tas', 'psl')
 model_names <- read.table('model_names_pr_tas_psl_perfect_model.txt')
 model_names <- as.list(model_names[['V1']])
 # Index of the reference
-ref_index <<- 4
+ref_index <<- 8
 # Custom function to format time into human-readable format
 format_time <- function(time_seconds) {
   hours <- floor(time_seconds / 3600)
@@ -71,7 +71,7 @@ current_time <- Sys.time()
 formatted_time <- format(current_time, "%Y%m%d%H%M")
 
 # Concatenate the formatted time string with your desired filename
-filename <- paste0(formatted_time, "_my_workspace_ERA5_allModels_beforeOptim_3v.RData")
+filename <- paste0(formatted_time, "_my_workspace_PerfectModel_pdf.RData")
 
 # Save the workspace using the generated filename
 save.image(file = filename, compress = FALSE)
@@ -79,11 +79,11 @@ save.image(file = filename, compress = FALSE)
 pdf_present <- tmp$present
 pdf_future <- tmp$future
 
-pdf_ref_present <- pdf_present[ , , , 1]
-pdf_models_present <- pdf_present[ , , , -1]
+pdf_ref_present <- pdf_present[ , , , ref_index]
+pdf_models_present <- pdf_present[ , , , -ref_index]
 
-pdf_ref_future <- pdf_future[ , , , 1]
-pdf_models_future <- pdf_future[ , , , -1]
+pdf_ref_future <- pdf_future[ , , , ref_index]
+pdf_models_future <- pdf_future[ , , , -ref_index]
 
 rm(pdf_present, pdf_future)
 
@@ -124,7 +124,7 @@ current_time <- Sys.time()
 formatted_time <- format(current_time, "%Y%m%d%H%M")
 
 # Concatenate the formatted time string with your desired filename
-filename <- paste0(formatted_time, "_my_workspace_ERA5_allModels_beforeOptim_3v.RData")
+filename <- paste0(formatted_time, "_my_workspace_PerfectModel_pdf_hdist.RData")
 
 # Save the workspace using the generated filename
 save.image(file = filename, compress = FALSE)
@@ -132,7 +132,7 @@ save.image(file = filename, compress = FALSE)
 
 # Initialize lists to store results and seeds
 GC_results_stoch <- list()
-lambdas_loop <- c(0, 0.05, 0.1, 0.15, 0.2, 0.4, 0.6, 0.8, 1.0)
+lambdas_loop <- c(0, 0.1, 0.2, 0.4, 0.6, 0.8, 1.0, 2)
 
 # Loop through the specified lambda values
 for (lambda in lambdas_loop) {
@@ -140,7 +140,7 @@ for (lambda in lambdas_loop) {
   GC_results_stoch[[paste0("lambda_", lambda)]] <- list()
 
   # Run 10 iterations for each lambda with different seeds
-  for (i in 1:3) {
+  for (i in 1:1) {
     # Wrap each iteration in tryCatch to handle errors gracefully
     tryCatch({
       # Run Graph Cut with the current lambda and seed
@@ -174,7 +174,7 @@ current_time <- Sys.time()
 formatted_time <- format(current_time, "%Y%m%d%H%M")
 
 # Concatenate the formatted time string with your desired filename
-filename <- paste0(formatted_time, "_my_workspace_ERA5_allModels_beforeOptim_3v.RData")
+filename <- paste0(formatted_time, "_my_workspace_PerfectModel_stochResults.RData")
 
 # Save the workspace using the generated filename
 save.image(file = filename, compress = FALSE)
