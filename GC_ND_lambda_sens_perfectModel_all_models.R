@@ -53,54 +53,41 @@ save.image(file = filename, compress = FALSE)
 pdf_present <- tmp$present
 pdf_future <- tmp$future
 
-# Structures to store results
-results_list <- list(
-  h_dist = list(),
-  h_dist_future = list(),
-  GC_results_stoch = list()
-)
+rm(tmp)
 
-# Iterate over each model as the reference
-for (ref_index in seq_along(model_names)) {
-  print(ref_index)
+library(future.apply)
+
+# Set up parallel processing with 4 workers
+workers <- 4
+plan(multisession, workers = workers)
+options(future.globals.maxSize = 16 * 1024^3)  # Increase max size to 16 GiB
+
+# Function to process a single reference model
+process_reference <- function(ref_index, model_names, pdf_ref_present, pdf_models_present, pdf_ref_future, pdf_models_future, lon, lat, nbins1d, lambdas_loop) {
   reference_name <- model_names[[ref_index]]
   other_model_names <- model_names[-ref_index]
-
-  # Reference PDFs
-  pdf_ref_present <- pdf_present[, , , ref_index]
-  pdf_models_present <- pdf_present[, , , -ref_index]
-  pdf_ref_future <- pdf_future[, , , ref_index]
-  pdf_models_future <- pdf_future[, , , -ref_index]
 
   # Initialize arrays for Hellinger distances
   h_dist <- array(NA, dim = c(length(lon), length(lat), length(other_model_names)))
   h_dist_future <- array(NA, dim = c(length(lon), length(lat), length(other_model_names)))
-  system.time({
-    # Compute Hellinger distances using vectorization
-    for (m in seq_along(other_model_names)) {
-      # Compute the difference between the square roots of PDFs for the present
-      diff_present <- sqrt(pdf_models_present[ , , , m]) - sqrt(pdf_ref_present)
-      h_dist[ , , m] <- sqrt(rowSums(diff_present^2, dims = 2)) / sqrt(2)  # Vectorized operation for present
 
-      # Compute the difference between the square roots of PDFs for the future
-      diff_future <- sqrt(pdf_models_future[ , , , m]) - sqrt(pdf_ref_future)
-      h_dist_future[ , , m] <- sqrt(rowSums(diff_future^2, dims = 2)) / sqrt(2)  # Vectorized operation for future
-    }
-  })
-  cat("Time taken for compute_nd_pdf_optimized: ", format_time(time_optimized["elapsed"]), "\n")
+  # Compute Hellinger distances using vectorization
+  for (m in seq_along(other_model_names)) {
+    # Compute the difference between the square roots of PDFs for the present
+    diff_present <- sqrt(pdf_models_present[, , , m]) - sqrt(pdf_ref_present)
+    h_dist[, , m] <- sqrt(rowSums(diff_present^2, dims = 2)) / sqrt(2)  # Vectorized operation for present
+
+    # Compute the difference between the square roots of PDFs for the future
+    diff_future <- sqrt(pdf_models_future[, , , m]) - sqrt(pdf_ref_future)
+    h_dist_future[, , m] <- sqrt(rowSums(diff_future^2, dims = 2)) / sqrt(2)  # Vectorized operation for future
+  }
 
   # Replace NaN with 0
   h_dist[is.nan(h_dist)] <- 0
   h_dist_future[is.nan(h_dist_future)] <- 0
 
-  # Store Hellinger distances
-  results_list$h_dist[[reference_name]] <- h_dist
-  results_list$h_dist_future[[reference_name]] <- h_dist_future
-
-
   # Initialize structure for GC results
   GC_results_stoch <- list()
-  lambdas_loop <- c(0, 0.1, 0.2, 0.4, 0.6, 0.8, 1.0, 2)
 
   # Loop through lambdas
   for (lambda in lambdas_loop) {
@@ -124,15 +111,56 @@ for (ref_index in seq_along(model_names)) {
     }
   }
 
-  # Store GC results
-  results_list$GC_results_stoch[[reference_name]] <- GC_results_stoch
-
-  # Save intermediate results
-  save(results_list, file = paste0("PerfectModel/results_PerfectModel_", reference_name, ".RData"))
+  # Return results for this reference model
+  return(list(
+    h_dist = h_dist,
+    h_dist_future = h_dist_future,
+    GC_results_stoch = GC_results_stoch,
+    reference_name = reference_name
+  ))
 }
 
-# Save final results
-save(results_list, file = "PerfectModel/results_PerfectModel_AllModels.RData")
+
+# Run the outer loop in parallel
+reference_results <- future_lapply(seq_along(model_names), function(ref_index) {
+  # Extract the slices for the current reference
+  pdf_ref_present <- pdf_present[, , , ref_index]
+  pdf_models_present <- pdf_present[, , , -ref_index]
+  pdf_ref_future <- pdf_future[, , , ref_index]
+  pdf_models_future <- pdf_future[, , , -ref_index]
+
+  # Call process_reference with only the necessary slices
+  process_reference(
+    ref_index = ref_index,
+    model_names = model_names,
+    pdf_ref_present = pdf_ref_present,
+    pdf_models_present = pdf_models_present,
+    pdf_ref_future = pdf_ref_future,
+    pdf_models_future = pdf_models_future,
+    lon = lon,
+    lat = lat,
+    nbins1d = nbins1d,
+    lambdas_loop = c(0, 0.1, 0.2, 0.4, 0.6, 0.8, 1.0, 2)
+  )
+})
+
+
+# Store results in the main results_list
+for (res in reference_results) {
+  results_list$h_dist[[res$reference_name]] <- res$h_dist
+  results_list$h_dist_future[[res$reference_name]] <- res$h_dist_future
+  results_list$GC_results_stoch[[res$reference_name]] <- res$GC_results_stoch
+}
+
+# Save the final results list
+save(results_list, file = "PerfectModel/results_PerfectModel_All.RData")
+
+# Reset to sequential processing
+plan(sequential)
+
+# Print completion message
+cat("Parallel processing completed for all reference models.\n")
+
 
 
 # Get the current date and time
