@@ -119,7 +119,7 @@ process_reference <- function(ref_index, model_names, pdf_ref_present, pdf_model
     reference_name = reference_name
   ))
 }
-
++
 
 # Run the outer loop in parallel
 reference_results <- future_lapply(seq_along(model_names), function(ref_index) {
@@ -142,8 +142,14 @@ reference_results <- future_lapply(seq_along(model_names), function(ref_index) {
     nbins1d = nbins1d,
     lambdas_loop = c(0, 0.1, 0.2, 0.4, 0.6, 0.8, 1.0, 2)
   )
-})
+}, future.seed = TRUE)
 
+# Initialize the results_list structure
+results_list <- list(
+  h_dist = list(),
+  h_dist_future = list(),
+  GC_results_stoch = list()
+)
 
 # Store results in the main results_list
 for (res in reference_results) {
@@ -153,7 +159,7 @@ for (res in reference_results) {
 }
 
 # Save the final results list
-save(results_list, file = "PerfectModel/results_PerfectModel_All.RData")
+save(results_list, file = "PerfectModel/results_PerfectModel_All.RData", compress = FALSE)
 
 # Reset to sequential processing
 plan(sequential)
@@ -170,7 +176,7 @@ current_time <- Sys.time()
 formatted_time <- format(current_time, "%Y%m%d%H%M")
 
 # Concatenate the formatted time string with your desired filename
-filename <- paste0(formatted_time, "_my_workspace_PerfectModel_stochResults.RData")
+filename <- paste0(formatted_time, "_my_workspace_PerfectModel_stochResults_Complete.RData")
 
 # Save the workspace using the generated filename
 save.image(file = filename, compress = FALSE)
