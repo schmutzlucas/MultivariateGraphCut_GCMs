@@ -181,6 +181,86 @@ filename <- paste0(formatted_time, "_my_workspace_PerfectModel_stochResults_Comp
 # Save the workspace using the generated filename
 save.image(file = filename, compress = FALSE)
 
+# Plot fo the average H_dist for each lambdas and each ref
+
+{library(ggplot2)
+
+# Initialize a data frame to store the average Hellinger distance for each model and lambda
+hdist_future_summary <- data.frame(
+  Lambda = numeric(),
+  Average_Hellinger = numeric(),
+  Reference_Model = character()
+)
+
+# Loop through each reference model
+for (ref_model in names(results_list$GC_results_stoch)) {
+  # Extract Hellinger distances for the current reference model
+  h_dist_future <- results_list$h_dist_future[[ref_model]]
+  gc_results <- results_list$GC_results_stoch[[ref_model]]
+
+  # Compute other models by excluding the current reference model
+  other_model_names <- model_names[model_names != ref_model]
+
+  # Loop through each lambda
+  for (lambda in names(gc_results)) {
+    # Initialize a matrix to store average Hellinger distances
+    avg_hdist_future <- numeric()
+
+    # Loop through each iteration for the current lambda
+    for (iteration in names(gc_results[[lambda]])) {
+      # Extract the label attribution matrix
+      label_attribution <- gc_results[[lambda]][[iteration]]$label_attribution
+
+      # Initialize a matrix to store Hellinger distances for the future
+      hdist_map <- matrix(NA, nrow = nrow(label_attribution), ncol = ncol(label_attribution))
+
+      # Map the label attribution to the corresponding Hellinger distances
+      for (l in seq_along(other_model_names)) {
+        is_label <- label_attribution == l
+        hdist_map[is_label] <- h_dist_future[, , l][is_label]
+      }
+
+      # Compute the average Hellinger distance over the grid for the future
+      avg_hdist_future <- c(avg_hdist_future, mean(hdist_map, na.rm = TRUE))
+    }
+
+    # Add the average Hellinger distance for this lambda to the summary data frame
+    hdist_future_summary <- rbind(hdist_future_summary, data.frame(
+      Lambda = as.numeric(sub("lambda_", "", lambda)),
+      Average_Hellinger = mean(avg_hdist_future),
+      Reference_Model = ref_model
+    ))
+  }
+}
+
+# Plot Hellinger distances for the future with one line per reference model
+p <- ggplot(hdist_future_summary, aes(x = Lambda, y = Average_Hellinger, color = Reference_Model)) +
+  geom_line(linewidth = 1) +
+  geom_point(size = 2) +
+  labs(
+    title = "Hellinger Distance for Future Across Lambdas",
+    x = "Lambda",
+    y = "Average Hellinger Distance",
+    color = "Reference Model"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 16, hjust = 0.5),
+    axis.title = element_text(size = 14),
+    axis.text = element_text(size = 12),
+    legend.position = "right",
+    legend.key.size = unit(0.6, "cm"),
+    legend.text = element_text(size = 10)
+  )
+
+# Save the plot
+output_dir <- "figure/Hellinger_Future/"
+dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
+ggsave(file.path(output_dir, "Hellinger_Future_per_Reference_Model.png"), plot = p, width = 12, height = 8, dpi = 300)
+print(p)
+}
+
+# Plot of the 
 
 
 # Creating figure for the total cost (Data + Smooth) with min-max range
