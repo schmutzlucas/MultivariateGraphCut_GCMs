@@ -133,6 +133,7 @@ filename <- paste0(formatted_time, "_my_workspace_ERA5_allModels_beforeOptim_3v.
 save.image(file = filename, compress = FALSE)
 
 GC_result_hellinger <- list()
+smooth_cost <- 0.6
 # Wrap each iteration in tryCatch to handle errors gracefully
 tryCatch({
   # Run Graph Cut with the varying smooth cost
@@ -151,6 +152,39 @@ tryCatch({
 }, error = function(e) {
   cat("Error encountered with smooth cost =", smooth_cost, ": ", e$message, "\n")
 })
+
+# Compute Multi-Model Mean for Present
+MMM_present <- apply(pdf_models_present, c(1, 2, 3), mean)
+
+# Compute Multi-Model Mean for Future
+MMM_future <- apply(pdf_models_future, c(1, 2, 3), mean)
+
+
+# Initialize arrays to store the Hellinger distance for MMM
+h_dist_MMM <- array(NA, dim = c(length(lon), length(lat)))
+h_dist_MMM_future <- array(NA, dim = c(length(lon), length(lat)))
+
+# Compute Hellinger distance for the Multi-Model Mean
+for (i in seq_along(lon)) {
+  for (j in seq_along(lat)) {
+    # Compute Hellinger distance for present
+    h_dist_MMM[i, j] <- sqrt(sum((sqrt(MMM_present[i, j, ]) - sqrt(pdf_ref_present[i, j, ]))^2)) / sqrt(2)
+
+    # Compute Hellinger distance for future
+    h_dist_MMM_future[i, j] <- sqrt(sum((sqrt(MMM_future[i, j, ]) - sqrt(pdf_ref_future[i, j, ]))^2)) / sqrt(2)
+  }
+}
+
+# Replace NaN values with 0
+h_dist_MMM <- replace(h_dist_MMM, is.nan(h_dist_MMM), 0)
+h_dist_MMM_future <- replace(h_dist_MMM_future, is.nan(h_dist_MMM_future), 0)
+
+# Visualize or analyze the results
+hist(h_dist_MMM)
+hist(h_dist_MMM_future)
+
+mean(h_dist_MMM_future)
+
 
 # Get the current date and time
 current_time <- Sys.time()
@@ -282,19 +316,15 @@ for (smooth_cost in names(GC_results)) {
 
 
 
-GC_hdist_future <- list()
-GC_hdist <- list()
 
-for (smooth_cost in names(GC_results)) {
-  # Initialize a lon x lat matrix for each smooth cost
-  GC_hdist[[smooth_cost]] <- matrix(NA, nrow = length(lon), ncol = length(lat))
-  GC_hdist_future[[smooth_cost]] <- matrix(NA, nrow = length(lon), ncol = length(lat))
+# Initialize a lon x lat matrix for each smooth cost
+GC_hdist<- matrix(NA, nrow = length(lon), ncol = length(lat))
+GC_hdist_future <- matrix(NA, nrow = length(lon), ncol = length(lat))
 
-  for(l in 1:(length(model_names))){  # Ensure that indexing aligns with model names
-    islabel <- which(GC_results[[smooth_cost]]$label_attribution == l)
-    GC_hdist[[smooth_cost]][islabel] <- h_dist[,,l][islabel]
-    GC_hdist_future[[smooth_cost]][islabel] <- h_dist_future[,,l][islabel]
-  }
+for(l in 1:(length(model_names))){  # Ensure that indexing aligns with model names
+  islabel <- which(GC_result_hellinger$label_attribution == l)
+  GC_hdist[islabel] <- h_dist[,,l][islabel]
+  GC_hdist_future[islabel] <- h_dist_future[,,l][islabel]
 }
 
 library(ggplot2)
