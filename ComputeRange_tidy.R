@@ -40,8 +40,8 @@ invisible(lapply(list.files(source_code_dir, full.names = TRUE), source))
 # --------- 3. Global Variables Definition ---------
 # Define constants and data paths
 lon <- 0:359                     # Longitude range
-lat <- -70:70                    # Latitude range
-year_interest <- 1960:2022       # Years of interest for analysis
+lat <- -90:90                 # Latitude range
+year_interest <- 1950:2023      # Years of interest for analysis
 data_dir <- 'data/CMIP6_merged_all/'  # Directory containing climate model data
 variables <- c('pr', 'tas', 'psl')    # Climate variables
 model_names <- read.table('model_names_pr_tas_psl.txt')$V1  # List of models

@@ -61,13 +61,13 @@ cat("Script started at: ", format(start_time, "%Y-%m-%d %H:%M:%S"), "\n")
 # Define longitude, latitude, years of interest, data directory, variables, and model names
 lon <- 0:359
 lat <- -90:90
-year_interest <- 1960:2022
+year_interest <- 1950:2023
 data_dir <- 'data/CMIP6_merged_all/'
 variables <- c('pr', 'tas', 'psl')
 model_names <- read.table('model_names_pr_tas_psl.txt')$V1
 
 # 4. Set up parallel backend using `future` package
-# This enables parallel processing with 8 workers for faster computation
+# This enables parallel processing with 4 workers for faster computation
 plan(multisession, workers = 4)
 
 # 5. Function to calculate the minimum and maximum ranges for each variable
