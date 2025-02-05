@@ -76,22 +76,20 @@ calculate_ranges <- function(variable, models, data_dir, years, lon_grid, lat_gr
     lon_indices <- which(ncvar_get(nc_data, "lon") %in% lon_grid)
     lat_indices <- which(ncvar_get(nc_data, "lat") %in% lat_grid)
 
-    # Use hyperslabs to directly calculate min and max for time dimension
-    min_values <- ncvar_get(
+    # Retrieve data slice
+    tmp_grid_var <- ncvar_get(
       nc_data, variable,
       start = c(min(lon_indices), min(lat_indices), min(year_indices)),
       count = c(length(lon_indices), length(lat_indices), length(year_indices)),
       collapse_degen = FALSE
-    ) %>%
-      apply(c(1, 2), min, na.rm = TRUE)
+    )
 
-    max_values <- ncvar_get(
-      nc_data, variable,
-      start = c(min(lon_indices), min(lat_indices), min(year_indices)),
-      count = c(length(lon_indices), length(lat_indices), length(year_indices)),
-      collapse_degen = FALSE
-    ) %>%
-      apply(c(1, 2), max, na.rm = TRUE)
+    # Transform the variable data if necessary (e.g., log transformation for precipitation)
+    if (variable == 'pr') tmp_grid_var <- log(tmp_grid_var + 1)
+
+    # Use hyperslabs to directly calculate min and max for time dimension
+    min_values <- apply(tmp_grid_var, c(1, 2), min, na.rm = TRUE)
+    max_values <- apply(tmp_grid_var, c(1, 2), max, na.rm = TRUE)
 
     # Store the results in range_array
     range_array[ , , 1, m] <- min_values
