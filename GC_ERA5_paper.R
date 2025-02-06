@@ -271,100 +271,84 @@ ggsave(paste0(name, ".png"), plot = p, width = 20, height = 15, units = "cm", dp
 
 
 {
-library(plotly)
+  library(plotly)
 
-# Example grid point indices
-lon_index <- 180+6 # Example longitude index
-lat_index <- 90 + 46  # Example latitude index
+  # Example grid point indices
+  lon_index <- 180+6 # Example longitude index
+  lat_index <- 90 + 46  # Example latitude index
 
-# Extract the 512-bin PDF vector for the specific grid point
-pdf_vector <- pdf_ref_present[lon_index, lat_index, ]
+  # Extract the 512-bin PDF vector for the specific grid point
+  pdf_vector <- pdf_ref_present[lon_index, lat_index, ]
 
-# Reshape the PDF vector into a 3D array of dimensions [8, 8, 8]
-nbins <- 8
-pdf_3d <- array(pdf_vector, dim = c(nbins, nbins, nbins))
+  # Reshape the PDF vector into a 3D array of dimensions [8, 8, 8]
+  nbins <- 8
+  pdf_3d <- array(pdf_vector, dim = c(nbins, nbins, nbins))
 
-# Extract the ranges for the variables from range_var_final
-range_var <- range_var_final$ranges
-var1_min <- range_var$pr[lon_index, lat_index, 1]
-var1_max <- range_var$pr[lon_index, lat_index, 2]
-var2_min <- range_var$tas[lon_index, lat_index, 1]
-var2_max <- range_var$tas[lon_index, lat_index, 2]
-var3_min <- range_var$psl[lon_index, lat_index, 1]
-var3_max <- range_var$psl[lon_index, lat_index, 2]
+  # Extract the ranges for the variables from range_var_final
+  range_var <- range_var_final$ranges
+  var1_min <- range_var$pr[lon_index, lat_index, 1]
+  var1_max <- range_var$pr[lon_index, lat_index, 2]
+  var2_min <- range_var$tas[lon_index, lat_index, 1]
+  var2_max <- range_var$tas[lon_index, lat_index, 2]
+  var3_min <- range_var$psl[lon_index, lat_index, 1]
+  var3_max <- range_var$psl[lon_index, lat_index, 2]
 
-# Create bin edges for each variable
-x_bins <- seq(var1_min, var1_max, length.out = nbins + 1)
-y_bins <- seq(var2_min, var2_max, length.out = nbins + 1)
-z_bins <- seq(var3_min, var3_max, length.out = nbins + 1)
+  # Create bin edges for each variable
+  x_bins <- seq(var1_min, var1_max, length.out = nbins + 1)
+  y_bins <- seq(var2_min, var2_max, length.out = nbins + 1)
+  z_bins <- seq(var3_min, var3_max, length.out = nbins + 1)
 
-# Create the coordinates for the centers of the bins
-x_centers <- (x_bins[-1] + x_bins[-length(x_bins)]) / 2
-y_centers <- (y_bins[-1] + y_bins[-length(y_bins)]) / 2
-z_centers <- (z_bins[-1] + z_bins[-length(z_bins)]) / 2
+  # Create the coordinates for the centers of the bins
+  x_centers <- (x_bins[-1] + x_bins[-length(x_bins)]) / 2
+  y_centers <- (y_bins[-1] + y_bins[-length(y_bins)]) / 2
+  z_centers <- (z_bins[-1] + z_bins[-length(z_bins)]) / 2
 
-# Expand the grid of coordinates
-grid <- expand.grid(x = x_centers, y = y_centers, z = z_centers)
+  # Expand the grid of coordinates
+  grid <- expand.grid(x = x_centers, y = y_centers, z = z_centers)
 
-# Flatten the PDF array into a vector
-pdf_flat <- as.vector(pdf_3d)
+  # Flatten the PDF array into a vector
+  pdf_flat <- as.vector(pdf_3d)
 
-# Combine the coordinates with the PDF values
-plot_data <- data.frame(
-  x = grid$x,
-  y = grid$y,
-  z = grid$z,
-  value = pdf_flat
-)
-
-# Normalize PDF values for marker size
-normalized_pdf <- pdf_flat / max(pdf_flat, na.rm = TRUE)
-
-# Plot the 3D histogram
-fig <- plot_ly(
-  data = plot_data,
-  x = ~x,
-  y = ~y,
-  z = ~z,
-  type = "scatter3d",
-  mode = "markers",
-  marker = list(
-    size = ~normalized_pdf * 75,  # Adjust size scaling factor
-    color = ~value,
-    colorscale = "Viridis",
-    showscale = TRUE
-  ),
-  text = ~paste("PDF Value:", round(value, 4))
-) %>%
-  layout(
-    scene = list(
-      xaxis = list(title = "Variable 1 (pr)"),
-      yaxis = list(title = "Variable 2 (tas)"),
-      zaxis = list(title = "Variable 3 (psl)")
-    ),
-    title = paste("3D PDF for Grid Point (Lon:", lon_index, ", Lat:", lat_index, ")")
+  # Combine the coordinates with the PDF values
+  plot_data <- data.frame(
+    x = grid$x,
+    y = grid$y,
+    z = grid$z,
+    value = pdf_flat
   )
 
-# Show the plot
-fig
+  # Normalize PDF values for marker size
+  normalized_pdf <- pdf_flat / max(pdf_flat, na.rm = TRUE)
+
+  # Plot the 3D histogram
+  fig <- plot_ly(
+    data = plot_data,
+    x = ~x,
+    y = ~y,
+    z = ~z,
+    type = "scatter3d",
+    mode = "markers",
+    marker = list(
+      size = ~normalized_pdf * 75,  # Adjust size scaling factor
+      color = ~value,
+      colorscale = "Viridis",
+      showscale = TRUE
+    ),
+    text = ~paste("PDF Value:", round(value, 4))
+  ) %>%
+    layout(
+      scene = list(
+        xaxis = list(title = "Variable 1 (pr)"),
+        yaxis = list(title = "Variable 2 (tas)"),
+        zaxis = list(title = "Variable 3 (psl)")
+      ),
+      title = paste("3D PDF for Grid Point (Lon:", lon_index, ", Lat:", lat_index, ")")
+    )
+
+  # Show the plot
+  fig
 }
 
-
-
-# Load the RDS file
-file_path <- "ranges/range_var_final_allModelsPar_1950-2023_90deg_3v.rds"
-range_data <- readRDS(file_path)
-
-# Apply log transformation for "pr" variable
-if ("pr" %in% names(range_data$ranges)) {
-  pr_data <- range_data$ranges$pr
-  pr_data[, , 1] <- log(pr_data[, , 1] + 1)  # Min values
-  pr_data[, , 2] <- log(pr_data[, , 2] + 1)  # Max values
-  range_data$ranges$pr <- pr_data
-}
-
-# Save the updated ranges back to the file
-saveRDS(range_data, file_path)
 
 
 # Given a PDF for a specific grid point
@@ -392,88 +376,88 @@ cat("Sum of selected values:", sum(selected_values), "\n")
 
 
 {
-library(plotly)
+  library(plotly)
 
-# Example grid point indices
-lon_index <- 180 + 6 # Example longitude index
-lat_index <- 90 + 46  # Example latitude index
+  # Example grid point indices
+  lon_index <- 180 + 6 # Example longitude index
+  lat_index <- 90 + 46  # Example latitude index
 
-# Extract the 512-bin PDF vector for the specific grid point
-pdf_vector <- pdf_ref_present[lon_index, lat_index, ]
+  # Extract the 512-bin PDF vector for the specific grid point
+  pdf_vector <- pdf_ref_present[lon_index, lat_index, ]
 
-# Reshape the PDF vector into a 3D array of dimensions [8, 8, 8]
-nbins <- 8
-pdf_3d <- array(pdf_vector, dim = c(nbins, nbins, nbins))
+  # Reshape the PDF vector into a 3D array of dimensions [8, 8, 8]
+  nbins <- 8
+  pdf_3d <- array(pdf_vector, dim = c(nbins, nbins, nbins))
 
-# Extract the ranges for the variables from range_var_final
-range_var <- range_var_final$ranges
-var1_min <- range_var$pr[lon_index, lat_index, 1]
-var1_max <- range_var$pr[lon_index, lat_index, 2]
-var2_min <- range_var$tas[lon_index, lat_index, 1]
-var2_max <- range_var$tas[lon_index, lat_index, 2]
-var3_min <- range_var$psl[lon_index, lat_index, 1]
-var3_max <- range_var$psl[lon_index, lat_index, 2]
+  # Extract the ranges for the variables from range_var_final
+  range_var <- range_var_final$ranges
+  var1_min <- range_var$pr[lon_index, lat_index, 1]
+  var1_max <- range_var$pr[lon_index, lat_index, 2]
+  var2_min <- range_var$tas[lon_index, lat_index, 1]
+  var2_max <- range_var$tas[lon_index, lat_index, 2]
+  var3_min <- range_var$psl[lon_index, lat_index, 1]
+  var3_max <- range_var$psl[lon_index, lat_index, 2]
 
-# Create bin edges for each variable
-x_bins <- seq(var1_min, var1_max, length.out = nbins + 1)
-y_bins <- seq(var2_min, var2_max, length.out = nbins + 1)
-z_bins <- seq(var3_min, var3_max, length.out = nbins + 1)
+  # Create bin edges for each variable
+  x_bins <- seq(var1_min, var1_max, length.out = nbins + 1)
+  y_bins <- seq(var2_min, var2_max, length.out = nbins + 1)
+  z_bins <- seq(var3_min, var3_max, length.out = nbins + 1)
 
-# Create the coordinates for the centers of the bins
-x_centers <- (x_bins[-1] + x_bins[-length(x_bins)]) / 2
-y_centers <- (y_bins[-1] + y_bins[-length(y_bins)]) / 2
-z_centers <- (z_bins[-1] + z_bins[-length(z_bins)]) / 2
+  # Create the coordinates for the centers of the bins
+  x_centers <- (x_bins[-1] + x_bins[-length(x_bins)]) / 2
+  y_centers <- (y_bins[-1] + y_bins[-length(y_bins)]) / 2
+  z_centers <- (z_bins[-1] + z_bins[-length(z_bins)]) / 2
 
-# Expand the grid of coordinates
-grid <- expand.grid(x = x_centers, y = y_centers, z = z_centers)
+  # Expand the grid of coordinates
+  grid <- expand.grid(x = x_centers, y = y_centers, z = z_centers)
 
-# Flatten the PDF array into a vector
-pdf_flat <- as.vector(pdf_3d)
+  # Flatten the PDF array into a vector
+  pdf_flat <- as.vector(pdf_3d)
 
-# Identify the indices of the bins contributing to the 10% smallest cumulative sum
-sorted_indices <- order(pdf_flat)
-cumulative_sum <- cumsum(pdf_flat[sorted_indices])
-threshold_index <- which(cumulative_sum >= 0.1)[1]
-selected_indices <- sorted_indices[1:threshold_index]
+  # Identify the indices of the bins contributing to the 10% smallest cumulative sum
+  sorted_indices <- order(pdf_flat)
+  cumulative_sum <- cumsum(pdf_flat[sorted_indices])
+  threshold_index <- which(cumulative_sum >= 0.1)[1]
+  selected_indices <- sorted_indices[1:threshold_index]
 
-# Filter data for the selected bins
-highlight_data <- data.frame(
-  x = grid$x[selected_indices],
-  y = grid$y[selected_indices],
-  z = grid$z[selected_indices],
-  value = pdf_flat[selected_indices]
-)
-
-# Normalize PDF values for marker size
-normalized_pdf <- highlight_data$value / max(highlight_data$value, na.rm = TRUE)
-
-# Plot the 3D histogram with highlighted bins
-fig <- plot_ly(
-  data = highlight_data,
-  x = ~x,
-  y = ~y,
-  z = ~z,
-  type = "scatter3d",
-  mode = "markers",
-  marker = list(
-    size = ~normalized_pdf * 75,  # Adjust size scaling factor
-    color = ~value,
-    colorscale = "Viridis",
-    showscale = TRUE
-  ),
-  text = ~paste("PDF Value:", round(value, 4))
-) %>%
-  layout(
-    scene = list(
-      xaxis = list(title = "Variable 1 (pr)"),
-      yaxis = list(title = "Variable 2 (tas)"),
-      zaxis = list(title = "Variable 3 (psl)")
-    ),
-    title = paste("3D PDF (Highlighted 10%) for Grid Point (Lon:", lon_index, ", Lat:", lat_index, ")")
+  # Filter data for the selected bins
+  highlight_data <- data.frame(
+    x = grid$x[selected_indices],
+    y = grid$y[selected_indices],
+    z = grid$z[selected_indices],
+    value = pdf_flat[selected_indices]
   )
 
-# Show the plot
-fig
+  # Normalize PDF values for marker size
+  normalized_pdf <- highlight_data$value / max(highlight_data$value, na.rm = TRUE)
+
+  # Plot the 3D histogram with highlighted bins
+  fig <- plot_ly(
+    data = highlight_data,
+    x = ~x,
+    y = ~y,
+    z = ~z,
+    type = "scatter3d",
+    mode = "markers",
+    marker = list(
+      size = ~normalized_pdf * 75,  # Adjust size scaling factor
+      color = ~value,
+      colorscale = "Viridis",
+      showscale = TRUE
+    ),
+    text = ~paste("PDF Value:", round(value, 4))
+  ) %>%
+    layout(
+      scene = list(
+        xaxis = list(title = "Variable 1 (pr)"),
+        yaxis = list(title = "Variable 2 (tas)"),
+        zaxis = list(title = "Variable 3 (psl)")
+      ),
+      title = paste("3D PDF (Highlighted 10%) for Grid Point (Lon:", lon_index, ", Lat:", lat_index, ")")
+    )
+
+  # Show the plot
+  fig
 }
 
 
@@ -563,3 +547,172 @@ hist(MMM_hdist_future, xlim = c(0, 1), ylim = c(0, 25000), main = "Histogram of 
      xlab = "Hellinger Distance", ylab = "Frequency", col = "lightblue", border = "black")
 hist(GC_hdist_future, xlim = c(0, 1), ylim = c(0, 25000), main = "Histogram of GC MV Hellinger Distances",
      xlab = "Hellinger Distance", ylab = "Frequency", col = "lightblue", border = "black")
+
+
+
+
+# Marginal :
+{
+  library(ggplot2)
+
+  # Example grid point indices
+  lon_index <- 180+6 # Example longitude index
+  lat_index <- 90 + 46  # Example latitude index
+
+  # Extract the 512-bin PDF vector for the specific grid point
+  pdf_vector <- pdf_ref_present[lon_index, lat_index, ]
+
+  # Reshape the PDF vector into a 3D array of dimensions [8, 8, 8]
+  nbins <- 8
+  pdf_3d <- array(pdf_vector, dim = c(nbins, nbins, nbins))
+
+  # Extract the ranges for tas (Variable 2)
+  range_var <- range_var_final$ranges
+  var2_min <- range_var$tas[lon_index, lat_index, 1]
+  var2_max <- range_var$tas[lon_index, lat_index, 2]
+
+  # Create bin edges and centers for tas
+  tas_bins <- seq(var2_min, var2_max, length.out = nbins + 1)
+  tas_centers <- (tas_bins[-1] + tas_bins[-length(tas_bins)]) / 2  # Midpoints
+
+  # Compute the marginal PDF by summing over pr (Var1) and psl (Var3)
+  tas_marginal <- apply(pdf_3d, 2, sum)  # Sum over dimensions 1 and 3
+
+  # Normalize the marginal PDF (optional)
+  tas_marginal <- tas_marginal / sum(tas_marginal)
+
+  # Create a data frame for ggplot
+  marginal_data <- data.frame(
+    tas = tas_centers,
+    probability = tas_marginal
+  )
+
+  # Plot the marginal distribution
+  ggplot(marginal_data, aes(x = tas, y = probability)) +
+    geom_bar(stat = "identity", fill = "skyblue", color = "black") +
+    labs(
+      title = paste("Marginal PDF of tas for Grid Point (Lon:", lon_index, ", Lat:", lat_index, ")"),
+      x = "Temperature (tas)",
+      y = "Probability Density"
+    ) +
+    theme_minimal()
+}
+
+
+# Level sets HDR based approach of the outlier selection.
+{
+  library(plotly)
+
+  # ---------------------------
+  # 1. Set up the grid point and data
+  # ---------------------------
+
+  # Example grid point indices
+  lon_index <- 180 + 6  # Example longitude index
+  lat_index <- 90 + 46  # Example latitude index
+
+  # Extract the 512-bin PDF vector for the specific grid point
+  pdf_vector <- pdf_ref_present[lon_index, lat_index, ]
+
+  # Reshape the PDF vector into a 3D array of dimensions [8, 8, 8]
+  nbins <- 8
+  pdf_3d <- array(pdf_vector, dim = c(nbins, nbins, nbins))
+
+  # ---------------------------
+  # 2. Set up bin edges and centers for each variable
+  # ---------------------------
+  # Extract the ranges for the variables from range_var_final
+  range_var <- range_var_final$ranges
+  var1_min <- range_var$pr[lon_index, lat_index, 1]
+  var1_max <- range_var$pr[lon_index, lat_index, 2]
+  var2_min <- range_var$tas[lon_index, lat_index, 1]
+  var2_max <- range_var$tas[lon_index, lat_index, 2]
+  var3_min <- range_var$psl[lon_index, lat_index, 1]
+  var3_max <- range_var$psl[lon_index, lat_index, 2]
+
+  # Create bin edges for each variable
+  x_bins <- seq(var1_min, var1_max, length.out = nbins + 1)
+  y_bins <- seq(var2_min, var2_max, length.out = nbins + 1)
+  z_bins <- seq(var3_min, var3_max, length.out = nbins + 1)
+
+  # Compute the centers of the bins
+  x_centers <- (x_bins[-1] + x_bins[-length(x_bins)]) / 2
+  y_centers <- (y_bins[-1] + y_bins[-length(y_bins)]) / 2
+  z_centers <- (z_bins[-1] + z_bins[-length(z_bins)]) / 2
+
+  # Expand the grid of coordinates for plotting
+  grid <- expand.grid(x = x_centers, y = y_centers, z = z_centers)
+
+  # Flatten the PDF array into a vector
+  pdf_flat <- as.vector(pdf_3d)
+
+  # ---------------------------
+  # 3. Define the level set for the central region (HDR)
+  # ---------------------------
+  # We wish to consider the "central" region that contains 90% of the probability mass,
+  # so that the outliers represent the remaining 10%.
+  tau <- 0.10         # Fraction of outlier mass
+  target_mass <- 1 - tau  # 0.90: the mass in the central region Q(tau)
+
+  # Sort the indices in descending order so that the highest density bins come first
+  sorted_indices_desc <- order(pdf_flat, decreasing = TRUE)
+
+  # Compute the cumulative sum of the PDF values for the sorted bins
+  cumulative_sum_desc <- cumsum(pdf_flat[sorted_indices_desc])
+
+  # Find the smallest index m such that the cumulative sum is >= target_mass (0.90)
+  threshold_index <- which(cumulative_sum_desc >= target_mass)[1]
+
+  # The threshold density kappa is the PDF value at that sorted index
+  kappa <- pdf_flat[sorted_indices_desc[threshold_index]]
+
+  # Define the central region Q(tau): all bins with PDF >= kappa
+  central_region_indices <- which(pdf_flat >= kappa)
+
+  # Define the outlier region as the complement of the central region
+  outlier_indices <- setdiff(seq_along(pdf_flat), central_region_indices)
+
+  # ---------------------------
+  # 4. Prepare data for plotting the outlier bins
+  # ---------------------------
+  highlight_data <- data.frame(
+    x = grid$x[outlier_indices],
+    y = grid$y[outlier_indices],
+    z = grid$z[outlier_indices],
+    value = pdf_flat[outlier_indices]
+  )
+
+  # Normalize PDF values for marker sizing
+  normalized_pdf <- highlight_data$value / max(highlight_data$value, na.rm = TRUE)
+
+  # ---------------------------
+  # 5. Plot the outlier bins using plotly
+  # ---------------------------
+  fig <- plot_ly(
+    data = highlight_data,
+    x = ~x,
+    y = ~y,
+    z = ~z,
+    type = "scatter3d",
+    mode = "markers",
+    marker = list(
+      size = ~normalized_pdf * 75,  # Adjust the scaling factor as needed
+      color = ~value,
+      colorscale = "Viridis",
+      showscale = TRUE
+    ),
+    text = ~paste("PDF Value:", round(value, 4))
+  ) %>% layout(
+    scene = list(
+      xaxis = list(title = "Variable 1 (pr)"),
+      yaxis = list(title = "Variable 2 (tas)"),
+      zaxis = list(title = "Variable 3 (psl)")
+    ),
+    title = paste("Outlier Bins (10% of Mass) for Grid Point (Lon:", lon_index, ", Lat:", lat_index, ")")
+  )
+
+  # Display the plot
+  fig
+
+}
+
