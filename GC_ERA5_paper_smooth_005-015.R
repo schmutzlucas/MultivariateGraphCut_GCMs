@@ -216,15 +216,43 @@ tryCatch({
 })
 
 # Initialize a lon x lat matrix for each smooth cost
-GC_hdist <- matrix(NA, nrow = length(lon), ncol = length(lat))
-GC_hdist_future <- matrix(NA, nrow = length(lon), ncol = length(lat))
+GC_hdist_0.05 <- matrix(NA, nrow = length(lon), ncol = length(lat))
+GC_hdist_future_0.05 <- matrix(NA, nrow = length(lon), ncol = length(lat))
 
 for(l in 1:(length(model_names))){  # Ensure that indexing aligns with model names
-  islabel <- which(GC_result$label_attribution == l)
-  GC_hdist[islabel] <- h_dist[,,l][islabel]
-  GC_hdist_future[islabel] <- h_dist_future[,,l][islabel]
+  islabel <- which(GC_result_0.05$label_attribution == l)
+  GC_hdist_0.05[islabel] <- h_dist[,,l][islabel]
+  GC_hdist_future_0.05[islabel] <- h_dist_future[,,l][islabel]
 }
 
+
+# Initialize a lon x lat matrix for each smooth cost
+GC_hdist_0.1 <- matrix(NA, nrow = length(lon), ncol = length(lat))
+GC_hdist_future_0.1 <- matrix(NA, nrow = length(lon), ncol = length(lat))
+
+for(l in 1:(length(model_names))){  # Ensure that indexing aligns with model names
+  islabel <- which(GC_result_0.1$label_attribution == l)
+  GC_hdist_0.1[islabel] <- h_dist[,,l][islabel]
+  GC_hdist_future_0.1[islabel] <- h_dist_future[,,l][islabel]
+}
+
+# Initialize a lon x lat matrix for each smooth cost
+GC_hdist_0.15 <- matrix(NA, nrow = length(lon), ncol = length(lat))
+GC_hdist_future_0.15 <- matrix(NA, nrow = length(lon), ncol = length(lat))
+
+for(l in 1:(length(model_names))){  # Ensure that indexing aligns with model names
+  islabel <- which(GC_result_0.15$label_attribution == l)
+  GC_hdist_0.15[islabel] <- h_dist[,,l][islabel]
+  GC_hdist_future_0.15[islabel] <- h_dist_future[,,l][islabel]
+}
+
+hist(GC_hdist_future_0.05)
+hist(GC_hdist_future_0.1)
+hist(GC_hdist_future_0.15)
+
+mean(GC_hdist_future_0.05)
+mean(GC_hdist_future_0.1)
+mean(GC_hdist_future_0.15)
 
 # Compute Multi-Model Mean for Present
 MMM_present <- apply(pdf_models_present, c(1, 2, 3), mean)
@@ -277,7 +305,7 @@ save.image(file = filename, compress = FALSE)
 
 
 # Extract the label attribution for the current smooth cost
-GC_labels <- GC_result$label_attribution
+GC_labels <- GC_result_0.05$label_attribution
 
 # Convert the label matrix to a data frame for plotting
 label_df <- melt(GC_labels, c("lon", "lat"), value.name = "label_attribution")
@@ -525,12 +553,12 @@ cat("Sum of selected values:", sum(selected_values), "\n")
 
 
 
-test_df <- melt(GC_hdist_future, c("lon", "lat"), value.name = "H_dist")
+test_df <- melt(GC_hdist_future_0.05, c("lon", "lat"), value.name = "H_dist")
 
 p5 <- ggplot() +
   geom_tile(data=test_df, aes(x=lon, y=lat-90, fill=H_dist))+
   labs(subtitle = 'Projection period : 1999 - 2014')+
-  ggtitle(paste0('GraphCut MV', ': Mean Hellinger distance = ', round(mean(GC_hdist_future), 2)))+
+  ggtitle(paste0('GraphCut MV', ': Mean Hellinger distance = ', round(mean(GC_hdist_future_0.05), 2)))+
   scale_fill_gradient(low = "white", high = "#015a8c", limits = c(0.1, 0.70), oob = scales::squish)+
   borders("world2", colour = 'black', lwd = 0.12) +
   scale_x_continuous(, expand = c(0, 0)) +
@@ -555,13 +583,89 @@ p5 <- ggplot() +
 p5
 
 # Generate file name based on the smooth cost
-name <- paste0("figure/Hdist_GCMV_1950-1975_3v")
+name <- paste0("figure/Hdist_GCMV_1950-1975_3v_smooth_005")
 
 # Save the plot as both PDF and PNG
 ggsave(paste0(name, ".pdf"), plot = p5, width = 20, height = 15, units = "cm", dpi = 300)
 ggsave(paste0(name, ".png"), plot = p5, width = 20, height = 15, units = "cm", dpi = 300)
 
 
+
+
+test_df <- melt(GC_hdist_future_0.1, c("lon", "lat"), value.name = "H_dist")
+
+p5 <- ggplot() +
+  geom_tile(data=test_df, aes(x=lon, y=lat-90, fill=H_dist))+
+  labs(subtitle = 'Projection period : 1999 - 2014')+
+  ggtitle(paste0('GraphCut MV', ': Mean Hellinger distance = ', round(mean(GC_hdist_future_0.1), 2)))+
+  scale_fill_gradient(low = "white", high = "#015a8c", limits = c(0.1, 0.70), oob = scales::squish)+
+  borders("world2", colour = 'black', lwd = 0.12) +
+  scale_x_continuous(, expand = c(0, 0)) +
+  scale_y_continuous(, expand = c(0,0))+
+  theme(legend.position = 'bottom')+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  theme(panel.background = element_blank())+
+  xlab('Longitude')+
+  ylab('Latitude') +
+  labs(fill='Hellinger \nDistance')+
+  theme_bw()+
+  theme(legend.key.size = unit(1, 'cm'), #change legend key size
+        legend.key.height = unit(1.4, 'cm'), #change legend key height
+        legend.key.width = unit(0.4, 'cm'), #change legend key width
+        legend.title = element_text(size=16), #change legend title font sizen
+        legend.text = element_text(size=12))+ #change legend text font size
+  theme(plot.title = element_text(size=24),
+        plot.subtitle = element_text(size = 20,hjust=0.5),
+        axis.text=element_text(size=14),
+        axis.title=element_text(size=16),)+
+  easy_center_title()
+p5
+
+# Generate file name based on the smooth cost
+name <- paste0("figure/Hdist_GCMV_1950-1975_3v_smooth_010")
+
+# Save the plot as both PDF and PNG
+ggsave(paste0(name, ".pdf"), plot = p5, width = 20, height = 15, units = "cm", dpi = 300)
+ggsave(paste0(name, ".png"), plot = p5, width = 20, height = 15, units = "cm", dpi = 300)
+
+
+
+
+test_df <- melt(GC_hdist_future_0.15, c("lon", "lat"), value.name = "H_dist")
+
+p5 <- ggplot() +
+  geom_tile(data=test_df, aes(x=lon, y=lat-90, fill=H_dist))+
+  labs(subtitle = 'Projection period : 1999 - 2014')+
+  ggtitle(paste0('GraphCut MV', ': Mean Hellinger distance = ', round(mean(GC_hdist_future_0.15), 2)))+
+  scale_fill_gradient(low = "white", high = "#015a8c", limits = c(0.1, 0.70), oob = scales::squish)+
+  borders("world2", colour = 'black', lwd = 0.12) +
+  scale_x_continuous(, expand = c(0, 0)) +
+  scale_y_continuous(, expand = c(0,0))+
+  theme(legend.position = 'bottom')+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  theme(panel.background = element_blank())+
+  xlab('Longitude')+
+  ylab('Latitude') +
+  labs(fill='Hellinger \nDistance')+
+  theme_bw()+
+  theme(legend.key.size = unit(1, 'cm'), #change legend key size
+        legend.key.height = unit(1.4, 'cm'), #change legend key height
+        legend.key.width = unit(0.4, 'cm'), #change legend key width
+        legend.title = element_text(size=16), #change legend title font sizen
+        legend.text = element_text(size=12))+ #change legend text font size
+  theme(plot.title = element_text(size=24),
+        plot.subtitle = element_text(size = 20,hjust=0.5),
+        axis.text=element_text(size=14),
+        axis.title=element_text(size=16),)+
+  easy_center_title()
+p5
+
+# Generate file name based on the smooth cost
+name <- paste0("figure/Hdist_GCMV_1950-1975_3v_smooth_015")
+
+# Save the plot as both PDF and PNG
+ggsave(paste0(name, ".pdf"), plot = p5, width = 20, height = 15, units = "cm", dpi = 300)
+ggsave(paste0(name, ".png"), plot = p5, width = 20, height = 15, units = "cm", dpi = 300)
 
 test_df <- melt(MMM_hdist_future, c("lon", "lat"), value.name = "H_dist")
 

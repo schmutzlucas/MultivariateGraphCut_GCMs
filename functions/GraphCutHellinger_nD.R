@@ -157,7 +157,6 @@ GraphCutHellinger_nD <- function(
   # Return results
   list(
     "label_attribution" = label_attribution,
-    "Data and smooth cost" = data_smooth_list,
-    'h_dist_GC_present' = label_attribution  # Assuming 'h_dist_GC_present' refers to the updated label_attribution
+    "Data and smooth cost" = data_smooth_list
   )
 }
