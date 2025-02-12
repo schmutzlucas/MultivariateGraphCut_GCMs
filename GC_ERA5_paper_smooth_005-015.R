@@ -778,7 +778,7 @@ hist(GC_hdist_future, xlim = c(0, 1), ylim = c(0, 25000), main = "Histogram of G
   lat_index <- 90 + 46  # Example latitude index
 
   # Extract the 512-bin PDF vector for the specific grid point
-  pdf_vector <- pdf_ref_present[lon_index, lat_index, ]
+  pdf_vector <- pdf_ref_future[lon_index, lat_index, ]
 
   # Reshape the PDF vector into a 3D array of dimensions [8, 8, 8]
   nbins <- 8
