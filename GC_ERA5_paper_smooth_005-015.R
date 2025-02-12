@@ -6,7 +6,7 @@ if(length(new.packages))
 
 library(devtools)
 lapply(list_of_packages, library, character.only = TRUE)
-install_github("thaos/gcoWrapR")
+install_github("schmutzlucas/gcoWrapR")
 
 
 # Loading local functions
@@ -19,18 +19,21 @@ range_var_final <- readRDS('ranges/range_var_final_allModelsPar_1950-2023_90deg_
 # Setting global variables
 lon <- 0:359
 lat <- -90:90
+lon_size <- length(lon)
+lat_size <- length(lat)
 # Temporal ranges
 year_present <<- 1950:1975
 year_future <<- 1998:2023
 # data directory
 data_dir <<- 'data/CMIP6_merged_all/'
 
-# Bins for the pdfs
-nbins1d <<- 8
-
-
 # List of the variable used
 variables <- c('pr', 'tas', 'psl')
+
+# Bins for the pdfs
+nbins1d <<- 8
+nbins <<- nbins1d^(length(variables))
+
 
 # Obtains the list of models from the model names or from a file
 model_names <- read.table('model_names_pr_tas_psl.txt')
@@ -132,20 +135,20 @@ filename <- paste0(formatted_time, "_my_workspace_ERA5_allModels_beforeOptim_3v.
 # Save the workspace using the generated filename
 save.image(file = filename, compress = FALSE)
 
-GC_result_hellinger <- list()
+
 smooth_cost <- 0.6
 # Wrap each iteration in tryCatch to handle errors gracefully
 tryCatch({
   # Run Graph Cut with the varying smooth cost
-  GC_result <- GraphCutHellinger_nD(
+  GC_result2 <- GraphCutHellinger_nD(
     pdf_models_future = pdf_models_present,
     h_dist = h_dist,
     weight_data = 1,               # Fixed data weight
     weight_smooth = smooth_cost,   # Varying smooth cost
     nBins = nbins1d^3,
-    seed = 1,
+    seed = 2,
     verbose = TRUE,
-    rebuild = FALSE
+    rebuild = TRUE
   )
 
 
@@ -302,10 +305,144 @@ filename <- paste0(formatted_time, "_my_workspace_ERA5_allModels_final_results.R
 # Save the workspace using the generated filename
 save.image(file = filename, compress = FALSE)
 
+# Step 1: Compute ldr_indices (outlier bins for each grid point)
+ldr_indices <- vector("list", lon_size)
+
+for (i in 1:lon_size) {  # Longitude first (memory efficient)
+  ldr_indices[[i]] <- vector("list", lat_size)  # Initialize sublists
+
+  for (j in 1:lat_size) {  # Latitude next
+    hdr_indices <- select_hdr_indices(pdf_ref_future[i, j, ], tau = 0.1)
+    ldr_indices[[i]][[j]] <- setdiff(seq_len(nbins), hdr_indices)  # Compute outlier bins
+  }
+}
+
+# Step 2: Compute partial Hellinger distance using precomputed indices
+h_dist_partial <- compute_partial_hdist(pdf_ref_future, pdf_models_future, ldr_indices)
+
+
+# Convert model names to a character vector (if needed)
+model_names <- as.character(model_names)
+
+# Compute mean Hellinger distance (full)
+mean_h_dist_future <- sapply(seq_along(model_names), function(m) {
+  mean(h_dist_future[,,m], na.rm = TRUE)  # Avoid NaNs
+})
+
+# Compute mean Hellinger distance (partial - lower 10% mass)
+mean_h_dist_partial <- sapply(seq_along(model_names), function(m) {
+  mean(h_dist_partial[,,m], na.rm = TRUE)  # Avoid NaNs
+})
+
+# Create a dataframe
+df_hdist <- data.frame(
+  Model = rep(model_names, 2),  # Ensure Model is a character vector
+  Mean_Hellinger_Distance = c(mean_h_dist_future, mean_h_dist_partial),
+  Type = rep(c("Full Hellinger Distance", "Partial Hellinger (Low Density Regions (10%))"), each = length(model_names))
+)
+
+# Plot
+ggplot(df_hdist, aes(x = Model, y = Mean_Hellinger_Distance, fill = Type)) +
+  geom_bar(stat = "identity", position = "dodge", color = "black") +
+  theme_minimal() +
+  scale_fill_manual(values = c("steelblue", "darkorange")) +  # Custom colors
+  labs(
+    title = "Comparison of Full vs. Partial Hellinger Distance per Model",
+    x = "Climate Model",
+    y = "Mean Hellinger Distance",
+    fill = "Distance Type"
+  ) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
+        axis.title = element_text(size = 12),
+        legend.position = "bottom")
+
+
+# Step 2: Compute partial Hellinger distance using precomputed indices
+h_dist_partial_MMM <- compute_partial_hdist(pdf_ref_future, MMM_future, ldr_indices)
+
+
+test_df <- melt(h_dist_partial_MMM, c("lon", "lat"), value.name = "H_dist")
+
+p6 <- ggplot() +
+  geom_tile(data=test_df, aes(x=lon, y=lat-90, fill=H_dist))+
+  labs(subtitle = 'Projection period : 1999 - 2014')+
+  ggtitle(paste0('MMM', ': Average Hellinger distance = ', round(mean(h_dist_partial_MMM), 2)))+
+  scale_fill_gradient(low = "white", high = "#015a8c", limits = c(0.1, 0.70), oob = scales::squish)+
+  borders("world2", colour = 'black', lwd = 0.12) +
+  scale_x_continuous(, expand = c(0, 0)) +
+  scale_y_continuous(, expand = c(0,0))+
+  theme(legend.position = 'bottom')+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  theme(panel.background = element_blank())+
+  xlab('Longitude')+
+  ylab('Latitude') +
+  labs(fill='Hellinger \nDistance')+
+  theme_bw()+
+  theme(legend.key.size = unit(1, 'cm'), #change legend key size
+        legend.key.height = unit(1.4, 'cm'), #change legend key height
+        legend.key.width = unit(0.4, 'cm'), #change legend key width
+        legend.title = element_text(size=16), #change legend title font sizen
+        legend.text = element_text(size=12))+ #change legend text font size
+  theme(plot.title = element_text(size=24),
+        plot.subtitle = element_text(size = 20,hjust=0.5),
+        axis.text=element_text(size=14),
+        axis.title=element_text(size=16),)+
+  easy_center_title()
+p6
+
+# Initialize arrays to store the GC-selected PDFs
+pdf_GC_present <- array(NA, dim = c(lon_size, lat_size, nbins))
+pdf_GC_future  <- array(NA, dim = c(lon_size, lat_size, nbins))
+
+# Assign the selected PDFs at each grid point
+for (i in 1:lon_size) {
+  for (j in 1:lat_size) {
+    label <- GC_result$label_attribution[i, j]  # Get the assigned model (1-based index)
+
+    if (!is.na(label)) {  # Ensure valid labels
+      pdf_GC_present[i, j, ] <- pdf_models_present[i, j, , label]  # Extract the right PDF
+      pdf_GC_future[i, j, ]  <- pdf_models_future[i, j, , label]   # Extract future PDF
+    }
+  }
+}
+
+
+
+# Step 2: Compute partial Hellinger distance using precomputed indices
+h_dist_partial_GC <- compute_partial_hdist(pdf_ref_future, pdf_GC_future, ldr_indices)
+
+test_df <- melt(h_dist_partial_GC, c("lon", "lat"), value.name = "H_dist")
+
+p6 <- ggplot() +
+  geom_tile(data=test_df, aes(x=lon, y=lat-90, fill=H_dist))+
+  labs(subtitle = 'Projection period : 1999 - 2014')+
+  ggtitle(paste0('MMM', ': Average Hellinger distance = ', round(mean(h_dist_partial_GC), 2)))+
+  scale_fill_gradient(low = "white", high = "#015a8c", limits = c(0.1, 0.70), oob = scales::squish)+
+  borders("world2", colour = 'black', lwd = 0.12) +
+  scale_x_continuous(, expand = c(0, 0)) +
+  scale_y_continuous(, expand = c(0,0))+
+  theme(legend.position = 'bottom')+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  theme(panel.background = element_blank())+
+  xlab('Longitude')+
+  ylab('Latitude') +
+  labs(fill='Hellinger \nDistance')+
+  theme_bw()+
+  theme(legend.key.size = unit(1, 'cm'), #change legend key size
+        legend.key.height = unit(1.4, 'cm'), #change legend key height
+        legend.key.width = unit(0.4, 'cm'), #change legend key width
+        legend.title = element_text(size=16), #change legend title font sizen
+        legend.text = element_text(size=12))+ #change legend text font size
+  theme(plot.title = element_text(size=24),
+        plot.subtitle = element_text(size = 20,hjust=0.5),
+        axis.text=element_text(size=14),
+        axis.title=element_text(size=16),)+
+  easy_center_title()
+p6
 
 
 # Extract the label attribution for the current smooth cost
-GC_labels <- GC_result_0.05$label_attribution
+GC_labels <- GC_result2$label_attribution
 
 # Convert the label matrix to a data frame for plotting
 label_df <- melt(GC_labels, c("lon", "lat"), value.name = "label_attribution")
@@ -356,8 +493,6 @@ name <- paste0("figure/Labels_GC_Hellinger_smooth_1950-1975_3v")
 # Save the plot as both PDF and PNG
 ggsave(paste0(name, ".pdf"), plot = p, width = 20, height = 15, units = "cm", dpi = 300)
 ggsave(paste0(name, ".png"), plot = p, width = 20, height = 15, units = "cm", dpi = 300)
-
-
 
 
 {
@@ -549,9 +684,6 @@ cat("Sum of selected values:", sum(selected_values), "\n")
   # Show the plot
   fig
 }
-
-
-
 
 test_df <- melt(GC_hdist_future_0.05, c("lon", "lat"), value.name = "H_dist")
 
@@ -881,4 +1013,7 @@ hist(GC_hdist_future, xlim = c(0, 1), ylim = c(0, 25000), main = "Histogram of G
   fig
 
 }
+
+
+
 
