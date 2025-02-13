@@ -111,7 +111,7 @@ GraphCutHellinger_nD_lat <- function(
     int numPix = width * height;
     float weight_global = extraData["weight"];
     NumericVector data = extraData["data"];
-    NumericVector lat = extraData["lat"];  // Get latitude values
+    NumericVector lat = extraData["lat"];
     int nBins = extraData["nBins"];
 
     float cost = 0.0f;
@@ -128,8 +128,8 @@ GraphCutHellinger_nD_lat <- function(
     float lat1 = lat[j1];
     float lat2 = lat[j2];
 
-    // Compute smoothness weight based on latitude
-    float lat_weight = (cos(lat1 * M_PI / 180.0) + cos(lat2 * M_PI / 180.0)) / 2.0;
+    // Compute smoothness weight based on latitude (absolute to ensure positivity)
+    float lat_weight = (abs(cos(lat1 * M_PI / 180.0)) + abs(cos(lat2 * M_PI / 180.0))) / 2.0;
 
     // Compute Hellinger distance between labels
     int offset_p1_l1 = (p1 + numPix * l1) * nBins;
@@ -151,12 +151,13 @@ GraphCutHellinger_nD_lat <- function(
 
     cost = (sqrt(tmp1) + sqrt(tmp2)) / sqrt(2.0f);
 
-    // Apply latitude weighting
+    // Apply latitude weighting to smooth cost
     return(weight_global * lat_weight * cost);
   }',
     includes = c("#include <math.h>", "#include <Rcpp.h>"),
     rebuild = rebuild, showOutput = TRUE, verbose = FALSE
   )
+
 
   # Set DataCost and SmoothCost
   gco$setDataCost(ptrDataCost, list(
