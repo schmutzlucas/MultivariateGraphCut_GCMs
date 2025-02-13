@@ -59,8 +59,17 @@ GraphCutHellinger_nD <- function(
   h_dist_cpp <- c(aperm(h_dist, c(2, 1, 3)))
   pdf_models_cpp <- c(aperm(pdf_models_future, c(3, 2, 1, 4)))
 
+  print(dim(h_dist))
+  print(dim(pdf_models_future))
+
+  print(dim(aperm(h_dist, c(2, 1, 3))))
+  print(dim(aperm(pdf_models_future, c(3, 2, 1, 4))))
+
+
   # Instantiate the GraphCut environment
   gco <- new(GCoptimizationGridGraph, width, height, n_labs)
+
+  print(gco)
 
   # Create DataCost and SmoothCost functions in C++
   cat("Creating DataCost function...  ")

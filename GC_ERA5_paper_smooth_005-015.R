@@ -14,10 +14,10 @@ source_code_dir <- 'functions/' #The directory where all functions are saved.
 file_paths <- list.files(source_code_dir, full.names = T)
 for(path in file_paths){source(path)}
 
-range_var_final <- readRDS('ranges/range_var_final_allModelsPar_1950-2023_90deg_3v.rds')
+range_var_final <- readRDS('ranges/range_var_final_GreenwichCentered_1950-2023_90deg_3v.rds')
 
 # Setting global variables
-lon <- 0:359
+lon <- -180:179
 lat <- -90:90
 lon_size <- length(lon)
 lat_size <- length(lat)
@@ -57,7 +57,7 @@ format_time <- function(time_seconds) {
 # Time the execution of the optimized function
 time_optimized <- system.time({
   # todo add number of workers as argument
-  tmp <- compute_nd_pdf_optimized(variables, model_names, data_dir, year_present, year_future,
+  tmp <- compute_nd_pdf_optimized_0centered(variables, model_names, data_dir, year_present, year_future,
                                   lon, lat, aperm(abind(range_var_final$ranges, along = 4), c(1, 2, 4, 3)), nbins1d, workers = 3)
 })
 cat("Time taken for compute_nd_pdf_optimized: ", format_time(time_optimized["elapsed"]), "\n")
@@ -136,17 +136,17 @@ filename <- paste0(formatted_time, "_my_workspace_ERA5_allModels_beforeOptim_3v.
 save.image(file = filename, compress = FALSE)
 
 
-smooth_cost <- 0.6
+smooth_cost <- 1
 # Wrap each iteration in tryCatch to handle errors gracefully
 tryCatch({
   # Run Graph Cut with the varying smooth cost
-  GC_result2 <- GraphCutHellinger_nD(
+  GC_result11 <- GraphCutHellinger_nD(
     pdf_models_future = pdf_models_present,
     h_dist = h_dist,
     weight_data = 1,               # Fixed data weight
     weight_smooth = smooth_cost,   # Varying smooth cost
     nBins = nbins1d^3,
-    seed = 2,
+    seed = 1,
     verbose = TRUE,
     rebuild = TRUE
   )
@@ -361,33 +361,42 @@ ggplot(df_hdist, aes(x = Model, y = Mean_Hellinger_Distance, fill = Type)) +
 h_dist_partial_MMM <- compute_partial_hdist(pdf_ref_future, MMM_future, ldr_indices)
 
 
-test_df <- melt(h_dist_partial_MMM, c("lon", "lat"), value.name = "H_dist")
+# Melt it into a data frame:
+test_df <- melt(h_dist_partial_MMM, varnames = c("lon", "lat"), value.name = "H_dist")
 
 p6 <- ggplot() +
-  geom_tile(data=test_df, aes(x=lon, y=lat-90, fill=H_dist))+
-  labs(subtitle = 'Projection period : 1999 - 2014')+
-  ggtitle(paste0('MMM', ': Average Hellinger distance = ', round(mean(h_dist_partial_MMM), 2)))+
-  scale_fill_gradient(low = "white", high = "#015a8c", limits = c(0.1, 0.70), oob = scales::squish)+
-  borders("world2", colour = 'black', lwd = 0.12) +
-  scale_x_continuous(, expand = c(0, 0)) +
-  scale_y_continuous(, expand = c(0,0))+
-  theme(legend.position = 'bottom')+
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
-  theme(panel.background = element_blank())+
-  xlab('Longitude')+
+  geom_tile(data = test_df, aes(x = lon, y = lat, fill = H_dist)) +
+  labs(subtitle = 'Projection period : 1999 - 2014') +
+  ggtitle(paste0('MMM', ': Average Hellinger distance = ',
+                 round(mean(h_dist_partial_MMM), 2))) +
+  scale_fill_gradient(low = "white", high = "#015a8c",
+                      limits = c(0.1, 0.70), oob = scales::squish) +
+  # Use "world" instead of "world2" so that it matches –180..+180
+  borders("world", colour = 'black', fill = NA, size = 0.12) +
+  # Force x,y limits to match your new longitude and latitude
+  scale_x_continuous(limits = c(-180, 180), expand = c(0, 0)) +
+  scale_y_continuous(limits = c(-90, 90), expand = c(0, 0)) +
+  # Keep or replace with coord_quickmap()
+  coord_fixed(ratio = 1) +
+  theme(legend.position = 'bottom',
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank()) +
+  xlab('Longitude') +
   ylab('Latitude') +
-  labs(fill='Hellinger \nDistance')+
-  theme_bw()+
-  theme(legend.key.size = unit(1, 'cm'), #change legend key size
-        legend.key.height = unit(1.4, 'cm'), #change legend key height
-        legend.key.width = unit(0.4, 'cm'), #change legend key width
-        legend.title = element_text(size=16), #change legend title font sizen
-        legend.text = element_text(size=12))+ #change legend text font size
-  theme(plot.title = element_text(size=24),
-        plot.subtitle = element_text(size = 20,hjust=0.5),
-        axis.text=element_text(size=14),
-        axis.title=element_text(size=16),)+
+  labs(fill = 'Hellinger \nDistance') +
+  theme_bw() +
+  theme(legend.key.size = unit(1, 'cm'),    # legend key size
+        legend.key.height = unit(1.4, 'cm'),
+        legend.key.width = unit(0.4, 'cm'),
+        legend.title = element_text(size=16),
+        legend.text = element_text(size=12),
+        plot.title = element_text(size=24),
+        plot.subtitle = element_text(size = 20, hjust=0.5),
+        axis.text = element_text(size=14),
+        axis.title = element_text(size=16)) +
   easy_center_title()
+
 p6
 
 # Initialize arrays to store the GC-selected PDFs
@@ -440,16 +449,23 @@ p6 <- ggplot() +
   easy_center_title()
 p6
 
-
 # Extract the label attribution for the current smooth cost
-GC_labels <- GC_result2$label_attribution
+GC_labels <- GC_result11$label_attribution
 
 # Convert the label matrix to a data frame for plotting
-label_df <- melt(GC_labels, c("lon", "lat"), value.name = "label_attribution")
-label_df$lat <- label_df$lat - 90  # Adjust latitudes if necessary
+# Make sure 'GC_labels' has dimensions [lon, lat],
+# where lon ∈ [-180..179] and lat ∈ [-90..90].
+label_df <- reshape2::melt(GC_labels, varnames = c("lon", "lat"), value.name = "label_attribution")
 
-# Convert label_attribution to a factor with ALL model names as levels
-label_df$label_attribution <- factor(label_df$label_attribution, levels = seq_along(model_names), labels = model_names)
+# Remove this if lat is already -90..+90 (no extra shift needed)
+# label_df$lat <- label_df$lat - 90
+
+# Convert label_attribution to a factor with all model names
+label_df$label_attribution <- factor(
+  label_df$label_attribution,
+  levels = seq_along(model_names),
+  labels = model_names
+)
 
 color_palette <- c(
   "#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd",
@@ -459,34 +475,53 @@ color_palette <- c(
   "#393b79", "#5254a3", "#6b6ecf"
 )
 
-
-# Create the plot
 p <- ggplot() +
+  # Plot tiles at each (lon, lat)
   geom_tile(data = label_df, aes(x = lon, y = lat, fill = label_attribution)) +
-  scale_fill_manual(values = color_palette, na.value = "white", guide = guide_legend(title = "Model Names", ncol = 1)) +  # Keep all model names in the legend
+
+  # Custom color palette for the labels
+  scale_fill_manual(
+    values = color_palette,
+    na.value = "white",
+    guide = guide_legend(title = "Model Names", ncol = 1)
+  ) +
+
   ggtitle(paste("Label GC Hellinger - Lambda:", smooth_cost)) +
-  borders("world2", colour = 'black', lwd = 0.12) +
-  scale_x_continuous(expand = c(0, 0)) +
-  scale_y_continuous(limits = c(-90, 90), expand = c(0, 0)) +  # Set y-axis limits
-  theme(legend.position = 'bottom') +
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
-  theme(panel.background = element_blank()) +
-  xlab('Longitude') +
-  ylab('Latitude') +
+
+  # Use "world" (not "world2"), which expects longitude ∈ [-180..+180]
+  borders("world", colour = 'black', size = 0.12) +
+
+  # Force x,y to match the new [-180..+180] and [-90..+90] coordinate system
+  # and lock the aspect ratio (1:1 degrees)
+  coord_fixed(xlim = c(-180, 180), ylim = c(-90, 90), ratio = 1) +
+
+  # A clean theme
   theme_bw() +
+
+  # Adjust the legend and axis text, etc.
   theme(
-    legend.key.size = unit(0.5, 'cm'),        # Reduce legend key size
-    legend.key.height = unit(0.5, 'cm'),      # Reduce legend key height
-    legend.key.width = unit(0.5, 'cm'),       # Reduce legend key width
-    legend.title = element_text(size = 10),   # Reduce legend title font size
-    legend.text = element_text(size = 8),     # Reduce legend text font size
+    legend.position = 'bottom',
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.background = element_blank(),
+    legend.key.size = unit(0.5, 'cm'),
+    legend.key.height = unit(0.5, 'cm'),
+    legend.key.width = unit(0.5, 'cm'),
+    legend.title = element_text(size = 10),
+    legend.text = element_text(size = 8),
     plot.title = element_text(size = 16),
     plot.subtitle = element_text(size = 12, hjust = 0.5),
     axis.text = element_text(size = 10),
     axis.title = element_text(size = 12)
   ) +
+
+  xlab('Longitude') +
+  ylab('Latitude') +
   easy_center_title()
+
 p
+
+
 # Generate file name based on the smooth cost
 name <- paste0("figure/Labels_GC_Hellinger_smooth_1950-1975_3v")
 
@@ -1014,6 +1049,32 @@ hist(GC_hdist_future, xlim = c(0, 1), ylim = c(0, 25000), main = "Histogram of G
 
 }
 
+# Assume GC_result11$label_attribution is your label matrix (dimensions: height x width)
+label_matrix <- GC_result11$label_attribution
 
+# Number of rows in the label matrix
+n_rows <- nrow(label_matrix)
 
+# Initialize a vector to store the mean difference for each adjacent pair of rows
+row_diff_means <- numeric(n_rows - 1)
 
+# Loop over each adjacent row pair (comparing row i and row i+1)
+for(i in 1:(n_rows - 1)) {
+  # diff_vec is TRUE where labels differ between row i and row i+1
+  diff_vec <- label_matrix[i, ] != label_matrix[i+1, ]
+  # Compute the fraction of pixels that differ
+  row_diff_means[i] <- mean(diff_vec)
+}
+
+# Now compare the first row with the last row (wrap-around)
+wrap_diff <- mean(label_matrix[1, ] != label_matrix[n_rows, ])
+
+# Combine the differences from adjacent rows and the wrap-around
+all_diffs <- c(row_diff_means, wrap_diff)
+
+# Plot a histogram of the differences for each row pair (including wrap-around)
+hist(all_diffs,
+     main = "Histogram of Differences Between Adjacent Rows (with wrap-around)",
+     xlab = "Fraction of pixels with differing labels",
+     col = "lightblue",
+     border = "gray")

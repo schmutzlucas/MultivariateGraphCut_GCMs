@@ -778,3 +778,5 @@ hist(GC_hdist_future, xlim = c(0, 1), ylim = c(0, 25000), main = "Histogram of G
 
 }
 
+
+
