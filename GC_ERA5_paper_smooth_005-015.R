@@ -58,7 +58,7 @@ format_time <- function(time_seconds) {
 time_optimized <- system.time({
   # todo add number of workers as argument
   tmp <- compute_nd_pdf_optimized_0centered(variables, model_names, data_dir, year_present, year_future,
-                                  lon, lat, aperm(abind(range_var_final$ranges, along = 4), c(1, 2, 4, 3)), nbins1d, workers = 3)
+                                            lon, lat, aperm(abind(range_var_final$ranges, along = 4), c(1, 2, 4, 3)), nbins1d, workers = 3)
 })
 cat("Time taken for compute_nd_pdf_optimized: ", format_time(time_optimized["elapsed"]), "\n")
 
@@ -156,6 +156,25 @@ tryCatch({
   cat("Error encountered with smooth cost =", smooth_cost, ": ", e$message, "\n")
 })
 
+smooth_cost <- 1
+# Wrap each iteration in tryCatch to handle errors gracefully
+tryCatch({
+  # Run Graph Cut with the varying smooth cost
+  GC_result1_lat <- GraphCutHellinger_nD_lat(
+    pdf_models_future = pdf_models_present,
+    h_dist = h_dist,
+    weight_data = 1,               # Fixed data weight
+    weight_smooth = smooth_cost,   # Varying smooth cost
+    nBins = nbins1d^3,
+    seed = 1,
+    verbose = TRUE,
+    rebuild = TRUE
+  )
+
+
+}, error = function(e) {
+  cat("Error encountered with smooth cost =", smooth_cost, ": ", e$message, "\n")
+})
 
 smooth_cost <- 0.05
 # Wrap each iteration in tryCatch to handle errors gracefully
@@ -1078,3 +1097,55 @@ hist(all_diffs,
      xlab = "Fraction of pixels with differing labels",
      col = "lightblue",
      border = "gray")
+
+
+# Convert the label matrix to a data frame for plotting
+label_df <- reshape2::melt(GC_result1_lat$label_attribution, varnames = c("lon_idx", "lat_idx"), value.name = "label_attribution")
+
+# ✅ Explicitly assign latitude and longitude values
+label_df$lon <- lon[label_df$lon_idx]  # Match lon index to actual longitude
+label_df$lat <- lat[label_df$lat_idx]  # Match lat index to actual latitude
+
+# ✅ Convert label_attribution to a factor (fixes the "continuous values" error)
+label_df$label_attribution <- factor(
+  label_df$label_attribution,
+  levels = seq_along(model_names),
+  labels = model_names
+)
+
+# Debugging checks
+print(range(label_df$lon))  # Should be [-180, 179]
+print(range(label_df$lat))  # Should be [-90, 90]
+print(dim(GC_labels))       # Should match expected grid size
+print(unique(label_df$label_attribution))  # Ensure factor conversion worked
+
+p <- ggplot() +
+  geom_tile(data = label_df, aes(x = lon, y = lat, fill = label_attribution)) +
+  scale_fill_manual(
+    values = color_palette,
+    na.value = "white",
+    guide = guide_legend(title = "Model Names", ncol = 1)
+  ) +
+  ggtitle(paste("Label GC Hellinger - Lambda:", smooth_cost)) +
+  borders("world", colour = 'black', size = 0.12) +
+  coord_fixed(xlim = c(-180, 180), ylim = c(-90, 90), ratio = 1) +  # Prevent cropping
+  theme_bw() +
+  theme(
+    legend.position = 'right',
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.background = element_blank(),
+    legend.key.size = unit(0.5, 'cm'),
+    legend.key.height = unit(0.5, 'cm'),
+    legend.key.width = unit(0.5, 'cm'),
+    legend.title = element_text(size = 10),
+    legend.text = element_text(size = 8),
+    plot.title = element_text(size = 16),
+    plot.subtitle = element_text(size = 12, hjust = 0.5),
+    axis.text = element_text(size = 10),
+    axis.title = element_text(size = 12)
+  ) +
+  xlab('Longitude') +
+  ylab('Latitude')
+
+p

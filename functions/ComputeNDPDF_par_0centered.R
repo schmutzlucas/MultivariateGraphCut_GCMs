@@ -18,39 +18,21 @@
 #' @return A list containing two arrays:
 #' \item{present}{The n-dimensional PDF array for the present period.}
 #' \item{future}{The n-dimensional PDF array for the future period.}
-#' The arrays have dimensions `[lon, lat, nbins^nvar, num_models]`, where:
-#' - `lon` and `lat` are the grid points.
-#' - `nbins^nvar` is the number of bins for the joint PDF of all variables.
-#' - `num_models` is the number of climate models.
-#'
-#' @examples
-#' # Define parameters
-#' variables <- c('pr', 'tas', 'psl')
-#' model_names <- c('model1', 'model2', 'model3')
-#' data_dir <- 'data/CMIP6_merged_all/'
-#' year_present <- 1960:1990
-#' year_future <- 2070:2100
-#' lon <- 0:359
-#' lat <- -90:90
-#' range_var <- array(NA, dim = c(length(lon), length(lat), length(variables), 2))  # Example range array
-#' nbins <- 20
-#'
-#' # Compute n-dimensional PDFs for both time periods
-#' pdf_result <- compute_nd_pdf_optimized(variables, model_names, data_dir, year_present, year_future, lon, lat, range_var, nbins)
+#' The arrays have dimensions `[lon, lat, nbins^nvar, num_models]`.
 #'
 #' @import ncdf4 future future.apply
 #' @export
+
 compute_nd_pdf_optimized_0centered <- function(variables, model_names, data_dir, year_present, year_future, lon, lat, range_var, nbins, workers) {
-  n_var <- length(variables)  # Number of variables
+  n_var <- length(variables)
   num_models <- length(model_names)
-  pdf_matrix_present <- array(NA, dim = c(length(lon), length(lat), nbins^n_var, num_models))  # PDF matrix for present period
-  pdf_matrix_future <- array(NA, dim = c(length(lon), length(lat), nbins^n_var, num_models))   # PDF matrix for future period
+  pdf_matrix_present <- array(NA, dim = c(length(lon), length(lat), nbins^n_var, num_models))
+  pdf_matrix_future <- array(NA, dim = c(length(lon), length(lat), nbins^n_var, num_models))
 
-  # Set up parallel processing for each model
-  plan(multisession, workers = workers)  # Use a limited number of workers
-  options(future.globals.maxSize = 8 * 1024^3)  # Allow up to 8 GiB for exporting globals
+  # Set up parallel processing
+  plan(multisession, workers = workers)
+  options(future.globals.maxSize = 8 * 1024^3)
 
-  # Process models in parallel for each time period
   pdf_matrix_list <- future_lapply(seq_along(model_names), function(m) {
     model_name <- model_names[m]
     cat(paste0("Processing model: ", model_name, " at ", format(Sys.time(), "%Y-%m-%d %H:%M:%S"), "\n"))
@@ -60,30 +42,68 @@ compute_nd_pdf_optimized_0centered <- function(variables, model_names, data_dir,
 
     for (v in seq_along(variables)) {
       # Construct the file path
-      file_path <- paste0(data_dir, model_name, '/', variables[v], '/', list.files(path = paste0(data_dir, model_name, '/', variables[v], '/'), pattern = glob2rx(paste0(variables[v], "_", model_name, "*.nc")))[1])
+      file_path <- paste0(data_dir, model_name, '/', variables[v], '/', list.files(
+        path = paste0(data_dir, model_name, '/', variables[v], '/'),
+        pattern = glob2rx(paste0(variables[v], "_", model_name, "*.nc"))
+      )[1])
+
       nc_var <- nc_open(file_path)
 
-      # Use the helper function to extract years from the time variable
-      yyyy <- extract_years_from_time(nc_var)
-      lon_var <- ncvar_get(nc_var, "lon")
+      # Extract longitude & latitude from NetCDF file
+      lon_var <- ncvar_get(nc_var, "lon")  # NetCDF longitude: 0 to 359
       lat_var <- ncvar_get(nc_var, "lat")
 
-      # Find indices for the longitude and latitude ranges
-      lon_indices <- which(lon_var %in% lon)
-      lat_indices <- which(lat_var %in% lat)
+      # ✅ **Convert NetCDF longitude (0-359°) to expected format (-180 to 179°)**
+      lon_var <- ifelse(lon_var >= 180, lon_var - 360, lon_var)  # Shift longitudes
+      sorted_indices <- order(lon_var)  # Sorting ensures correct mapping
+      lon_var <- lon_var[sorted_indices]  # Apply sorted order
+
+      # ✅ **Find correct indices based on the updated longitude & latitude**
+      lon_indices <- match(lon, lon_var)
+      lat_indices <- match(lat, lat_var)
+
+      # ✅ **Remove any missing indices (handle mismatches safely)**
+      lon_indices <- lon_indices[!is.na(lon_indices)]
+      lat_indices <- lat_indices[!is.na(lat_indices)]
+
+      if (length(lon_indices) == 0 || length(lat_indices) == 0) {
+        stop("Error: Longitude or latitude indices not found in NetCDF file.")
+      }
+
       start_lon <- min(lon_indices)
       start_lat <- min(lat_indices)
 
-      # Get data slices for present and future periods
-      iyyyy_present <- which(yyyy %in% year_present)
-      var_data_present <- ncvar_get(nc_var, variables[v], start = c(start_lon, start_lat, min(iyyyy_present)), count = c(length(lon_indices), length(lat_indices), length(iyyyy_present)))
+      # Extract the time variable and match years
+      yyyy <- extract_years_from_time(nc_var)
 
+      # Get present period indices
+      iyyyy_present <- which(yyyy %in% year_present)
+      if (length(iyyyy_present) == 0) {
+        stop(paste("Error: No matching present years found in NetCDF for", model_name))
+      }
+
+      var_data_present <- ncvar_get(nc_var, variables[v],
+                                    start = c(start_lon, start_lat, min(iyyyy_present)),
+                                    count = c(length(lon_indices), length(lat_indices), length(iyyyy_present)))
+
+      # Get future period indices
       iyyyy_future <- which(yyyy %in% year_future)
-      var_data_future <- ncvar_get(nc_var, variables[v], start = c(start_lon, start_lat, min(iyyyy_future)), count = c(length(lon_indices), length(lat_indices), length(iyyyy_future)))
+      if (length(iyyyy_future) == 0) {
+        stop(paste("Error: No matching future years found in NetCDF for", model_name))
+      }
+
+      var_data_future <- ncvar_get(nc_var, variables[v],
+                                    start = c(start_lon, start_lat, min(iyyyy_future)),
+                                    count = c(length(lon_indices), length(lat_indices), length(iyyyy_future)))
 
       nc_close(nc_var)
 
-      # Apply log transform for precipitation if required
+      # Print extracted dimensions for debugging
+      cat("Extracted dimensions for", variables[v], "\n")
+      print(dim(var_data_present))
+      print(dim(var_data_future))
+
+      # Apply log transform for precipitation
       if (variables[v] == 'pr') {
         var_data_present <- log(var_data_present + 1)
         var_data_future <- log(var_data_future + 1)
@@ -122,36 +142,7 @@ compute_nd_pdf_optimized_0centered <- function(variables, model_names, data_dir,
     pdf_matrix_future[, , , m] <- pdf_matrix_list[[m]]$future
   }
 
-  plan(sequential)  # Reset to sequential
+  plan(sequential)
 
   return(list(present = pdf_matrix_present, future = pdf_matrix_future))
-}
-
-
-# Helper function to extract years from time netcdf
-extract_years_from_time <- function(nc_var) {
-  # Determine the correct time dimension name
-  time_dim <- if ("time" %in% names(nc_var$dim)) "time" else "valid_time"
-
-  # Retrieve the raw time data
-  time_raw <- ncvar_get(nc_var, time_dim)
-
-  # Get the units of the time variable
-  time_units <- ncatt_get(nc_var, time_dim, "units")$value
-
-  # Check the time units format and convert accordingly
-  if (grepl("since", time_units)) {
-    reference_date <- as.Date(sub(".*since ", "", time_units))
-
-    if (grepl("days", time_units)) {
-      dates <- reference_date + time_raw
-    } else if (grepl("seconds", time_units)) {
-      dates <- reference_date + as.difftime(time_raw, units = "secs")
-    }
-
-    # Extract the year component
-    return(as.numeric(format(dates, "%Y")))
-  } else {
-    stop("Unrecognized time units format.")
-  }
 }
