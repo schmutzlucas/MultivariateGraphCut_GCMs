@@ -53,16 +53,16 @@ compute_nd_pdf_optimized_0centered <- function(variables, model_names, data_dir,
       lon_var <- ncvar_get(nc_var, "lon")  # NetCDF longitude: 0 to 359
       lat_var <- ncvar_get(nc_var, "lat")
 
-      # ✅ **Convert NetCDF longitude (0-359°) to expected format (-180 to 179°)**
+      #  **Convert NetCDF longitude (0-359°) to expected format (-180 to 179°)**
       lon_var <- ifelse(lon_var >= 180, lon_var - 360, lon_var)  # Shift longitudes
       sorted_indices <- order(lon_var)  # Sorting ensures correct mapping
       lon_var <- lon_var[sorted_indices]  # Apply sorted order
 
-      # ✅ **Find correct indices based on the updated longitude & latitude**
+      #  **Find correct indices based on the updated longitude & latitude**
       lon_indices <- match(lon, lon_var)
       lat_indices <- match(lat, lat_var)
 
-      # ✅ **Remove any missing indices (handle mismatches safely)**
+      #  **Remove any missing indices (handle mismatches safely)**
       lon_indices <- lon_indices[!is.na(lon_indices)]
       lat_indices <- lat_indices[!is.na(lat_indices)]
 
@@ -93,10 +93,14 @@ compute_nd_pdf_optimized_0centered <- function(variables, model_names, data_dir,
       }
 
       var_data_future <- ncvar_get(nc_var, variables[v],
-                                    start = c(start_lon, start_lat, min(iyyyy_future)),
-                                    count = c(length(lon_indices), length(lat_indices), length(iyyyy_future)))
+                                   start = c(start_lon, start_lat, min(iyyyy_future)),
+                                   count = c(length(lon_indices), length(lat_indices), length(iyyyy_future)))
 
       nc_close(nc_var)
+
+      # Reorder extracted data to match sorted longitude
+      var_data_present <- var_data_present[sorted_indices, , ]
+      var_data_future <- var_data_future[sorted_indices, , ]
 
       # Print extracted dimensions for debugging
       cat("Extracted dimensions for", variables[v], "\n")
