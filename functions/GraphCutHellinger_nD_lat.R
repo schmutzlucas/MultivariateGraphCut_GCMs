@@ -47,6 +47,7 @@ GraphCutHellinger_nD_lat <- function(
   weight_data,
   weight_smooth,
   nBins,
+  lat,
   seed,
   verbose,
   rebuild
@@ -55,19 +56,20 @@ GraphCutHellinger_nD_lat <- function(
   height <- ncol(pdf_models_future[,,,1])
   width <- nrow(pdf_models_future[,,,1])
 
+  print(height)
+  print(width)
+
   if (length(lat) != height) {
     stop("Error: Latitude vector length does not match grid height.")
   }
 
+  lat_weights <- matrix(rep(abs(cos(lat * pi / 180)), each = width), nrow = width, ncol = height, byrow = TRUE)
+  print(dim(lat_weights))
+
   # Permuting the arrays for C++ indexing
-  h_dist_cpp <- c(aperm(h_dist, c(2, 1, 3)))
-  pdf_models_cpp <- c(aperm(pdf_models_future, c(3, 2, 1, 4)))
-
-  print(dim(h_dist))
-  print(dim(pdf_models_future))
-
-  print(dim(aperm(h_dist, c(2, 1, 3))))
-  print(dim(aperm(pdf_models_future, c(3, 2, 1, 4))))
+  h_dist_cpp <- c(aperm(h_dist, c(1, 2, 3)))
+  pdf_models_cpp <- c(aperm(pdf_models_future, c(3, 1, 2, 4)))
+  lat_weights_cpp <-  c(aperm(lat_weights, c(1, 2)))
 
 
   # Instantiate the GraphCut environment
@@ -75,8 +77,7 @@ GraphCutHellinger_nD_lat <- function(
 
   print(gco)
 
-  # Create DataCost and SmoothCost functions in C++
-  cat("Creating DataCost function...  ")
+  # DataCost function using 2D latitude weights
   ptrDataCost <- cppXPtr(
     code = 'float dataFn(int p, int l, Rcpp::List extraData)
   {
@@ -85,34 +86,36 @@ GraphCutHellinger_nD_lat <- function(
     int numPix = width * height;
     float weight_global = extraData["weight"];
     NumericVector data = extraData["data"];
-    NumericVector lat = extraData["lat"];
+    NumericVector lat_weights = extraData["lat_weights"];
 
-    // Compute row index (latitude index) from pixel index p
-    int j = p / width;
-
-    // Retrieve corresponding latitude value
-    float lat_value = lat[j];
-
-    // Compute latitude weight using cosine function
-    float lat_weight = abs(cos(lat_value * M_PI / 180.0));
+    // Retrieve corresponding latitude weight
+    float lat_weight = lat_weights[p];
 
     return(weight_global * lat_weight * data[p + numPix * l]);
   }',
-    includes = c("#include <math.h>", "#include <Rcpp.h>", "#include <iostream>"),
+    includes = c("#include <math.h>", "#include <Rcpp.h>"),
     rebuild = rebuild, showOutput = FALSE, verbose = FALSE
   )
 
   cat("Creating SmoothCost function...  ")
   ptrSmoothCost <- cppXPtr(
     code = 'float smoothFn(int p1, int p2, int l1, int l2, Rcpp::List extraData)
-  {
+{
     int width = extraData["width"];
     int height = extraData["height"];
     int numPix = width * height;
     float weight_global = extraData["weight"];
     NumericVector data = extraData["data"];
-    NumericVector lat = extraData["lat"];
+    NumericVector lat_weights = extraData["lat_weights"];
     int nBins = extraData["nBins"];
+
+    // Ensure p1 and p2 are within the valid range
+    if (p1 < 0 || p1 >= numPix || p2 < 0 || p2 >= numPix) {
+        Rcpp::stop("Pixel index out of bounds in smoothFn.");
+    }
+
+    // Retrieve latitude weights safely
+    float lat_weight = (lat_weights[p1] + lat_weights[p2]) / 2.0;
 
     float cost = 0.0f;
     float tmp1 = 0.0f;
@@ -120,18 +123,6 @@ GraphCutHellinger_nD_lat <- function(
     float diff1, diff2;
     int index1, index2;
 
-    // Compute row indices (latitude indices) for pixels p1 and p2
-    int j1 = p1 / width;
-    int j2 = p2 / width;
-
-    // Retrieve corresponding latitude values
-    float lat1 = lat[j1];
-    float lat2 = lat[j2];
-
-    // Compute smoothness weight based on latitude (absolute to ensure positivity)
-    float lat_weight = (abs(cos(lat1 * M_PI / 180.0)) + abs(cos(lat2 * M_PI / 180.0))) / 2.0;
-
-    // Compute Hellinger distance between labels
     int offset_p1_l1 = (p1 + numPix * l1) * nBins;
     int offset_p1_l2 = (p1 + numPix * l2) * nBins;
     int offset_p2_l1 = (p2 + numPix * l1) * nBins;
@@ -150,10 +141,9 @@ GraphCutHellinger_nD_lat <- function(
     }
 
     cost = (sqrt(tmp1) + sqrt(tmp2)) / sqrt(2.0f);
-
-    // Apply latitude weighting to smooth cost
-    return(weight_global * lat_weight * cost);
-  }',
+    return weight_global * lat_weight * cost;
+}
+',
     includes = c("#include <math.h>", "#include <Rcpp.h>"),
     rebuild = rebuild, showOutput = TRUE, verbose = FALSE
   )
@@ -166,7 +156,7 @@ GraphCutHellinger_nD_lat <- function(
     height = height,
     data = h_dist_cpp,
     weight = weight_data,
-    lat = lat
+    lat_weights = lat_weights_cpp
   ))
 
   gco$setSmoothCost(ptrSmoothCost, list(
@@ -175,7 +165,7 @@ GraphCutHellinger_nD_lat <- function(
     data = pdf_models_cpp,
     weight = weight_smooth,
     nBins = nBins,
-    lat = lat
+    lat_weights = lat_weights_cpp
   ))
 
 
@@ -202,10 +192,10 @@ GraphCutHellinger_nD_lat <- function(
   data_smooth_list <- list("Data cost" = data_cost, "Smooth cost" = smooth_cost)
 
   # Extract label attribution
-  label_attribution <- matrix(0, nrow = height, ncol = width)
+  label_attribution <- matrix(0, nrow = width, ncol = height)
   for (j in 1:height) {
     for (i in 1:width) {
-      label_attribution[j, i] <- gco$whatLabel((i - 1) + width * (j - 1))
+      label_attribution[i, j] <- gco$whatLabel((i - 1) + width * (j - 1))
     }
   }
   label_attribution <- label_attribution + 1

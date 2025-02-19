@@ -14,7 +14,7 @@ source_code_dir <- 'functions/' #The directory where all functions are saved.
 file_paths <- list.files(source_code_dir, full.names = T)
 for(path in file_paths){source(path)}
 
-range_var_final <- readRDS('ranges/range_var_final_GreenwichCentered_1950-2023_90deg_3v.rds')
+range_var_final_0 <- readRDS('ranges/range_var_final_GreenwichCentered_1950-2023_90deg_3v.rds')
 
 # Setting global variables
 lon <- -180:179
@@ -424,7 +424,7 @@ test_df <- melt(GC_hdist_future_0.05, c("lon", "lat"), value.name = "H_dist")
 p6 <- ggplot() +
   geom_tile(data=test_df, aes(x=lon, y=lat-90, fill=H_dist))+
   labs(subtitle = 'Projection period : 1998 - 2023')+
-  ggtitle(paste0('GC', ': Average Partial Hellinger distance = ', round(mean(GC_hdist_future_0.05), 2)))+
+  ggtitle(paste0('GC', ': Average Hellinger distance = ', round(mean(GC_hdist_future_0.05), 2)))+
   scale_fill_gradient(low = "white", high = "#015a8c", limits = c(0.1, 0.70), oob = scales::squish)+
   borders("world2", colour = 'black', lwd = 0.12) +
   scale_x_continuous(, expand = c(0, 0)) +
@@ -462,7 +462,7 @@ test_df <- melt(MMM_hdist_future, varnames = c("lon", "lat"), value.name = "H_di
 p6 <- ggplot() +
   geom_tile(data=test_df, aes(x=lon, y=lat-90, fill=H_dist))+
   labs(subtitle = 'Projection period : 1998 - 2023')+
-  ggtitle(paste0('MMM', ': Average Partial Hellinger distance = ', round(mean(MMM_hdist_future), 2)))+
+  ggtitle(paste0('MMM', ': Average Hellinger distance = ', round(mean(MMM_hdist_future), 2)))+
   scale_fill_gradient(low = "white", high = "#015a8c", limits = c(0.1, 0.70), oob = scales::squish)+
   borders("world2", colour = 'black', lwd = 0.12) +
   scale_x_continuous(, expand = c(0, 0)) +
@@ -1151,7 +1151,7 @@ hist(GC_hdist_future, xlim = c(0, 1), ylim = c(0, 25000), main = "Histogram of G
 }
 
 # Assume GC_result11$label_attribution is your label matrix (dimensions: height x width)
-label_matrix <- GC_result11$label_attribution
+label_matrix <- GC_result061_new$label_attribution
 
 # Number of rows in the label matrix
 n_rows <- nrow(label_matrix)
@@ -1182,13 +1182,13 @@ hist(all_diffs,
 
 
 # Convert the label matrix to a data frame for plotting
-label_df <- reshape2::melt(GC_result1_lat$label_attribution, varnames = c("lon_idx", "lat_idx"), value.name = "label_attribution")
+label_df <- reshape2::melt(GC_result061_new$label_attribution, varnames = c("lon_idx", "lat_idx"), value.name = "label_attribution")
 
-# ✅ Explicitly assign latitude and longitude values
+#  Explicitly assign latitude and longitude values
 label_df$lon <- lon[label_df$lon_idx]  # Match lon index to actual longitude
 label_df$lat <- lat[label_df$lat_idx]  # Match lat index to actual latitude
 
-# ✅ Convert label_attribution to a factor (fixes the "continuous values" error)
+# Convert label_attribution to a factor (fixes the "continuous values" error)
 label_df$label_attribution <- factor(
   label_df$label_attribution,
   levels = seq_along(model_names),
@@ -1231,3 +1231,5 @@ p <- ggplot() +
   ylab('Latitude')
 
 p
+
+

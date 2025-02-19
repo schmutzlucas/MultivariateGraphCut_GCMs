@@ -277,7 +277,7 @@ save.image(file = filename, compress = FALSE)
 
 
 # Extract the label attribution for the current smooth cost
-GC_labels <- GC_result$label_attribution
+GC_labels <- GC_result1_lat$label_attribution
 
 # Convert the label matrix to a data frame for plotting
 label_df <- melt(GC_labels, c("lon", "lat"), value.name = "label_attribution")
@@ -301,8 +301,6 @@ p <- ggplot() +
   scale_fill_manual(values = color_palette, na.value = "white", guide = guide_legend(title = "Model Names", ncol = 1)) +  # Keep all model names in the legend
   ggtitle(paste("Label GC Hellinger - Lambda:", smooth_cost)) +
   borders("world2", colour = 'black', lwd = 0.12) +
-  scale_x_continuous(expand = c(0, 0)) +
-  scale_y_continuous(limits = c(-90, 90), expand = c(0, 0)) +  # Set y-axis limits
   theme(legend.position = 'bottom') +
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
   theme(panel.background = element_blank()) +

@@ -73,7 +73,7 @@ current_time <- Sys.time()
 formatted_time <- format(current_time, "%Y%m%d%H%M")
 
 # Concatenate the formatted time string with your desired filename
-filename <- paste0(formatted_time, "_my_workspace_ERA5_allModels_beforeOptim_3v.RData")
+filename <- paste0(formatted_time, "_my_workspace_ERA5_short_beforeOptim_3v_centered.RData")
 
 # Save the workspace using the generated filename
 save.image(file = filename, compress = FALSE)
@@ -129,7 +129,7 @@ current_time <- Sys.time()
 formatted_time <- format(current_time, "%Y%m%d%H%M")
 
 # Concatenate the formatted time string with your desired filename
-filename <- paste0(formatted_time, "_my_workspace_ERA5_allModels_beforeOptim_3v.RData")
+filename <- paste0(formatted_time, "_my_workspace_ERA5_short_beforeOptim_3v_centered.RData")
 
 # Save the workspace using the generated filename
 save.image(file = filename, compress = FALSE)
@@ -139,18 +139,17 @@ smooth_cost <- 0.6
 # Wrap each iteration in tryCatch to handle errors gracefully
 tryCatch({
   # Run Graph Cut with the varying smooth cost
-  GC_result <- GraphCutHellinger_nD_lat(
-    pdf_models_future = pdf_models_present,
+  GC_result061_new <- GraphCutHellinger_nD_lat(
+    pdf_models_future = pdf_models_future,
     h_dist = h_dist,
     weight_data = 1,               # Fixed data weight
     weight_smooth = smooth_cost,   # Varying smooth cost
     nBins = nbins1d^3,
+    lat = lat,
     seed = 1,
     verbose = TRUE,
-    rebuild = FALSE
+    rebuild = TRUE
   )
-
-
 }, error = function(e) {
   cat("Error encountered with smooth cost =", smooth_cost, ": ", e$message, "\n")
 })
@@ -161,7 +160,7 @@ smooth_cost <- 0.05
 tryCatch({
   # Run Graph Cut with the varying smooth cost
   GC_result_0.05 <- GraphCutHellinger_nD(
-    pdf_models_future = pdf_models_present,
+    pdf_models_future = pdf_models_future,
     h_dist = h_dist,
     weight_data = 1,               # Fixed data weight
     weight_smooth = smooth_cost,   # Varying smooth cost
@@ -170,8 +169,6 @@ tryCatch({
     verbose = TRUE,
     rebuild = FALSE
   )
-
-
 }, error = function(e) {
   cat("Error encountered with smooth cost =", smooth_cost, ": ", e$message, "\n")
 })
@@ -271,7 +268,7 @@ current_time <- Sys.time()
 formatted_time <- format(current_time, "%Y%m%d%H%M")
 
 # Concatenate the formatted time string with your desired filename
-filename <- paste0(formatted_time, "_my_workspace_ERA5_allModels_final_results.RData")
+filename <- paste0(formatted_time, "_my_workspace_ERA5_short_final_results_centered.RData")
 
 # Save the workspace using the generated filename
 save.image(file = filename, compress = FALSE)
@@ -279,7 +276,7 @@ save.image(file = filename, compress = FALSE)
 
 
 # Extract the label attribution for the current smooth cost
-GC_labels <- GC_result$label_attribution
+GC_labels <- GC_result061_new$label_attribution
 
 # Convert the label matrix to a data frame for plotting
 label_df <- melt(GC_labels, c("lon", "lat"), value.name = "label_attribution")
@@ -780,5 +777,82 @@ hist(GC_hdist_future, xlim = c(0, 1), ylim = c(0, 25000), main = "Histogram of G
 
 }
 
+# Load necessary libraries
+library(ggplot2)
+library(tidyr)
+library(dplyr)
+library(sf)
+library(rnaturalearth)
+library(rnaturalearthdata)
 
+# Load world map data
+world <- ne_countries(scale = "medium", returnclass = "sf")
 
+# Extract matrix from list
+matrix_data <- aperm(GC_result061_new$label_attribution, c(2,1))
+
+# Define longitude (-180 to 179) and latitude (-90 to 90)
+lon <- seq(-180, 179, length.out = 360)  # Ensure it aligns with your expected data range
+lat <- seq(-90, 90, length.out = 181)        # Adjusted to match matrix height
+
+# Convert matrix to a dataframe by reshaping it directly
+df_long <- expand.grid(lon = lon, lat = lat)
+
+# Flatten the matrix column-wise and attach it to dataframe
+df_long$model <- as.factor(as.vector(matrix_data))
+
+# Plot the world map with categorical data
+ggplot() +
+  geom_sf(data = world, fill = "gray90", color = "black") +  # World map
+  geom_tile(data = df_long, aes(x = lon, y = lat, fill = model)) +  # Categorical heatmap
+  coord_sf(expand = FALSE) +  # Use coord_sf() for sf objects
+  labs(title = "World Map with Categorical Data",
+       x = "Longitude", y = "Latitude", fill = "Model") +
+  theme_minimal() +
+  theme(panel.grid = element_blank())
+
+# Load necessary libraries
+library(ggplot2)
+library(tidyr)
+library(dplyr)
+library(sf)
+library(rnaturalearth)
+library(rnaturalearthdata)
+
+# Load world map data
+world <- ne_countries(scale = "medium", returnclass = "sf")
+
+# Fix the world map: Shift longitudes from -180 to 180 --> 0 to 360
+world <- world %>%
+  mutate(geometry = st_shift_longitude(geometry))  # Shift the map's longitude
+
+# Extract matrix from list
+matrix_data <- GC_result06$label_attribution
+
+# Define longitude (-180 to 179)
+lon_original <- seq(-180, 179, length.out = 360)
+
+# Define latitude (-90 to 90)
+lat <- seq(-90, 90, length.out = 181)
+
+# Convert matrix to a dataframe by reshaping it directly
+df_long <- expand.grid(lon = lon_original, lat = lat)
+
+# Flatten the matrix column-wise and attach it to dataframe
+df_long$model <- as.factor(as.vector(matrix_data))
+
+# Correctly shift longitude values in data
+df_long <- df_long %>%
+  mutate(lon = ifelse(lon < 0, lon + 360, lon)) %>%  # Shift data longitude
+  arrange(lon, lat)  # Ensure order is correct
+
+# Plot the world map with categorical data (Lon 0 to 360)
+ggplot() +
+  geom_sf(data = world, fill = "gray90", color = "black") +  # Corrected world map
+  geom_tile(data = df_long, aes(x = lon, y = lat, fill = model)) +  # Categorical heatmap
+  coord_sf(expand = FALSE, xlim = c(0, 360)) +  # Keep longitude from 0 to 360
+  scale_x_continuous(breaks = seq(0, 360, by = 60)) +  # Adjust longitude labels
+  labs(title = "World Map with Categorical Data (Lon 0 to 360)",
+       x = "Longitude", y = "Latitude", fill = "Model") +
+  theme_minimal() +
+  theme(panel.grid = element_blank())
