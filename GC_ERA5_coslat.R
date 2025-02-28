@@ -135,11 +135,11 @@ filename <- paste0(formatted_time, "_my_workspace_ERA5_short_beforeOptim_3v_cent
 save.image(file = filename, compress = FALSE)
 
 GC_result_hellinger <- list()
-smooth_cost <- 0.6
+smooth_cost <- 1
 # Wrap each iteration in tryCatch to handle errors gracefully
 tryCatch({
   # Run Graph Cut with the varying smooth cost
-  GC_result061_new <- GraphCutHellinger_nD_lat(
+  GC_result13_debugg_lat2 <- GraphCutHellinger_nD_lat(
     pdf_models_future = pdf_models_future,
     h_dist = h_dist,
     weight_data = 1,               # Fixed data weight
@@ -153,7 +153,7 @@ tryCatch({
 }, error = function(e) {
   cat("Error encountered with smooth cost =", smooth_cost, ": ", e$message, "\n")
 })
-
+# DEBUG dataFn(): p=50000, l=0, lat_weight=0.325568, dval=0.231206
 
 smooth_cost <- 0.05
 # Wrap each iteration in tryCatch to handle errors gracefully

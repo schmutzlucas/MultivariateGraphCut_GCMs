@@ -63,7 +63,9 @@ GraphCutHellinger_nD_lat <- function(
     stop("Error: Latitude vector length does not match grid height.")
   }
 
-  lat_weights <- matrix(rep(abs(cos(lat * pi / 180)), each = width), nrow = width, ncol = height, byrow = TRUE)
+  lat_weights <- matrix(rep(abs(cos(lat * pi / 180)), each = width),
+                      nrow = width, ncol = height, byrow = FALSE)
+
   print(dim(lat_weights))
 
   # Permuting the arrays for C++ indexing
@@ -80,19 +82,29 @@ GraphCutHellinger_nD_lat <- function(
   # DataCost function using 2D latitude weights
   ptrDataCost <- cppXPtr(
     code = 'float dataFn(int p, int l, Rcpp::List extraData)
-  {
-    int width = extraData["width"];
-    int height = extraData["height"];
-    int numPix = width * height;
+{
+    int width         = extraData["width"];
+    int height        = extraData["height"];
+    int numPix        = width * height;
     float weight_global = extraData["weight"];
-    NumericVector data = extraData["data"];
-    NumericVector lat_weights = extraData["lat_weights"];
+    Rcpp::NumericVector data        = extraData["data"];
+    Rcpp::NumericVector lat_weights = extraData["lat_weights"];
 
-    // Retrieve corresponding latitude weight
     float lat_weight = lat_weights[p];
+    float dval       = data[p + numPix * l];
 
-    return(weight_global * lat_weight * data[p + numPix * l]);
-  }',
+    // For debugging: only print for p=0, 10000, 20000,... or some special condition
+    if (p % 10000 == 0 && l == 0) {
+        Rcpp::Rcout << "DEBUG dataFn(): p=" << p
+                    << ", l=" << l
+                    << ", lat_weight=" << lat_weight
+                    << ", dval=" << dval
+                    << std::endl;
+    }
+
+    // Return the cost
+    return(weight_global * dval * lat_weight);
+}',
     includes = c("#include <math.h>", "#include <Rcpp.h>"),
     rebuild = rebuild, showOutput = FALSE, verbose = FALSE
   )
@@ -142,6 +154,7 @@ GraphCutHellinger_nD_lat <- function(
 
     cost = (sqrt(tmp1) + sqrt(tmp2)) / sqrt(2.0f);
     return weight_global * lat_weight * cost;
+    // return weight_global *  cost;
 }
 ',
     includes = c("#include <math.h>", "#include <Rcpp.h>"),

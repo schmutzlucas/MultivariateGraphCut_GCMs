@@ -1151,7 +1151,7 @@ hist(GC_hdist_future, xlim = c(0, 1), ylim = c(0, 25000), main = "Histogram of G
 }
 
 # Assume GC_result11$label_attribution is your label matrix (dimensions: height x width)
-label_matrix <- GC_result061_new$label_attribution
+label_matrix <- GC_result13$label_attribution
 
 # Number of rows in the label matrix
 n_rows <- nrow(label_matrix)
