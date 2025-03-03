@@ -223,3 +223,33 @@ GraphCutHellinger_nD_lat <- function(
     "Data and smooth cost" = data_smooth_list
   )
 }
+
+
+# Define grid dimensions
+width <- 360    # number of rows
+height <- 181   # number of columns
+
+# Create a matrix of zeros with dimensions (width x height)
+test_mat <- matrix(0, nrow = width, ncol = height)
+
+# Given that pixels are indexed as: p = x + y*width, with x = 0:(width-1) and y = 0:(height-1)
+# For p = 50000, compute:
+p <- 65000
+x <- p %% width             # x is the remainder (0-indexed)
+y <- floor(p / width)       # y is the quotient (0-indexed)
+
+# Convert to R's 1-indexing:
+row_index <- x + 1   # row index corresponding to x
+col_index <- y + 1   # column index corresponding to y
+
+cat("For p =", p, "we get x =", x, "and y =", y, "\n")
+cat("So in R indexing, the pixel is at (row, col) =", row_index, ",", col_index, "\n")
+
+# Set that pixel to 1
+test_mat[row_index, col_index] <- 1
+
+# Plot the result
+image(1:width, 1:height, test_mat,
+      xlab = "x (width index)", ylab = "y (height index)",
+      main = paste("Pixel index", p, "set to 1"),
+      col = c("white", "black"))
