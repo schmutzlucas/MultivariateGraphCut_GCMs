@@ -61,9 +61,9 @@ format_time <- function(time_seconds) {
 
 # Time the execution of the new bias-corrected function.
 time_optimized <- system.time({
-  results <- compute_nd_pdf_bias_corrected(variables, reference_name, model_names, data_dir,
+  results <- compute_nd_pdf_bias_corrected_2(variables, reference_name, model_names, data_dir,
                                              year_present, year_future, lon, lat, nbins1d,
-                                             workers = 2, buffer = 0.15)
+                                             workers = 4, buffer = 0.15, verbose = TRUE)
 })
 cat("Time taken for compute_nd_pdf_bias_corrected: ",
     format_time(time_optimized["elapsed"]), "\n")
