@@ -137,7 +137,6 @@ compute_nd_pdf_bias_corrected <- function(variables, reference_name, model_names
       i <- ((idx - 1) %% nlon) + 1
       j <- ((idx - 1) %/% nlon) + 1
       if (var == "pr") {
-        # Use the log-transformed data for range computation
         diff_pres <- max(ref_data_pres[i,j, ], na.rm = TRUE) - min(ref_data_pres[i,j, ], na.rm = TRUE)
         range_pres[idx, 1] <- min(ref_data_pres[i,j, ], na.rm = TRUE) - buffer * diff_pres
         range_pres[idx, 2] <- max(ref_data_pres[i,j, ], na.rm = TRUE) + buffer * diff_pres
@@ -198,6 +197,11 @@ compute_nd_pdf_bias_corrected <- function(variables, reference_name, model_names
   pdf_models_present <- array(NA, dim = c(nlon, nlat, nbins^n_vars, num_models))
   pdf_models_future  <- array(NA, dim = c(nlon, nlat, nbins^n_vars, num_models))
 
+  # Initialize arrays to store out-of-range counts:
+  # Dimensions: [nlon, nlat, n_vars, num_models]
+  out_range_pres_all <- array(0, dim = c(nlon, nlat, n_vars, num_models))
+  out_range_fut_all  <- array(0, dim = c(nlon, nlat, n_vars, num_models))
+
   plan(multisession, workers = workers)
   models_pdf_list <- future_lapply(seq_along(model_names), function(m_idx) {
     model_name <- model_names[m_idx]
@@ -206,6 +210,10 @@ compute_nd_pdf_bias_corrected <- function(variables, reference_name, model_names
     # Lists to hold bias-corrected data (present and future) for each variable
     corrected_data_present_list <- vector("list", n_vars)
     corrected_data_future_list  <- vector("list", n_vars)
+
+    # Initialize out-of-range count matrices for this model: [nlon, nlat, n_vars]
+    out_range_pres <- array(0, dim = c(nlon, nlat, n_vars))
+    out_range_fut  <- array(0, dim = c(nlon, nlat, n_vars))
 
     for (v in seq_along(variables)) {
       var <- variables[v]
@@ -292,28 +300,55 @@ compute_nd_pdf_bias_corrected <- function(variables, reference_name, model_names
       corrected_data_future_list[[v]]  <- corr_fut
     } # End loop over variables for current model
 
-    # Compute joint PDFs from the bias–corrected data for this model.
+    # Initialize model PDF arrays for this model.
     model_pdf_pres <- array(NA, dim = c(nlon, nlat, nbins^n_vars))
     model_pdf_fut  <- array(NA, dim = c(nlon, nlat, nbins^n_vars))
+
+    # Loop over each grid point to compute the joint histogram and count out-of-range values.
     for (i in seq_len(nlon)) {
       for (j in seq_len(nlat)) {
+        # For present period:
+        # Assemble joint data: a matrix with rows = time steps, columns = variables.
         pixel_data_mod_pres <- sapply(1:n_vars, function(v) corrected_data_present_list[[v]][i,j, ])
-        # Use the reference range (from ref_range_present) for binning consistency.
+        # For each variable, get the reference range.
         range_mat <- matrix(NA, n_vars, 2)
         for (v in seq_len(n_vars))
           range_mat[v,] <- ref_range_present[i,j,v,]
+        # Count out-of-range values for each variable.
+        count_vec_pres <- numeric(n_vars)
+        for (v in seq_len(n_vars)) {
+          count_vec_pres[v] <- sum(pixel_data_mod_pres[,v] < range_mat[v,1] | pixel_data_mod_pres[,v] > range_mat[v,2])
+          if(count_vec_pres[v] > 0) {
+            cat(sprintf("Model %s, present, grid (%d,%d), variable %s: %d values out-of-range\n",
+                        model_name, i, j, variables[v], count_vec_pres[v]))
+          }
+        }
+        # Save the count vector into the out-of-range array.
+        out_range_pres[i,j, , m_idx] <- count_vec_pres
+        # Now compute the joint histogram (compute_histND should clamp values to the first/last bins).
         hist_mod_pres <- compute_histND(pixel_data_mod_pres, range_mat, nbins)
         model_pdf_pres[i,j,] <- hist_mod_pres / sum(hist_mod_pres)
 
+        # For future period:
         pixel_data_mod_fut <- sapply(1:n_vars, function(v) corrected_data_future_list[[v]][i,j, ])
         range_mat_fut <- matrix(NA, n_vars, 2)
         for (v in seq_len(n_vars))
           range_mat_fut[v,] <- ref_range_future[i,j,v,]
+        count_vec_fut <- numeric(n_vars)
+        for (v in seq_len(n_vars)) {
+          count_vec_fut[v] <- sum(pixel_data_mod_fut[,v] < range_mat_fut[v,1] | pixel_data_mod_fut[,v] > range_mat_fut[v,2])
+          if(count_vec_fut[v] > 0) {
+            cat(sprintf("Model %s, future, grid (%d,%d), variable %s: %d values out-of-range\n",
+                        model_name, i, j, variables[v], count_vec_fut[v]))
+          }
+        }
+        out_range_fut[i,j, , m_idx] <- count_vec_fut
         hist_mod_fut <- compute_histND(pixel_data_mod_fut, range_mat_fut, nbins)
         model_pdf_fut[i,j,] <- hist_mod_fut / sum(hist_mod_fut)
       }
     }
-    return(list(present = model_pdf_pres, future = model_pdf_fut))
+    return(list(present = model_pdf_pres, future = model_pdf_fut,
+                out_range = list(present = out_range_pres, future = out_range_fut)))
   })  # End future_lapply over models
   plan(sequential)
 
@@ -323,9 +358,18 @@ compute_nd_pdf_bias_corrected <- function(variables, reference_name, model_names
     pdf_models_future[,,,m_idx]  <- models_pdf_list[[m_idx]]$future
   }
 
+  # Combine out-of-range counts across models into arrays with dims [nlon, nlat, n_vars, num_models]
+  out_range_pres_all <- array(NA, dim = c(nlon, nlat, n_vars, num_models))
+  out_range_fut_all  <- array(NA, dim = c(nlon, nlat, n_vars, num_models))
+  for (m_idx in seq_along(model_names)) {
+    out_range_pres_all[,,,m_idx] <- models_pdf_list[[m_idx]]$out_range$present
+    out_range_fut_all[,,,m_idx]  <- models_pdf_list[[m_idx]]$out_range$future
+  }
+
   return(list(
     pdf_reference = list(present = pdf_ref_present, future = pdf_ref_future),
     pdf_models    = list(present = pdf_models_present, future = pdf_models_future),
-    reference_stats = list(present = reference_stats_present, future = reference_stats_future)
+    reference_stats = list(present = reference_stats_present, future = reference_stats_future),
+    out_of_range_counts = list(present = out_range_pres_all, future = out_range_fut_all)
   ))
 }

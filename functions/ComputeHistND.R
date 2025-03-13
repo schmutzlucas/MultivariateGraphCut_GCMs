@@ -28,7 +28,7 @@ compute_histND <- function(data, range_var, nbins) {
   n_vars <- ncol(data)  # Number of variables
   n_obs <- nrow(data)   # Number of observations
 
-  # Calculate the bin edges for each variable
+  # Calculate the bin edges for each variable based on the given range
   bin_edges <- lapply(1:n_vars, function(v) {
     seq(range_var[v, 1], range_var[v, 2], length.out = nbins + 1)
   })
@@ -36,15 +36,17 @@ compute_histND <- function(data, range_var, nbins) {
   # Initialize a matrix to hold bin indices for each observation and variable
   bin_indices <- matrix(NA, nrow = n_obs, ncol = n_vars)
 
-  # Assign each data point to a bin
+  # For each variable, assign each data point to a bin using findInterval.
+  # Then, explicitly clamp any indices that fall below 1 or above nbins.
   for (v in 1:n_vars) {
     bin_indices[, v] <- findInterval(data[, v], vec = bin_edges[[v]], rightmost.closed = TRUE)
-    # Correct any indices that are zero or out of bounds
+    # Clamp values below the minimum to the first bin:
     bin_indices[, v][bin_indices[, v] < 1] <- 1
+    # Clamp values above the maximum to the last bin:
     bin_indices[, v][bin_indices[, v] > nbins] <- nbins
   }
 
-  # Compute linear indices for the n-dimensional histogram
+  # Compute linear indices for the n-dimensional histogram.
   dims <- rep(nbins, n_vars)
   multiplier <- cumprod(c(1, dims[-length(dims)]))
   idx_linear <- as.numeric((bin_indices - 1) %*% multiplier) + 1
@@ -52,10 +54,8 @@ compute_histND <- function(data, range_var, nbins) {
   # Initialize the histogram vector
   hist_vector <- rep(0, prod(dims))
 
-  # Count occurrences using table()
+  # Count occurrences using table() and update the histogram vector.
   counts <- table(idx_linear)
-
-  # Update the histogram vector
   hist_vector[as.numeric(names(counts))] <- counts
 
   return(hist_vector)

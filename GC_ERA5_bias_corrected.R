@@ -39,7 +39,7 @@ nbins1d <<- 8
 # (The joint PDF will have nbins1d^n_vars bins)
 
 # Obtain the list of models from a file
-model_names <- read.table('model_names_pr_tas_psl.txt')
+model_names <- read.table('model_names_pr_tas_psl_3mod.txt')
 model_names <- as.list(model_names[['V1']])
 ref_index <<- 1
 
