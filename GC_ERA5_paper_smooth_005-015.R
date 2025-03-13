@@ -550,16 +550,22 @@ name <- paste0("figure/GC_Partial10_H_smooth005")
 ggsave(paste0(name, ".pdf"), plot = p6, width = 20, height = 15, units = "cm", dpi = 300)
 ggsave(paste0(name, ".png"), plot = p6, width = 20, height = 15, units = "cm", dpi = 300)
 
+
+
+# Map of labels
 # Extract the label attribution for the current smooth cost
-GC_labels <- GC_result11$label_attribution
+GC_labels <- GC_result13_debugg_lat2$label_attribution
 
 # Convert the label matrix to a data frame for plotting
 # Make sure 'GC_labels' has dimensions [lon, lat],
 # where lon ∈ [-180..179] and lat ∈ [-90..90].
-label_df <- reshape2::melt(GC_labels, varnames = c("lon", "lat"), value.name = "label_attribution")
+# Convert the label matrix to a data frame for plotting
+label_df <- reshape2::melt(GC_labels, varnames = c("lon_idx", "lat_idx"), value.name = "label_attribution")
 
-# Remove this if lat is already -90..+90 (no extra shift needed)
-# label_df$lat <- label_df$lat - 90
+# ✅ Explicitly assign correct longitude and latitude values
+label_df$lon <- lon[label_df$lon_idx]  # Map longitude indices to values
+label_df$lat <- lat[label_df$lat_idx]  # Map latitude indices to values
+
 
 # Convert label_attribution to a factor with all model names
 label_df$label_attribution <- factor(
@@ -594,7 +600,7 @@ p <- ggplot() +
 
   # Force x,y to match the new [-180..+180] and [-90..+90] coordinate system
   # and lock the aspect ratio (1:1 degrees)
-  coord_fixed(xlim = c(-180, 180), ylim = c(-90, 90), ratio = 1) +
+  # coord_fixed(xlim = c(-180, 180), ylim = c(-90, 90), ratio = 1) +
 
   # A clean theme
   theme_bw() +
@@ -629,6 +635,50 @@ name <- paste0("figure/Labels_GC_Hellinger_smooth_1950-1975_3v")
 # Save the plot as both PDF and PNG
 ggsave(paste0(name, ".pdf"), plot = p, width = 20, height = 15, units = "cm", dpi = 300)
 ggsave(paste0(name, ".png"), plot = p, width = 20, height = 15, units = "cm", dpi = 300)
+
+
+
+{library(ggplot2)
+library(maps)
+library(mapproj)  # Required for projections
+
+p <- ggplot() +
+  geom_tile(data = label_df, aes(x = lon, y = lat, fill = label_attribution)) +
+  scale_fill_manual(
+    values = color_palette,
+    na.value = "white",
+    guide = guide_legend(title = "Model Names", ncol = 1)
+  ) +
+  ggtitle(paste("Label GC Hellinger - Lambda:", smooth_cost)) +
+
+  # 🛠 Fix the map background issue
+  borders("world", colour = 'black', size = 0.12) +
+
+  # ✅ Apply Robinson projection
+  coord_map("robinson") +
+
+  theme_bw() +
+  theme(
+    legend.position = 'right',
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.background = element_blank(),
+    legend.key.size = unit(0.5, 'cm'),
+    legend.key.height = unit(0.5, 'cm'),
+    legend.key.width = unit(0.5, 'cm'),
+    legend.title = element_text(size = 10),
+    legend.text = element_text(size = 8),
+    plot.title = element_text(size = 16),
+    plot.subtitle = element_text(size = 12, hjust = 0.5),
+    axis.text = element_text(size = 10),
+    axis.title = element_text(size = 12)
+  ) +
+  xlab('Longitude') +
+  ylab('Latitude')
+
+p
+
+}
 
 
 {
