@@ -156,7 +156,7 @@ process_model_pdf <- function(m_idx, model_names, nlon, nlat, variables, data_di
 # Main function
 #-------------------------------
 compute_nd_pdf_bias_corrected_2 <- function(variables, reference_name, model_names, data_dir,
-                                            year_present, year_future, lon, lat, nbins, workers,
+                                            year_present, year_future, lon, lat, nbins, workers = 1,
                                             buffer = 0.05, verbose = FALSE) {
 
   n_vars <- length(variables)
@@ -302,8 +302,9 @@ compute_nd_pdf_bias_corrected_2 <- function(variables, reference_name, model_nam
   } # End loop over reference variables
 
 for (i in seq_len(nlon)) {
-  if (verbose && (i %% 10 == 0)) {
-    cat(sprintf("Processing reference grid row %d of %d\n", i, nlon))
+  if (verbose && (i %% 5 == 0)) {
+    cat(sprintf("[%s] Processing reference grid row %d of %d\n",
+                format(Sys.time(), "%Y-%m-%d %H:%M:%S"), i, nlon))
   }
   for (j in seq_len(nlat)) {
     range_mat_pres <- matrix(NA, n_vars, 2)
@@ -342,8 +343,7 @@ for (i in seq_len(nlon)) {
   models_pdf_list <- future_lapply(seq_along(model_names),
                                    FUN = function(m_idx) process_model_pdf(m_idx, model_names, nlon, nlat, variables, data_dir,
                                                                            year_present, year_future, reference_stats_present,
-                                                                           reference_stats_future, ref_range_present, ref_range_future, nbins),
-                                   simplify = FALSE)
+                                                                           reference_stats_future, ref_range_present, ref_range_future, nbins))
   plan(sequential)
 
   for (m_idx in seq_along(model_names)) {

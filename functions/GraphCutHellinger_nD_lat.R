@@ -42,7 +42,7 @@ library(gcoWrapR)
 #' @import gcoWrapR
 #' @export
 GraphCutHellinger_nD_lat <- function(
-  pdf_models_future,
+  pdf_models_present,
   h_dist,
   weight_data,
   weight_smooth,
@@ -53,8 +53,8 @@ GraphCutHellinger_nD_lat <- function(
   rebuild
 ) {
   n_labs <- dim(h_dist)[3]
-  height <- ncol(pdf_models_future[,,,1])
-  width <- nrow(pdf_models_future[,,,1])
+  height <- ncol(pdf_models_present[,,,1])
+  width <- nrow(pdf_models_present[,,,1])
 
   print(height)
   print(width)
@@ -70,7 +70,7 @@ GraphCutHellinger_nD_lat <- function(
 
   # Permuting the arrays for C++ indexing
   h_dist_cpp <- c(aperm(h_dist, c(1, 2, 3)))
-  pdf_models_cpp <- c(aperm(pdf_models_future, c(3, 1, 2, 4)))
+  pdf_models_cpp <- c(aperm(pdf_models_present, c(3, 1, 2, 4)))
   lat_weights_cpp <-  c(aperm(lat_weights, c(1, 2)))
 
 
