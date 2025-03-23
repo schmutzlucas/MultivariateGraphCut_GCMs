@@ -15,16 +15,27 @@ for(path in file_paths){
   source(path)
 }
 
-
 # Setting global variables
-lon <- -180:179
-lat <- -90:90
+lon <- -10:10
+lat <- -10:10
 lon_size <- length(lon)
 lat_size <- length(lat)
 
 # Temporal ranges
 year_present <<- 1950:1975
 year_future <<- 1998:2023
+
+
+
+# # Setting global variables
+# lon <- -180:179
+# lat <- -90:90
+# lon_size <- length(lon)
+# lat_size <- length(lat)
+#
+# # Temporal ranges
+# year_present <<- 1950:1975
+# year_future <<- 1998:2023
 
 # Data directory
 data_dir <<- 'data/CMIP6_merged_all/'
@@ -63,7 +74,7 @@ format_time <- function(time_seconds) {
 time_optimized <- system.time({
   results <- compute_nd_pdf_bias_corrected_2(variables, reference_name, model_names, data_dir,
                                              year_present, year_future, lon, lat, nbins1d,
-                                             workers = 3, buffer = 0.15, verbose = TRUE)
+                                             workers = 8, buffer = 0.15, verbose = TRUE)
 })
 cat("Time taken for compute_nd_pdf_bias_corrected: ",
     format_time(time_optimized["elapsed"]), "\n")
@@ -88,63 +99,63 @@ save.image(file = filename, compress = FALSE)
 # Plotting the 3d pdf of one gridpoint
 {
   # Example indices (adjust as needed)
-lon_index <- 10   # selected longitude index
-lat_index <- 10   # selected latitude index
-model_idx <- 3     # select one model (from the pdf_models array)
-nbins <- 8       # number of bins per variable
+  lon_index <- 10  # selected longitude index
+  lat_index <- 10   # selected latitude index
+  model_idx <- 3     # select one model (from the pdf_models array)
+  nbins <- 8       # number of bins per variable
 
-# Extract the PDF vector for the chosen grid point and model.
-# Here pdf_models is from results$pdf_models$present and has dimensions:
-# [lon, lat, nbins^n_vars, num_models].
-pdf_vector <- results$pdf_models$present[lon_index, lat_index, , model_idx]
+  # Extract the PDF vector for the chosen grid point and model.
+  # Here pdf_models is from results$pdf_models$present and has dimensions:
+  # [lon, lat, nbins^n_vars, num_models].
+  pdf_vector <- results$pdf_models$present[lon_index, lat_index, , model_idx]
 
-# Reshape the 1D PDF vector into a 3D array.
-pdf_3d <- array(pdf_vector, dim = c(nbins, nbins, nbins))
+  # Reshape the 1D PDF vector into a 3D array.
+  pdf_3d <- array(pdf_vector, dim = c(nbins, nbins, nbins))
 
-# Extract the reference range for that grid point.
-# We assume results$ref_range_present has dimensions: [lon, lat, n_vars, 2]
-range_mat <- results$ref_range_present[lon_index, lat_index, , ]  # dimensions: [3, 2]
+  # Extract the reference range for that grid point.
+  # We assume results$ref_range_present has dimensions: [lon, lat, n_vars, 2]
+  range_mat <- results$ref_range_present[lon_index, lat_index, , ]  # dimensions: [3, 2]
 
-# Compute bin edges and centers for each variable.
-centers <- list()
-for(v in 1:3) {
-  bin_edges <- seq(range_mat[v, 1], range_mat[v, 2], length.out = nbins + 1)
-  centers[[v]] <- (bin_edges[-1] + bin_edges[-length(bin_edges)])/2
-}
+  # Compute bin edges and centers for each variable.
+  centers <- list()
+  for(v in 1:3) {
+    bin_edges <- seq(range_mat[v, 1], range_mat[v, 2], length.out = nbins + 1)
+    centers[[v]] <- (bin_edges[-1] + bin_edges[-length(bin_edges)])/2
+  }
 
-# Create a grid of bin centers.
-grid <- expand.grid(x = centers[[1]], y = centers[[2]], z = centers[[3]])
+  # Create a grid of bin centers.
+  grid <- expand.grid(x = centers[[1]], y = centers[[2]], z = centers[[3]])
 
-# Flatten the 3D PDF into a vector.
-pdf_flat <- as.vector(pdf_3d)
-# Normalize PDF values for marker size.
-normalized_pdf <- pdf_flat / max(pdf_flat, na.rm = TRUE)
+  # Flatten the 3D PDF into a vector.
+  pdf_flat <- as.vector(pdf_3d)
+  # Normalize PDF values for marker size.
+  normalized_pdf <- pdf_flat / max(pdf_flat, na.rm = TRUE)
 
-library(plotly)
-fig <- plot_ly(
-  data = grid,
-  x = ~x,
-  y = ~y,
-  z = ~z,
-  type = "scatter3d",
-  mode = "markers",
-  marker = list(
-    size = ~normalized_pdf * 75,  # Adjust scaling factor as needed
-    color = ~pdf_flat,
-    colorscale = "Viridis",
-    showscale = TRUE
-  ),
-  text = ~paste("PDF Value:", round(pdf_flat, 4))
-) %>% layout(
-  scene = list(
-    xaxis = list(title = "pr"),
-    yaxis = list(title = "tas"),
-    zaxis = list(title = "psl")
-  ),
-  title = paste("3D PDF for Model", model_idx, "Grid Point (Lon:", lon_index, ", Lat:", lat_index, ")")
-)
+  library(plotly)
+  fig <- plot_ly(
+    data = grid,
+    x = ~x,
+    y = ~y,
+    z = ~z,
+    type = "scatter3d",
+    mode = "markers",
+    marker = list(
+      size = ~normalized_pdf * 75,  # Adjust scaling factor as needed
+      color = ~pdf_flat,
+      colorscale = "Viridis",
+      showscale = TRUE
+    ),
+    text = ~paste("PDF Value:", round(pdf_flat, 4))
+  ) %>% layout(
+    scene = list(
+      xaxis = list(title = "pr"),
+      yaxis = list(title = "tas"),
+      zaxis = list(title = "psl")
+    ),
+    title = paste("3D PDF for Model", model_idx, "Grid Point (Lon:", lon_index, ", Lat:", lat_index, ")")
+  )
 
-fig
+  fig
 
 }
 
@@ -179,11 +190,11 @@ hist(h_dist_future, main = "Complete Hellinger Distance (Future)")
 
 # --- End Complete Hellinger Distance Computation ---
 
-smooth_cost <- 1
+smooth_cost <- 0.6
 tryCatch({
-  GC_result11 <- GraphCutHellinger_nD_lat(
-    pdf_models_present = pdf_models_present,
-    h_dist = h_dist_future,
+  GC_result06 <- GraphCutHellinger_nD_lat(
+    pdf_models_future = pdf_models_future,
+    h_dist = h_dist_present,
     weight_data = 1,               # Fixed data weight
     weight_smooth = smooth_cost,   # Varying smooth cost
     nBins = nbins1d^3,
@@ -195,3 +206,110 @@ tryCatch({
 }, error = function(e) {
   cat("Error encountered with smooth cost =", smooth_cost, ": ", e$message, "\n")
 })
+
+
+
+{
+  # Map of labels
+  # Extract the label attribution for the current smooth cost
+  GC_labels <- GC_result06$label_attribution
+
+  # Convert the label matrix to a data frame for plotting
+  # Make sure 'GC_labels' has dimensions [lon, lat],
+  # where lon ∈ [-180..179] and lat ∈ [-90..90].
+  # Convert the label matrix to a data frame for plotting
+  label_df <- reshape2::melt(GC_labels, varnames = c("lon_idx", "lat_idx"), value.name = "label_attribution")
+
+  # ✅ Explicitly assign correct longitude and latitude values
+  label_df$lon <- lon[label_df$lon_idx]  # Map longitude indices to values
+  label_df$lat <- lat[label_df$lat_idx]  # Map latitude indices to values
+
+
+  # Convert label_attribution to a factor with all model names
+  label_df$label_attribution <- factor(
+    label_df$label_attribution,
+    levels = seq_along(model_names),
+    labels = model_names
+  )
+
+  color_palette <- c(
+    "#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd",
+    "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf",
+    "#aec7e8", "#ffbb78", "#98df8a", "#ff9896", "#c5b0d5",
+    "#c49c94", "#f7b6d2", "#c7c7c7", "#dbdb8d", "#9edae5",
+    "#393b79", "#5254a3", "#6b6ecf"
+  )
+
+  p <- ggplot() +
+    # Plot tiles at each (lon, lat)
+    geom_tile(data = label_df, aes(x = lon, y = lat, fill = label_attribution)) +
+
+    # Custom color palette for the labels
+    scale_fill_manual(
+      values = color_palette,
+      na.value = "white",
+      guide = guide_legend(title = "Model Names", ncol = 1)
+    ) +
+
+    ggtitle(paste("Label GC Hellinger - Lambda:", smooth_cost)) +
+
+    # Use "world" (not "world2"), which expects longitude ∈ [-180..+180]
+    borders("world", colour = 'black', size = 0.12) +
+
+    # Force x,y to match the new [-180..+180] and [-90..+90] coordinate system
+    # and lock the aspect ratio (1:1 degrees)
+    # coord_fixed(xlim = c(-180, 180), ylim = c(-90, 90), ratio = 1) +
+
+    # A clean theme
+    theme_bw() +
+
+    # Adjust the legend and axis text, etc.
+    theme(
+      legend.position = 'bottom',
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank(),
+      panel.background = element_blank(),
+      legend.key.size = unit(0.5, 'cm'),
+      legend.key.height = unit(0.5, 'cm'),
+      legend.key.width = unit(0.5, 'cm'),
+      legend.title = element_text(size = 10),
+      legend.text = element_text(size = 8),
+      plot.title = element_text(size = 16),
+      plot.subtitle = element_text(size = 12, hjust = 0.5),
+      axis.text = element_text(size = 10),
+      axis.title = element_text(size = 12)
+    ) +
+
+    xlab('Longitude') +
+    ylab('Latitude') +
+    easy_center_title()
+
+  p
+
+}
+
+num_bins <- 20
+x_limits <- range(h_dist_present, finite = TRUE)  # Adjust based on your data
+y_limits <- c(0, 30000)
+
+# Loop through models and plot histograms
+for (v in seq_along(model_names)) {
+  hist(
+    h_dist_present[,,v],
+    breaks = seq(x_limits[1], x_limits[2], length.out = num_bins + 1),
+    xlim = x_limits,
+    ylim = y_limits,
+    main = paste("Histogram for", model_names[v]),
+    xlab = "Value",
+    col = "lightblue",
+    border = "black"
+  )
+}
+# Extract the data
+nan_map <- is.na(results$out_of_range_counts$present)
+
+# Create a plot
+image(nan_map, col = c("white", "black"), axes = FALSE, main = "Map of NaN Values")
+
+# Add a legend
+legend("topright", legend = c("Valid", "NaN"), fill = c("white", "black"), border = "black")

@@ -29,7 +29,6 @@ def process_group(input_files, grid_file, output_base_dir):
     output_dir = os.path.join(output_base_dir, model_dir, var_dir)
     os.makedirs(output_dir, exist_ok=True)
     output_path = os.path.join(output_dir, output_filename)
-
     # Define CDO command
     cdo_command = ["cdo", "-O", "remapbil," + grid_file,
                    "-mergetime"] + input_files + [output_path]

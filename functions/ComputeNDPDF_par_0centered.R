@@ -23,7 +23,8 @@
 #' @import ncdf4 future future.apply
 #' @export
 
-compute_nd_pdf_optimized_0centered <- function(variables, model_names, data_dir, year_present, year_future, lon, lat, range_var, nbins, workers) {
+compute_nd_pdf_optimized_0centered <- function(variables, model_names, data_dir, year_present, year_future, lon, lat,
+                                               range_var, nbins, workers) {
   n_var <- length(variables)
   num_models <- length(model_names)
   pdf_matrix_present <- array(NA, dim = c(length(lon), length(lat), nbins^n_var, num_models))

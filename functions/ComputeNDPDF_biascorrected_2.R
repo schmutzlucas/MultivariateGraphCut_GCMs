@@ -1,5 +1,5 @@
-# Set up parallel processing option (48 GiB maximum globals)
-options(future.globals.maxSize = 64 * 1024^3)
+# Set up parallel processing option (64 GiB maximum globals)
+options(future.globals.maxSize = 64.0 * 1024^3)
 
 #-------------------------------
 # Helper function for processing a single model.
@@ -85,26 +85,31 @@ process_model_pdf <- function(m_idx, model_names, nlon, nlat, variables, data_di
         ts_mod_pres <- mod_data_pres[i, j, ]
         ts_mod_fut  <- mod_data_fut[i, j, ]
         if (var != "pr") {
+          # Use present reference statistics for bias correction for both periods
           ref_mean_pres <- reference_stats_present[[v]]$mean[i, j]
           ref_sd_pres   <- reference_stats_present[[v]]$sd[i, j]
+
           mod_mean_pres <- mean(ts_mod_pres, na.rm = TRUE)
           mod_sd_pres   <- sd(ts_mod_pres, na.rm = TRUE)
           corr_pres[i, j, ] <- ((ts_mod_pres - mod_mean_pres) / mod_sd_pres) * ref_sd_pres + ref_mean_pres
 
-          ref_mean_fut <- reference_stats_future[[v]]$mean[i, j]
-          ref_sd_fut   <- reference_stats_future[[v]]$sd[i, j]
           mod_mean_fut <- mean(ts_mod_fut, na.rm = TRUE)
           mod_sd_fut   <- sd(ts_mod_fut, na.rm = TRUE)
-          corr_fut[i, j, ] <- ((ts_mod_fut - mod_mean_fut) / mod_sd_fut) * ref_sd_fut + ref_mean_fut
+          # Apply the same present reference stats for the future period correction
+          corr_fut[i, j, ] <- ((ts_mod_fut - mod_mean_fut) / mod_sd_fut) * ref_sd_pres + ref_mean_pres
+
         } else {
+          # For precipitation, use the 90th percentile (q90) from the present reference
           ref_q90_pres <- reference_stats_present[[v]]$q90[i, j]
+
           mod_q90_pres <- as.numeric(quantile(ts_mod_pres, 0.90, na.rm = TRUE))
           corr_pres[i, j, ] <- ts_mod_pres * (ref_q90_pres / mod_q90_pres)
 
-          ref_q90_fut <- reference_stats_future[[v]]$q90[i, j]
           mod_q90_fut <- as.numeric(quantile(ts_mod_fut, 0.90, na.rm = TRUE))
-          corr_fut[i, j, ] <- ts_mod_fut * (ref_q90_fut / mod_q90_fut)
+          # Use present q90 for the future period as well
+          corr_fut[i, j, ] <- ts_mod_fut * (ref_q90_pres / mod_q90_fut)
 
+          # Log-transform both corrected series for precipitation
           corr_pres[i, j, ] <- log(corr_pres[i, j, ] + 1)
           corr_fut[i, j, ]  <- log(corr_fut[i, j, ] + 1)
         }
@@ -119,31 +124,35 @@ process_model_pdf <- function(m_idx, model_names, nlon, nlat, variables, data_di
   model_pdf_pres <- array(NA, dim = c(nlon, nlat, nbins^n_vars))
   model_pdf_fut  <- array(NA, dim = c(nlon, nlat, nbins^n_vars))
 
-  for (i in seq_len(nlon)) {
-    for (j in seq_len(nlat)) {
-      pixel_data_mod_pres <- sapply(1:n_vars, function(v) corrected_data_present_list[[v]][i, j, ])
-      range_mat <- matrix(NA, n_vars, 2)
-      for (v in seq_len(n_vars)) {
-        range_mat[v, ] <- ref_range_present[i, j, v, ]
-      }
-      count_vec_pres <- sapply(1:n_vars, function(v)
-        sum(pixel_data_mod_pres[, v] < range_mat[v, 1] | pixel_data_mod_pres[, v] > range_mat[v, 2]))
-      out_range_pres[i, j, ] <- count_vec_pres
-      hist_mod_pres <- compute_histND(pixel_data_mod_pres, range_mat, nbins)
-      model_pdf_pres[i, j, ] <- hist_mod_pres / sum(hist_mod_pres)
-
-      pixel_data_mod_fut <- sapply(1:n_vars, function(v) corrected_data_future_list[[v]][i, j, ])
-      range_mat_fut <- matrix(NA, n_vars, 2)
-      for (v in seq_len(n_vars)) {
-        range_mat_fut[v, ] <- ref_range_future[i, j, v, ]
-      }
-      count_vec_fut <- sapply(1:n_vars, function(v)
-        sum(pixel_data_mod_fut[, v] < range_mat_fut[v, 1] | pixel_data_mod_fut[, v] > range_mat_fut[v, 2]))
-      out_range_fut[i, j, ] <- count_vec_fut
-      hist_mod_fut <- compute_histND(pixel_data_mod_fut, range_mat_fut, nbins)
-      model_pdf_fut[i, j, ] <- hist_mod_fut / sum(hist_mod_fut)
+for (i in seq_len(nlon)) {
+  for (j in seq_len(nlat)) {
+    # --- Compute PDF for the present period ---
+    pixel_data_mod_pres <- sapply(1:n_vars, function(v) corrected_data_present_list[[v]][i, j, ])
+    range_mat_pres <- matrix(NA, n_vars, 2)
+    for (v in seq_len(n_vars)) {
+      range_mat_pres[v, ] <- ref_range_present[i, j, v, ]
     }
+    count_vec_pres <- sapply(1:n_vars, function(v)
+      sum(pixel_data_mod_pres[, v] < range_mat_pres[v, 1] | pixel_data_mod_pres[, v] > range_mat_pres[v, 2]))
+    out_range_pres[i, j, ] <- count_vec_pres
+    hist_mod_pres <- compute_histND(pixel_data_mod_pres, range_mat_pres, nbins)
+    model_pdf_pres[i, j, ] <- hist_mod_pres / sum(hist_mod_pres)
+
+    # --- Compute PDF for the future period ---
+    # Here we use the same (present) reference range for bias-corrected future data.
+    pixel_data_mod_fut <- sapply(1:n_vars, function(v) corrected_data_future_list[[v]][i, j, ])
+    range_mat_fut <- matrix(NA, n_vars, 2)
+    for (v in seq_len(n_vars)) {
+      range_mat_fut[v, ] <- ref_range_present[i, j, v, ]  # Use present reference range
+    }
+    count_vec_fut <- sapply(1:n_vars, function(v)
+      sum(pixel_data_mod_fut[, v] < range_mat_fut[v, 1] | pixel_data_mod_fut[, v] > range_mat_fut[v, 2]))
+    out_range_fut[i, j, ] <- count_vec_fut
+    hist_mod_fut <- compute_histND(pixel_data_mod_fut, range_mat_fut, nbins)
+    model_pdf_fut[i, j, ] <- hist_mod_fut / sum(hist_mod_fut)
   }
+}
+
   rm(mod_data_pres, mod_data_fut)  # (Already removed full_data_*)
   gc()
 
@@ -301,27 +310,27 @@ compute_nd_pdf_bias_corrected_2 <- function(variables, reference_name, model_nam
     ref_data_future_all[,,,v]  <- ref_data_fut
   } # End loop over reference variables
 
-for (i in seq_len(nlon)) {
-  if (verbose && (i %% 5 == 0)) {
-    cat(sprintf("[%s] Processing reference grid row %d of %d\n",
-                format(Sys.time(), "%Y-%m-%d %H:%M:%S"), i, nlon))
-  }
-  for (j in seq_len(nlat)) {
-    range_mat_pres <- matrix(NA, n_vars, 2)
-    for (v in seq_len(n_vars))
-      range_mat_pres[v, ] <- ref_range_present[i, j, v, ]
-    pixel_data_pres <- sapply(1:n_vars, function(v) ref_data_present_all[i, j, , v])
-    hist_pres <- compute_histND(pixel_data_pres, range_mat_pres, nbins)
-    pdf_ref_present[i, j, ] <- hist_pres / sum(hist_pres)
+  for (i in seq_len(nlon)) {
+    if (verbose && (i %% 5 == 0)) {
+      cat(sprintf("[%s] Processing reference grid row %d of %d\n",
+                  format(Sys.time(), "%Y-%m-%d %H:%M:%S"), i, nlon))
+    }
+    for (j in seq_len(nlat)) {
+      range_mat_pres <- matrix(NA, n_vars, 2)
+      for (v in seq_len(n_vars))
+        range_mat_pres[v, ] <- ref_range_present[i, j, v, ]
+      pixel_data_pres <- sapply(1:n_vars, function(v) ref_data_present_all[i, j, , v])
+      hist_pres <- compute_histND(pixel_data_pres, range_mat_pres, nbins)
+      pdf_ref_present[i, j, ] <- hist_pres / sum(hist_pres)
 
-    range_mat_fut <- matrix(NA, n_vars, 2)
-    for (v in seq_len(n_vars))
-      range_mat_fut[v, ] <- ref_range_future[i, j, v, ]
-    pixel_data_fut <- sapply(1:n_vars, function(v) ref_data_future_all[i, j, , v])
-    hist_fut <- compute_histND(pixel_data_fut, range_mat_fut, nbins)
-    pdf_ref_future[i, j, ] <- hist_fut / sum(hist_fut)
+      range_mat_fut <- matrix(NA, n_vars, 2)
+      for (v in seq_len(n_vars))
+        range_mat_fut[v, ] <- ref_range_future[i, j, v, ]
+      pixel_data_fut <- sapply(1:n_vars, function(v) ref_data_future_all[i, j, , v])
+      hist_fut <- compute_histND(pixel_data_fut, range_mat_fut, nbins)
+      pdf_ref_future[i, j, ] <- hist_fut / sum(hist_fut)
+    }
   }
-}
 
   # Freeing memory
   rm(ref_data_present_all, ref_data_future_all)

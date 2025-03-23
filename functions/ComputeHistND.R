@@ -25,38 +25,31 @@
 #'
 #' @export
 compute_histND <- function(data, range_var, nbins) {
-  n_vars <- ncol(data)  # Number of variables
-  n_obs <- nrow(data)   # Number of observations
+  n_vars <- ncol(data)   # number of variables
+  n_obs  <- nrow(data)    # number of observations
 
-  # Calculate the bin edges for each variable based on the given range
+  # Compute bin edges for each variable
   bin_edges <- lapply(1:n_vars, function(v) {
     seq(range_var[v, 1], range_var[v, 2], length.out = nbins + 1)
   })
 
-  # Initialize a matrix to hold bin indices for each observation and variable
-  bin_indices <- matrix(NA, nrow = n_obs, ncol = n_vars)
-
-  # For each variable, assign each data point to a bin using findInterval.
-  # Then, explicitly clamp any indices that fall below 1 or above nbins.
-  for (v in 1:n_vars) {
-    bin_indices[, v] <- findInterval(data[, v], vec = bin_edges[[v]], rightmost.closed = TRUE)
-    # Clamp values below the minimum to the first bin:
-    bin_indices[, v][bin_indices[, v] < 1] <- 1
-    # Clamp values above the maximum to the last bin:
-    bin_indices[, v][bin_indices[, v] > nbins] <- nbins
-  }
+  # For each variable, determine the bin index for each observation
+  bin_indices <- sapply(1:n_vars, function(v) {
+    inds <- findInterval(data[, v], vec = bin_edges[[v]], rightmost.closed = TRUE)
+    inds[inds < 1] <- 1
+    inds[inds > nbins] <- nbins
+    return(inds)
+  })
 
   # Compute linear indices for the n-dimensional histogram.
+  # The overall number of bins is nbins^n_vars.
   dims <- rep(nbins, n_vars)
   multiplier <- cumprod(c(1, dims[-length(dims)]))
-  idx_linear <- as.numeric((bin_indices - 1) %*% multiplier) + 1
+  idx_linear <- as.vector((as.matrix(bin_indices) - 1) %*% multiplier) + 1
 
-  # Initialize the histogram vector
-  hist_vector <- rep(0, prod(dims))
-
-  # Count occurrences using table() and update the histogram vector.
-  counts <- table(idx_linear)
-  hist_vector[as.numeric(names(counts))] <- counts
+  # Build histogram vector using tabulate; its length is exactly nbins^n_vars.
+  hist_vector <- tabulate(idx_linear, nbins = prod(dims))
 
   return(hist_vector)
 }
+
