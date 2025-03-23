@@ -7,7 +7,7 @@ options(future.globals.maxSize = 64.0 * 1024^3)
 #-------------------------------
 process_model_pdf <- function(m_idx, model_names, nlon, nlat, variables, data_dir,
                               year_present, year_future, reference_stats_present,
-                              reference_stats_future, ref_range_present, ref_range_future, nbins) {
+                              ref_range_present,  nbins) {
   model_name <- as.character(model_names[[m_idx]])
   cat("Processing model:", model_name, "\n")
 
@@ -352,7 +352,7 @@ compute_nd_pdf_bias_corrected_2 <- function(variables, reference_name, model_nam
   models_pdf_list <- future_lapply(seq_along(model_names),
                                    FUN = function(m_idx) process_model_pdf(m_idx, model_names, nlon, nlat, variables, data_dir,
                                                                            year_present, year_future, reference_stats_present,
-                                                                           reference_stats_future, ref_range_present, ref_range_future, nbins))
+                                                                            ref_range_present, nbins))
   plan(sequential)
 
   for (m_idx in seq_along(model_names)) {

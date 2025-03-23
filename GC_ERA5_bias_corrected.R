@@ -15,27 +15,27 @@ for(path in file_paths){
   source(path)
 }
 
-# Setting global variables
-lon <- -10:10
-lat <- -10:10
-lon_size <- length(lon)
-lat_size <- length(lat)
-
-# Temporal ranges
-year_present <<- 1950:1975
-year_future <<- 1998:2023
-
-
-
 # # Setting global variables
-# lon <- -180:179
-# lat <- -90:90
+# lon <- -10:10
+# lat <- -10:10
 # lon_size <- length(lon)
 # lat_size <- length(lat)
 #
 # # Temporal ranges
 # year_present <<- 1950:1975
 # year_future <<- 1998:2023
+
+
+
+# Setting global variables
+lon <- -180:179
+lat <- -70:70
+lon_size <- length(lon)
+lat_size <- length(lat)
+
+# Temporal ranges
+year_present <<- 1950:1975
+year_future <<- 1998:2023
 
 # Data directory
 data_dir <<- 'data/CMIP6_merged_all/'
@@ -91,7 +91,7 @@ current_time <- Sys.time()
 formatted_time <- format(current_time, "%Y%m%d%H%M")
 
 # Concatenate the formatted time string with your desired filename
-filename <- paste0(formatted_time, "_my_workspace_ERA5_bias_corrected_7models.RData")
+filename <- paste0(formatted_time, "_my_workspace_ERA5_bias_corrected_7models_70-70.RData")
 
 # Save the workspace using the generated filename
 save.image(file = filename, compress = FALSE)
