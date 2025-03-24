@@ -7,7 +7,7 @@ options(future.globals.maxSize = 64.0 * 1024^3)
 #-------------------------------
 process_model_pdf <- function(m_idx, model_names, nlon, nlat, variables, data_dir,
                               year_present, year_future, reference_stats_present,
-                              ref_range_present,  nbins) {
+                              ref_range_present, nbins) {
   model_name <- as.character(model_names[[m_idx]])
   cat("Processing model:", model_name, "\n")
 
@@ -15,6 +15,9 @@ process_model_pdf <- function(m_idx, model_names, nlon, nlat, variables, data_di
   # Pre-allocate lists for corrected data (present and future)
   corrected_data_present_list <- vector("list", n_vars)
   corrected_data_future_list  <- vector("list", n_vars)
+  # Pre-allocate lists for raw means (uncorrected) [nlon x nlat] for each variable
+  raw_means_pres_list <- vector("list", n_vars)
+  raw_means_fut_list  <- vector("list", n_vars)
   # Pre-allocate arrays for out-of-range counts [nlon, nlat, n_vars]
   out_range_pres <- array(0, dim = c(nlon, nlat, n_vars))
   out_range_fut  <- array(0, dim = c(nlon, nlat, n_vars))
@@ -47,9 +50,6 @@ process_model_pdf <- function(m_idx, model_names, nlon, nlat, variables, data_di
     if (is.na(mod_file)) stop("Model file for ", var, " not found for model ", model_name)
 
     nc_mod <- nc_open(mod_file)
-    # If variables share the same lon/lat grid as variable 0, you don't need to recompute them.
-    # (You could optionally check here that ncvar_get(nc_mod, "lon") matches lon_file0.)
-
     yyyy <- extract_years_from_time(nc_mod)
     iyear_pres <- which(yyyy %in% year_present)
     if (length(iyear_pres)==0)
@@ -76,6 +76,11 @@ process_model_pdf <- function(m_idx, model_names, nlon, nlat, variables, data_di
     nc_close(nc_mod)
     gc()  # Prompt garbage collection
 
+    # Compute raw means (without correction) for each pixel for present and future.
+    # These are matrices of size [nlon, nlat] for the current variable.
+    raw_means_pres_list[[v]] <- apply(mod_data_pres, c(1,2), mean, na.rm = TRUE)
+    raw_means_fut_list[[v]]  <- apply(mod_data_fut, c(1,2), mean, na.rm = TRUE)
+
     # Pre-allocate corrected arrays
     corr_pres <- array(NA, dim = dim(mod_data_pres))
     corr_fut  <- array(NA, dim = dim(mod_data_fut))
@@ -85,7 +90,6 @@ process_model_pdf <- function(m_idx, model_names, nlon, nlat, variables, data_di
         ts_mod_pres <- mod_data_pres[i, j, ]
         ts_mod_fut  <- mod_data_fut[i, j, ]
         if (var != "pr") {
-          # Use present reference statistics for bias correction for both periods
           ref_mean_pres <- reference_stats_present[[v]]$mean[i, j]
           ref_sd_pres   <- reference_stats_present[[v]]$sd[i, j]
 
@@ -95,21 +99,17 @@ process_model_pdf <- function(m_idx, model_names, nlon, nlat, variables, data_di
 
           mod_mean_fut <- mean(ts_mod_fut, na.rm = TRUE)
           mod_sd_fut   <- sd(ts_mod_fut, na.rm = TRUE)
-          # Apply the same present reference stats for the future period correction
           corr_fut[i, j, ] <- ((ts_mod_fut - mod_mean_fut) / mod_sd_fut) * ref_sd_pres + ref_mean_pres
 
         } else {
-          # For precipitation, use the 90th percentile (q90) from the present reference
           ref_q90_pres <- reference_stats_present[[v]]$q90[i, j]
 
           mod_q90_pres <- as.numeric(quantile(ts_mod_pres, 0.90, na.rm = TRUE))
           corr_pres[i, j, ] <- ts_mod_pres * (ref_q90_pres / mod_q90_pres)
 
           mod_q90_fut <- as.numeric(quantile(ts_mod_fut, 0.90, na.rm = TRUE))
-          # Use present q90 for the future period as well
           corr_fut[i, j, ] <- ts_mod_fut * (ref_q90_pres / mod_q90_fut)
 
-          # Log-transform both corrected series for precipitation
           corr_pres[i, j, ] <- log(corr_pres[i, j, ] + 1)
           corr_fut[i, j, ]  <- log(corr_fut[i, j, ] + 1)
         }
@@ -121,44 +121,54 @@ process_model_pdf <- function(m_idx, model_names, nlon, nlat, variables, data_di
     gc()
   } # End loop over variables
 
+  # Compute PDFs for bias-corrected data (as before)
   model_pdf_pres <- array(NA, dim = c(nlon, nlat, nbins^n_vars))
   model_pdf_fut  <- array(NA, dim = c(nlon, nlat, nbins^n_vars))
+  for (i in seq_len(nlon)) {
+    for (j in seq_len(nlat)) {
+      # --- Compute PDF for the present period ---
+      pixel_data_mod_pres <- sapply(1:n_vars, function(v) corrected_data_present_list[[v]][i, j, ])
+      range_mat_pres <- matrix(NA, n_vars, 2)
+      for (v in seq_len(n_vars)) {
+        range_mat_pres[v, ] <- ref_range_present[i, j, v, ]
+      }
+      count_vec_pres <- sapply(1:n_vars, function(v)
+        sum(pixel_data_mod_pres[, v] < range_mat_pres[v, 1] | pixel_data_mod_pres[, v] > range_mat_pres[v, 2]))
+      out_range_pres[i, j, ] <- count_vec_pres
+      hist_mod_pres <- compute_histND(pixel_data_mod_pres, range_mat_pres, nbins)
+      model_pdf_pres[i, j, ] <- hist_mod_pres / sum(hist_mod_pres)
 
-for (i in seq_len(nlon)) {
-  for (j in seq_len(nlat)) {
-    # --- Compute PDF for the present period ---
-    pixel_data_mod_pres <- sapply(1:n_vars, function(v) corrected_data_present_list[[v]][i, j, ])
-    range_mat_pres <- matrix(NA, n_vars, 2)
-    for (v in seq_len(n_vars)) {
-      range_mat_pres[v, ] <- ref_range_present[i, j, v, ]
+      # --- Compute PDF for the future period ---
+      # Use present reference range for bias-corrected future data.
+      pixel_data_mod_fut <- sapply(1:n_vars, function(v) corrected_data_future_list[[v]][i, j, ])
+      range_mat_fut <- matrix(NA, n_vars, 2)
+      for (v in seq_len(n_vars)) {
+        range_mat_fut[v, ] <- ref_range_present[i, j, v, ]
+      }
+      count_vec_fut <- sapply(1:n_vars, function(v)
+        sum(pixel_data_mod_fut[, v] < range_mat_fut[v, 1] | pixel_data_mod_fut[, v] > range_mat_fut[v, 2]))
+      out_range_fut[i, j, ] <- count_vec_fut
+      hist_mod_fut <- compute_histND(pixel_data_mod_fut, range_mat_fut, nbins)
+      model_pdf_fut[i, j, ] <- hist_mod_fut / sum(hist_mod_fut)
     }
-    count_vec_pres <- sapply(1:n_vars, function(v)
-      sum(pixel_data_mod_pres[, v] < range_mat_pres[v, 1] | pixel_data_mod_pres[, v] > range_mat_pres[v, 2]))
-    out_range_pres[i, j, ] <- count_vec_pres
-    hist_mod_pres <- compute_histND(pixel_data_mod_pres, range_mat_pres, nbins)
-    model_pdf_pres[i, j, ] <- hist_mod_pres / sum(hist_mod_pres)
-
-    # --- Compute PDF for the future period ---
-    # Here we use the same (present) reference range for bias-corrected future data.
-    pixel_data_mod_fut <- sapply(1:n_vars, function(v) corrected_data_future_list[[v]][i, j, ])
-    range_mat_fut <- matrix(NA, n_vars, 2)
-    for (v in seq_len(n_vars)) {
-      range_mat_fut[v, ] <- ref_range_present[i, j, v, ]  # Use present reference range
-    }
-    count_vec_fut <- sapply(1:n_vars, function(v)
-      sum(pixel_data_mod_fut[, v] < range_mat_fut[v, 1] | pixel_data_mod_fut[, v] > range_mat_fut[v, 2]))
-    out_range_fut[i, j, ] <- count_vec_fut
-    hist_mod_fut <- compute_histND(pixel_data_mod_fut, range_mat_fut, nbins)
-    model_pdf_fut[i, j, ] <- hist_mod_fut / sum(hist_mod_fut)
   }
-}
 
-  rm(mod_data_pres, mod_data_fut)  # (Already removed full_data_*)
+  rm(mod_data_pres, mod_data_fut)
   gc()
 
+  # Assemble raw means arrays (uncorrected) for the model.
+  model_means_pres <- array(NA, dim = c(nlon, nlat, n_vars))
+  model_means_fut  <- array(NA, dim = c(nlon, nlat, n_vars))
+  for (v in seq_len(n_vars)) {
+    model_means_pres[,,v] <- raw_means_pres_list[[v]]
+    model_means_fut[,,v]  <- raw_means_fut_list[[v]]
+  }
+
   return(list(present = model_pdf_pres, future = model_pdf_fut,
-              out_range = list(present = out_range_pres, future = out_range_fut)))
+              out_range = list(present = out_range_pres, future = out_range_fut),
+              raw_means = list(present = model_means_pres, future = model_means_fut)))
 }
+
 
 
 #-------------------------------
@@ -175,7 +185,6 @@ compute_nd_pdf_bias_corrected_2 <- function(variables, reference_name, model_nam
   ## ----------------------------
   ## SEGMENT 1: Process the reference data
   ## ----------------------------
-
   pdf_ref_present <- array(NA, dim = c(nlon, nlat, nbins^n_vars))
   pdf_ref_future  <- array(NA, dim = c(nlon, nlat, nbins^n_vars))
 
@@ -332,7 +341,6 @@ compute_nd_pdf_bias_corrected_2 <- function(variables, reference_name, model_nam
     }
   }
 
-  # Freeing memory
   rm(ref_data_present_all, ref_data_future_all)
   gc()
 
@@ -343,6 +351,9 @@ compute_nd_pdf_bias_corrected_2 <- function(variables, reference_name, model_nam
   num_models <- length(model_names)
   pdf_models_present <- array(NA, dim = c(nlon, nlat, nbins^n_vars, num_models))
   pdf_models_future  <- array(NA, dim = c(nlon, nlat, nbins^n_vars, num_models))
+  # New: Allocate arrays for raw (uncorrected) model means.
+  means_models_present <- array(NA, dim = c(nlon, nlat, n_vars, num_models))
+  means_models_future  <- array(NA, dim = c(nlon, nlat, n_vars, num_models))
 
   # Arrays to record out-of-range counts [nlon, nlat, n_vars, num_models]
   out_range_pres_all <- array(0, dim = c(nlon, nlat, n_vars, num_models))
@@ -352,12 +363,14 @@ compute_nd_pdf_bias_corrected_2 <- function(variables, reference_name, model_nam
   models_pdf_list <- future_lapply(seq_along(model_names),
                                    FUN = function(m_idx) process_model_pdf(m_idx, model_names, nlon, nlat, variables, data_dir,
                                                                            year_present, year_future, reference_stats_present,
-                                                                            ref_range_present, nbins))
+                                                                           ref_range_present, nbins))
   plan(sequential)
 
   for (m_idx in seq_along(model_names)) {
     pdf_models_present[,,,m_idx] <- models_pdf_list[[m_idx]]$present
     pdf_models_future[,,,m_idx]  <- models_pdf_list[[m_idx]]$future
+    means_models_present[,,,m_idx] <- models_pdf_list[[m_idx]]$raw_means$present
+    means_models_future[,,,m_idx]  <- models_pdf_list[[m_idx]]$raw_means$future
   }
 
   for (m_idx in seq_along(model_names)) {
@@ -368,9 +381,11 @@ compute_nd_pdf_bias_corrected_2 <- function(variables, reference_name, model_nam
   return(list(
     pdf_reference = list(present = pdf_ref_present, future = pdf_ref_future),
     pdf_models    = list(present = pdf_models_present, future = pdf_models_future),
+    raw_means_models = list(present = means_models_present, future = means_models_future),
     reference_stats = list(present = reference_stats_present, future = reference_stats_future),
     out_of_range_counts = list(present = out_range_pres_all, future = out_range_fut_all),
     ref_range_present = ref_range_present,
     ref_range_future = ref_range_future
   ))
 }
+
