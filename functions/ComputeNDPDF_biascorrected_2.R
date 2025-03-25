@@ -326,16 +326,19 @@ compute_nd_pdf_bias_corrected_2 <- function(variables, reference_name, model_nam
     }
     for (j in seq_len(nlat)) {
       range_mat_pres <- matrix(NA, n_vars, 2)
-      for (v in seq_len(n_vars))
+      for (v in seq_len(n_vars)){
         range_mat_pres[v, ] <- ref_range_present[i, j, v, ]
-      pixel_data_pres <- sapply(1:n_vars, function(v) ref_data_present_all[i, j, , v])
+        pixel_data_pres <- sapply(1:n_vars, function(v) ref_data_present_all[i, j, , v])
+      }
       hist_pres <- compute_histND(pixel_data_pres, range_mat_pres, nbins)
+
       pdf_ref_present[i, j, ] <- hist_pres / sum(hist_pres)
 
       range_mat_fut <- matrix(NA, n_vars, 2)
-      for (v in seq_len(n_vars))
+      for (v in seq_len(n_vars)){
         range_mat_fut[v, ] <- ref_range_future[i, j, v, ]
-      pixel_data_fut <- sapply(1:n_vars, function(v) ref_data_future_all[i, j, , v])
+        pixel_data_fut <- sapply(1:n_vars, function(v) ref_data_future_all[i, j, , v])
+      }
       hist_fut <- compute_histND(pixel_data_fut, range_mat_fut, nbins)
       pdf_ref_future[i, j, ] <- hist_fut / sum(hist_fut)
     }

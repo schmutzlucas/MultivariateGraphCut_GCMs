@@ -94,7 +94,7 @@ GraphCutHellinger_nD_lat <- function(
     float dval       = data[p + numPix * l];
 
     // For debugging: only print for p=0, 10000, 20000,... or some special condition
-    if (p % 10000 == 0 && l == 0) {
+    if (p % 10000 == 0 && l == 3) {
         Rcpp::Rcout << "DEBUG dataFn(): p=" << p
                     << ", l=" << l
                     << ", lat_weight=" << lat_weight

@@ -96,18 +96,20 @@ filename <- paste0(formatted_time, "_my_workspace_ERA5_bias_corrected_7models_90
 # Save the workspace using the generated filename
 save.image(file = filename, compress = FALSE)
 
+test_hdist <- compute_partial_hdist(pdf_ref_future[180 + 131, 90 -7, ], pdf_ref_present[180 + 131, 90 -7, ], 1:512)
+
 # Plotting the 3d pdf of one gridpoint
 {
   # Example indices (adjust as needed)
-  lon_index <- 10  # selected longitude index
-  lat_index <- 10   # selected latitude index
-  model_idx <- 3     # select one model (from the pdf_models array)
+  lon_index <- 180 + 131  # selected longitude index
+  lat_index <- 90 - 7   # selected latitude index
+  model_idx <- 4 # select one model (from the pdf_models array)
   nbins <- 8       # number of bins per variable
 
   # Extract the PDF vector for the chosen grid point and model.
   # Here pdf_models is from results$pdf_models$present and has dimensions:
   # [lon, lat, nbins^n_vars, num_models].
-  pdf_vector <- results$pdf_models$present[lon_index, lat_index, , model_idx]
+  pdf_vector <- results$pdf_reference$future[lon_index, lat_index, ]
 
   # Reshape the 1D PDF vector into a 3D array.
   pdf_3d <- array(pdf_vector, dim = c(nbins, nbins, nbins))
@@ -190,9 +192,9 @@ hist(h_dist_future, main = "Complete Hellinger Distance (Future)")
 
 # --- End Complete Hellinger Distance Computation ---
 
-smooth_cost <- 0.6
+smooth_cost <- 1
 tryCatch({
-  GC_result06 <- GraphCutHellinger_nD_lat(
+  GC_result1 <- GraphCutHellinger_nD_lat(
     pdf_models_future = pdf_models_future,
     h_dist = h_dist_present,
     weight_data = 1,               # Fixed data weight
@@ -212,26 +214,21 @@ tryCatch({
 {
   # Map of labels
   # Extract the label attribution for the current smooth cost
-  GC_labels <- GC_result06$label_attribution
+  GC_labels <- GC_result01$label_attribution
 
-  # Convert the label matrix to a data frame for plotting
-  # Make sure 'GC_labels' has dimensions [lon, lat],
-  # where lon ∈ [-180..179] and lat ∈ [-90..90].
   # Convert the label matrix to a data frame for plotting
   label_df <- reshape2::melt(GC_labels, varnames = c("lon_idx", "lat_idx"), value.name = "label_attribution")
 
-  # ✅ Explicitly assign correct longitude and latitude values
+  # Explicitly assign correct longitude and latitude values
   label_df$lon <- lon[label_df$lon_idx]  # Map longitude indices to values
-  label_df$lat <- lat[label_df$lat_idx]  # Map latitude indices to values
+  label_df$lat <- lat[label_df$lat_idx]    # Map latitude indices to values
 
+  # Force label_attribution to be a factor with levels in the exact order of model_names.
+  label_df$label_attribution <- factor(label_df$label_attribution,
+                                       levels = seq_along(model_names),
+                                       labels = model_names)
 
-  # Convert label_attribution to a factor with all model names
-  label_df$label_attribution <- factor(
-    label_df$label_attribution,
-    levels = seq_along(model_names),
-    labels = model_names
-  )
-
+  # Create a named color palette: each model name is explicitly mapped to its color.
   color_palette <- c(
     "#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd",
     "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf",
@@ -239,33 +236,21 @@ tryCatch({
     "#c49c94", "#f7b6d2", "#c7c7c7", "#dbdb8d", "#9edae5",
     "#393b79", "#5254a3", "#6b6ecf"
   )
+  # Name the palette vector with model_names (in the same order)
+  names(color_palette) <- model_names
 
   p <- ggplot() +
-    # Plot tiles at each (lon, lat)
     geom_tile(data = label_df, aes(x = lon, y = lat, fill = label_attribution)) +
-
-    # Custom color palette for the labels
     scale_fill_manual(
       values = color_palette,
       na.value = "white",
       guide = guide_legend(title = "Model Names", ncol = 1)
     ) +
-
-    ggtitle(paste("Label GC Hellinger - Lambda:", smooth_cost)) +
-
-    # Use "world" (not "world2"), which expects longitude ∈ [-180..+180]
+    ggtitle(paste("Label GC Hellinger - Lambda:", 0.1)) +
     borders("world", colour = 'black', size = 0.12) +
-
-    # Force x,y to match the new [-180..+180] and [-90..+90] coordinate system
-    # and lock the aspect ratio (1:1 degrees)
-    # coord_fixed(xlim = c(-180, 180), ylim = c(-90, 90), ratio = 1) +
-
-    # A clean theme
     theme_bw() +
-
-    # Adjust the legend and axis text, etc.
     theme(
-      legend.position = 'bottom',
+      legend.position = 'right',
       panel.grid.major = element_blank(),
       panel.grid.minor = element_blank(),
       panel.background = element_blank(),
@@ -279,14 +264,13 @@ tryCatch({
       axis.text = element_text(size = 10),
       axis.title = element_text(size = 12)
     ) +
-
     xlab('Longitude') +
     ylab('Latitude') +
     easy_center_title()
 
   p
-
 }
+
 
 num_bins <- 20
 x_limits <- range(h_dist_present, finite = TRUE)  # Adjust based on your data
@@ -313,3 +297,177 @@ image(nan_map, col = c("white", "black"), axes = FALSE, main = "Map of NaN Value
 
 # Add a legend
 legend("topright", legend = c("Valid", "NaN"), fill = c("white", "black"), border = "black")
+
+
+
+# H Dist GC
+# Initialize a lon x lat matrix for each smooth cost
+GC_hdist_present <- matrix(NA, nrow = length(lon), ncol = length(lat))
+GC_hdist_future <- matrix(NA, nrow = length(lon), ncol = length(lat))
+
+for(l in 1:(length(model_names))){  # Ensure that indexing aligns with model names
+  islabel <- which(GC_result06$label_attribution == l)
+  GC_hdist_present[islabel] <- h_dist_present[,,l][islabel]
+  GC_hdist_future[islabel] <- h_dist_future[,,l][islabel]
+}
+
+
+
+# MMM
+
+# Compute Multi-Model Mean for Present
+MMM_present <- apply(pdf_models_present, c(1, 2, 3), mean)
+
+# Compute Multi-Model Mean for Future
+MMM_future <- apply(pdf_models_future, c(1, 2, 3), mean)
+
+
+# Initialize arrays to store the Hellinger distance for MMM
+MMM_hdist <- array(NA, dim = c(length(lon), length(lat)))
+MMM_hdist_future <- array(NA, dim = c(length(lon), length(lat)))
+
+# Compute Hellinger distance for the Multi-Model Mean
+for (i in seq_along(lon)) {
+  for (j in seq_along(lat)) {
+    # Compute Hellinger distance for present
+    MMM_hdist[i, j] <- sqrt(sum((sqrt(MMM_present[i, j, ]) - sqrt(pdf_ref_present[i, j, ]))^2)) / sqrt(2)
+
+    # Compute Hellinger distance for future
+    MMM_hdist_future[i, j] <- sqrt(sum((sqrt(MMM_future[i, j, ]) - sqrt(pdf_ref_future[i, j, ]))^2)) / sqrt(2)
+  }
+}
+
+# Get the current date and time
+current_time <- Sys.time()
+
+# Format the date and time as a string in the format 'yyyymmddhhmm'
+formatted_time <- format(current_time, "%Y%m%d%H%M")
+
+# Concatenate the formatted time string with your desired filename
+filename <- paste0(formatted_time, "_my_workspace_ERA5_bias_corrected_7models_final.RData")
+
+# Save the workspace using the generated filename
+save.image(file = filename, compress = FALSE)
+
+
+
+# Map H Dist future
+
+
+test_df <- melt(GC_hdist_future, c("lon", "lat"), value.name = "H_dist")
+
+p6 <- ggplot() +
+  geom_tile(data=test_df, aes(x=lon-180, y=lat-90, fill=H_dist))+
+  labs(subtitle = 'Projection period : 1998 - 2023')+
+  ggtitle(paste0('GC Bias corrected', ': Average Hellinger distance = ', round(mean(GC_hdist_future), 2)))+
+  scale_fill_gradient(low = "white", high = "#015a8c", limits = c(0.1, 0.70), oob = scales::squish)+
+  borders("world", colour = 'black', lwd = 0.12) +
+  scale_x_continuous(, expand = c(0, 0)) +
+  scale_y_continuous(, expand = c(0, 0))+
+  theme(legend.position = 'bottom')+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  theme(panel.background = element_blank())+
+  xlab('Longitude')+
+  ylab('Latitude') +
+  labs(fill='Hellinger \nDistance')+
+  theme_bw()+
+  theme(legend.key.size = unit(1, 'cm'), #change legend key size
+        legend.key.height = unit(1.4, 'cm'), #change legend key height
+        legend.key.width = unit(0.4, 'cm'), #change legend key width
+        legend.title = element_text(size=16), #change legend title font sizen
+        legend.text = element_text(size=12))+ #change legend text font size
+  theme(plot.title = element_text(size=24),
+        plot.subtitle = element_text(size = 20,hjust=0.5),
+        axis.text=element_text(size=14),
+        axis.title=element_text(size=16),)+
+  easy_center_title()
+p6
+
+# Generate file name based on the smooth cost
+name <- paste0("figure/GC_H_dist_smooth06_BC")
+
+# Save the plot as both PDF and PNG
+ggsave(paste0(name, ".pdf"), plot = p6, width = 20, height = 15, units = "cm", dpi = 300)
+ggsave(paste0(name, ".png"), plot = p6, width = 20, height = 15, units = "cm", dpi = 300)
+
+
+# Map H Dist present
+
+
+test_df <- melt(GC_hdist_present, c("lon", "lat"), value.name = "H_dist")
+
+p6 <- ggplot() +
+  geom_tile(data=test_df, aes(x=lon-180, y=lat-90, fill=H_dist))+
+  labs(subtitle = 'Calibration period : 1950 - 1975')+
+  ggtitle(paste0('GC BC', ': Average Hellinger distance = ', round(mean(GC_hdist_present), 2)))+
+  scale_fill_gradient(low = "white", high = "#015a8c", limits = c(0.1, 0.70), oob = scales::squish)+
+  borders("world", colour = 'black', lwd = 0.12) +
+  scale_x_continuous(, expand = c(0, 0)) +
+  scale_y_continuous(, expand = c(0, 0))+
+  theme(legend.position = 'bottom')+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  theme(panel.background = element_blank())+
+  xlab('Longitude')+
+  ylab('Latitude') +
+  labs(fill='Hellinger \nDistance')+
+  theme_bw()+
+  theme(legend.key.size = unit(1, 'cm'), #change legend key size
+        legend.key.height = unit(1.4, 'cm'), #change legend key height
+        legend.key.width = unit(0.4, 'cm'), #change legend key width
+        legend.title = element_text(size=16), #change legend title font sizen
+        legend.text = element_text(size=12))+ #change legend text font size
+  theme(plot.title = element_text(size=24),
+        plot.subtitle = element_text(size = 20,hjust=0.5),
+        axis.text=element_text(size=14),
+        axis.title=element_text(size=16),)+
+  easy_center_title()
+p6
+
+# Generate file name based on the smooth cost
+name <- paste0("figure/GC_H_dist_smooth06_BC_present")
+
+# Save the plot as both PDF and PNG
+ggsave(paste0(name, ".pdf"), plot = p6, width = 20, height = 15, units = "cm", dpi = 300)
+ggsave(paste0(name, ".png"), plot = p6, width = 20, height = 15, units = "cm", dpi = 300)
+
+
+
+# Map MMM H dist
+
+
+# Melt it into a data frame:
+test_df <- melt(MMM_hdist_future, varnames = c("lon", "lat"), value.name = "H_dist")
+
+p6 <- ggplot() +
+  geom_tile(data=test_df, aes(x=lon-180, y=lat-90, fill=H_dist))+
+  labs(subtitle = 'Projection period : 1998 - 2023')+
+  ggtitle(paste0('MMM', ': Average Hellinger distance = ', round(mean(MMM_hdist_future), 2)))+
+  scale_fill_gradient(low = "white", high = "#015a8c", limits = c(0.1, 0.70), oob = scales::squish)+
+  borders("world", colour = 'black', lwd = 0.12) +
+  scale_x_continuous(, expand = c(0, 0)) +
+  scale_y_continuous(, expand = c(0,0))+
+  theme(legend.position = 'bottom')+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  theme(panel.background = element_blank())+
+  xlab('Longitude')+
+  ylab('Latitude') +
+  labs(fill='Hellinger \nDistance')+
+  theme_bw()+
+  theme(legend.key.size = unit(1, 'cm'), #change legend key size
+        legend.key.height = unit(1.4, 'cm'), #change legend key height
+        legend.key.width = unit(0.4, 'cm'), #change legend key width
+        legend.title = element_text(size=16), #change legend title font sizen
+        legend.text = element_text(size=12))+ #change legend text font size
+  theme(plot.title = element_text(size=24),
+        plot.subtitle = element_text(size = 20,hjust=0.5),
+        axis.text=element_text(size=14),
+        axis.title=element_text(size=16),)+
+  easy_center_title()
+p6
+
+# Generate file name based on the smooth cost
+name <- paste0("figure/MMM_H_dist_BC")
+
+# Save the plot as both PDF and PNG
+ggsave(paste0(name, ".pdf"), plot = p6, width = 20, height = 15, units = "cm", dpi = 300)
+ggsave(paste0(name, ".png"), plot = p6, width = 20, height = 15, units = "cm", dpi = 300)
