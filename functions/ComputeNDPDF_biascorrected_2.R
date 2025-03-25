@@ -63,6 +63,7 @@ process_model_pdf <- function(m_idx, model_names, nlon, nlat, variables, data_di
                                 count = c(-1, length(lat_idx), length(iyear_pres)))
     full_data_pres <- full_data_pres[sorted_indices, , ]
     mod_data_pres <- full_data_pres[lon_idx, , ]
+    if (var == "psl") mod_data_pres <- mod_data_pres / 100
     rm(full_data_pres)
     gc()
 
@@ -70,6 +71,8 @@ process_model_pdf <- function(m_idx, model_names, nlon, nlat, variables, data_di
                                count = c(-1, length(lat_idx), length(iyear_fut)))
     full_data_fut <- full_data_fut[sorted_indices, , ]
     mod_data_fut <- full_data_fut[lon_idx, , ]
+    if (var == "psl") mod_data_fut <- mod_data_fut / 100
+
     rm(full_data_fut)
     gc()
 
@@ -99,7 +102,7 @@ process_model_pdf <- function(m_idx, model_names, nlon, nlat, variables, data_di
 
           mod_mean_fut <- mean(ts_mod_fut, na.rm = TRUE)
           mod_sd_fut   <- sd(ts_mod_fut, na.rm = TRUE)
-          corr_fut[i, j, ] <- ((ts_mod_fut - mod_mean_fut) / mod_sd_fut) * ref_sd_pres + ref_mean_pres
+          corr_fut[i, j, ] <- ((ts_mod_fut - mod_mean_pres) / mod_sd_pres) * ref_sd_pres + ref_mean_pres
 
         } else {
           ref_q90_pres <- reference_stats_present[[v]]$q90[i, j]
@@ -108,7 +111,7 @@ process_model_pdf <- function(m_idx, model_names, nlon, nlat, variables, data_di
           corr_pres[i, j, ] <- ts_mod_pres * (ref_q90_pres / mod_q90_pres)
 
           mod_q90_fut <- as.numeric(quantile(ts_mod_fut, 0.90, na.rm = TRUE))
-          corr_fut[i, j, ] <- ts_mod_fut * (ref_q90_pres / mod_q90_fut)
+          corr_fut[i, j, ] <- ts_mod_fut * (ref_q90_pres / mod_q90_pres)
 
           corr_pres[i, j, ] <- log(corr_pres[i, j, ] + 1)
           corr_fut[i, j, ]  <- log(corr_fut[i, j, ] + 1)
@@ -229,12 +232,19 @@ compute_nd_pdf_bias_corrected_2 <- function(variables, reference_name, model_nam
                                 count = c(-1, length(lat_indices), length(iyear_pres)))
     full_data_pres <- full_data_pres[sorted_indices, , ]
     ref_data_pres <- full_data_pres[lon_indices, , ]
+    if (var == "psl") ref_data_pres <- ref_data_pres / 100
+
+    rm(full_data_pres)
 
     full_data_fut <- ncvar_get(nc_ref, var,
                                start = c(1, min(lat_indices), min(iyear_fut)),
                                count = c(-1, length(lat_indices), length(iyear_fut)))
     full_data_fut <- full_data_fut[sorted_indices, , ]
     ref_data_fut <- full_data_fut[lon_indices, , ]
+    if (var == "psl") ref_data_fut <- ref_data_fut / 100
+
+    rm(full_data_fut)
+
 
     nc_close(nc_ref)
     gc()
@@ -328,8 +338,8 @@ compute_nd_pdf_bias_corrected_2 <- function(variables, reference_name, model_nam
       range_mat_pres <- matrix(NA, n_vars, 2)
       for (v in seq_len(n_vars)){
         range_mat_pres[v, ] <- ref_range_present[i, j, v, ]
-        pixel_data_pres <- sapply(1:n_vars, function(v) ref_data_present_all[i, j, , v])
       }
+      pixel_data_pres <- sapply(1:n_vars, function(v) ref_data_present_all[i, j, , v])
       hist_pres <- compute_histND(pixel_data_pres, range_mat_pres, nbins)
 
       pdf_ref_present[i, j, ] <- hist_pres / sum(hist_pres)
@@ -337,8 +347,8 @@ compute_nd_pdf_bias_corrected_2 <- function(variables, reference_name, model_nam
       range_mat_fut <- matrix(NA, n_vars, 2)
       for (v in seq_len(n_vars)){
         range_mat_fut[v, ] <- ref_range_future[i, j, v, ]
-        pixel_data_fut <- sapply(1:n_vars, function(v) ref_data_future_all[i, j, , v])
       }
+      pixel_data_fut <- sapply(1:n_vars, function(v) ref_data_future_all[i, j, , v])
       hist_fut <- compute_histND(pixel_data_fut, range_mat_fut, nbins)
       pdf_ref_future[i, j, ] <- hist_fut / sum(hist_fut)
     }

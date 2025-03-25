@@ -28,7 +28,7 @@ for(path in file_paths){
 
 
 # Setting global variables
-lon <- -180:179
+lon <- 0:179
 lat <- -90:90
 lon_size <- length(lon)
 lat_size <- length(lat)
@@ -101,22 +101,22 @@ test_hdist <- compute_partial_hdist(pdf_ref_future[180 + 131, 90 -7, ], pdf_ref_
 # Plotting the 3d pdf of one gridpoint
 {
   # Example indices (adjust as needed)
-  lon_index <- 180 + 131  # selected longitude index
-  lat_index <- 90 - 7   # selected latitude index
-  model_idx <- 4 # select one model (from the pdf_models array)
+  lon_index <- 131  # selected longitude index
+  lat_index <- 83   # selected latitude index
+  model_idx <- 1 # select one model (from the pdf_models array)
   nbins <- 8       # number of bins per variable
 
   # Extract the PDF vector for the chosen grid point and model.
   # Here pdf_models is from results$pdf_models$present and has dimensions:
   # [lon, lat, nbins^n_vars, num_models].
-  pdf_vector <- results$pdf_reference$future[lon_index, lat_index, ]
+  pdf_vector <- results$pdf_ref$future[lon_index, lat_index, ]
 
   # Reshape the 1D PDF vector into a 3D array.
   pdf_3d <- array(pdf_vector, dim = c(nbins, nbins, nbins))
 
   # Extract the reference range for that grid point.
   # We assume results$ref_range_present has dimensions: [lon, lat, n_vars, 2]
-  range_mat <- results$ref_range_present[lon_index, lat_index, , ]  # dimensions: [3, 2]
+  range_mat <- results$ref_range_future[lon_index, lat_index, , ]  # dimensions: [3, 2]
 
   # Compute bin edges and centers for each variable.
   centers <- list()
@@ -192,7 +192,7 @@ hist(h_dist_future, main = "Complete Hellinger Distance (Future)")
 
 # --- End Complete Hellinger Distance Computation ---
 
-smooth_cost <- 1
+smooth_cost <- 0.6
 tryCatch({
   GC_result1 <- GraphCutHellinger_nD_lat(
     pdf_models_future = pdf_models_future,
@@ -214,7 +214,7 @@ tryCatch({
 {
   # Map of labels
   # Extract the label attribution for the current smooth cost
-  GC_labels <- GC_result01$label_attribution
+  GC_labels <- GC_result1$label_attribution
 
   # Convert the label matrix to a data frame for plotting
   label_df <- reshape2::melt(GC_labels, varnames = c("lon_idx", "lat_idx"), value.name = "label_attribution")
@@ -306,7 +306,7 @@ GC_hdist_present <- matrix(NA, nrow = length(lon), ncol = length(lat))
 GC_hdist_future <- matrix(NA, nrow = length(lon), ncol = length(lat))
 
 for(l in 1:(length(model_names))){  # Ensure that indexing aligns with model names
-  islabel <- which(GC_result06$label_attribution == l)
+  islabel <- which(GC_result1$label_attribution == l)
   GC_hdist_present[islabel] <- h_dist_present[,,l][islabel]
   GC_hdist_future[islabel] <- h_dist_future[,,l][islabel]
 }
@@ -471,3 +471,82 @@ name <- paste0("figure/MMM_H_dist_BC")
 # Save the plot as both PDF and PNG
 ggsave(paste0(name, ".pdf"), plot = p6, width = 20, height = 15, units = "cm", dpi = 300)
 ggsave(paste0(name, ".png"), plot = p6, width = 20, height = 15, units = "cm", dpi = 300)
+
+
+
+
+# Map H Dist future
+
+
+test_df <- melt(h_dist_future[,,1], c("lon", "lat"), value.name = "H_dist")
+
+p6 <- ggplot() +
+  geom_tile(data=test_df, aes(x=lon-180, y=lat-90, fill=H_dist))+
+  labs(subtitle = 'Projection period : 1998 - 2023')+
+  ggtitle(paste0('GC Bias corrected', ': Average Hellinger distance = ', round(mean(h_dist_future[,,1]), 2)))+
+  scale_fill_gradient(low = "white", high = "#015a8c", limits = c(0.1, 0.70), oob = scales::squish)+
+  scale_x_continuous(, expand = c(0, 0)) +
+  scale_y_continuous(, expand = c(0, 0))+
+  theme(legend.position = 'bottom')+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  theme(panel.background = element_blank())+
+  xlab('Longitude')+
+  ylab('Latitude') +
+  labs(fill='Hellinger \nDistance')+
+  theme_bw()+
+  theme(legend.key.size = unit(1, 'cm'), #change legend key size
+        legend.key.height = unit(1.4, 'cm'), #change legend key height
+        legend.key.width = unit(0.4, 'cm'), #change legend key width
+        legend.title = element_text(size=16), #change legend title font sizen
+        legend.text = element_text(size=12))+ #change legend text font size
+  theme(plot.title = element_text(size=24),
+        plot.subtitle = element_text(size = 20,hjust=0.5),
+        axis.text=element_text(size=14),
+        axis.title=element_text(size=16),)+
+  easy_center_title()
+p6
+
+
+
+{
+
+  for (m in seq_along(model_names)) {
+    model_hdist <- h_dist_present[, , m]
+
+    # Melt the matrix into a dataframe with lon/lat
+    test_df <- melt(model_hdist, varnames = c("lon_idx", "lat_idx"), value.name = "H_dist")
+    test_df$lon <- lon[test_df$lon_idx]
+    test_df$lat <- lat[test_df$lat_idx]
+
+    # Plot
+    p <- ggplot() +
+      geom_tile(data = test_df, aes(x = lon, y = lat, fill = H_dist)) +
+      labs(subtitle = 'Projection period : 1998 - 2023') +
+      ggtitle(paste0(model_names[m], ': Average Hellinger distance = ',
+                     round(mean(model_hdist, na.rm = TRUE), 2))) +
+      scale_fill_gradient(low = "white", high = "#015a8c", limits = c(0.1, 0.70), oob = scales::squish) +
+      borders("world2", colour = 'black', lwd = 0.12) +
+      scale_x_continuous(expand = c(0, 0)) +
+      scale_y_continuous(expand = c(0, 0)) +
+      theme(legend.position = 'bottom') +
+      theme(panel.grid.major = element_blank(),
+            panel.grid.minor = element_blank(),
+            panel.background = element_blank()) +
+      xlab('Longitude') +
+      ylab('Latitude') +
+      labs(fill = 'Hellinger \nDistance') +
+      theme_bw() +
+      theme(legend.key.size = unit(1, 'cm'),
+            legend.key.height = unit(1.4, 'cm'),
+            legend.key.width = unit(0.4, 'cm'),
+            legend.title = element_text(size = 16),
+            legend.text = element_text(size = 12),
+            plot.title = element_text(size = 24),
+            plot.subtitle = element_text(size = 20, hjust = 0.5),
+            axis.text = element_text(size = 14),
+            axis.title = element_text(size = 16)) +
+      easy_center_title()
+
+    print(p)
+  }
+}
