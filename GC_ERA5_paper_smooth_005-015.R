@@ -14,11 +14,11 @@ source_code_dir <- 'functions/' #The directory where all functions are saved.
 file_paths <- list.files(source_code_dir, full.names = T)
 for(path in file_paths){source(path)}
 
-range_var_final_0 <- readRDS('ranges/range_var_final_GreenwichCentered_1950-2023_90deg_3v.rds')
+range_var_final <- readRDS('ranges/range_var_final_GreenwichCentered_1950-2023_90deg_3v.rds')
 
 # Setting global variables
-lon <- -180:179
-lat <- -90:90
+lon <- 0:30
+lat <- 0:10
 lon_size <- length(lon)
 lat_size <- length(lat)
 # Temporal ranges
@@ -36,7 +36,7 @@ nbins <<- nbins1d^(length(variables))
 
 
 # Obtains the list of models from the model names or from a file
-model_names <- read.table('model_names_pr_tas_psl.txt')
+model_names <- read.table('model_names_pr_tas_psl_short.txt')
 model_names <- as.list(model_names[['V1']])
 # Index of the reference
 ref_index <<- 1
@@ -57,7 +57,7 @@ format_time <- function(time_seconds) {
 # Time the execution of the optimized function
 time_optimized <- system.time({
   # todo add number of workers as argument
-  tmp <- compute_nd_pdf_optimized_0centered(variables, model_names, data_dir, year_present, year_future,
+  tmp <- compute_nd_pdf_optimized(variables, model_names, data_dir, year_present, year_future,
                                             lon, lat, aperm(abind(range_var_final$ranges, along = 4), c(1, 2, 4, 3)), nbins1d, workers = 3)
 })
 cat("Time taken for compute_nd_pdf_optimized: ", format_time(time_optimized["elapsed"]), "\n")

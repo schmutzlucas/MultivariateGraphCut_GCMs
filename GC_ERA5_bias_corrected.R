@@ -15,6 +15,8 @@ for(path in file_paths){
   source(path)
 }
 
+range_var_final <- readRDS('ranges/range_var_final_allModelsPar_1950-2023_90deg_3v.rds')
+
 # # Setting global variables
 # lon <- -10:10
 # lat <- -10:10
@@ -28,7 +30,7 @@ for(path in file_paths){
 
 
 # Setting global variables
-lon <- 0:179
+lon <- -180:179
 lat <- -90:90
 lon_size <- length(lon)
 lat_size <- length(lat)
@@ -70,19 +72,47 @@ format_time <- function(time_seconds) {
   }
 }
 
+# # Time the execution of the new bias-corrected function.
+# time_optimized <- system.time({
+#   results <- compute_nd_pdf_bias_corrected(
+#     variables, reference_name, model_names, data_dir,
+#     year_present, year_future, lon, lat, nbins1d,
+#     range_var = aperm(abind(range_var_final$ranges, along = 4), c(1, 2, 4, 3)), verbose = TRUE
+#   )
+#
+# })
+# cat("Time taken for compute_nd_pdf_bias_corrected: ",
+#     format_time(time_optimized["elapsed"]), "\n")
+
+
 # Time the execution of the new bias-corrected function.
 time_optimized <- system.time({
-  results <- compute_nd_pdf_bias_corrected_2(variables, reference_name, model_names, data_dir,
-                                             year_present, year_future, lon, lat, nbins1d,
-                                             workers = 4, buffer = 0.15, verbose = TRUE)
+  results <- compute_nd_pdf_bias_corrected_2(
+    variables,
+    reference_name,
+    model_names,
+    data_dir,
+    year_present,
+    year_future,
+    lon,
+    lat,
+    nbins1d,
+    workers = 5,    # Adjust the number of workers as needed
+    buffer = 0.05,
+    verbose = TRUE
+  )
 })
 cat("Time taken for compute_nd_pdf_bias_corrected: ",
     format_time(time_optimized["elapsed"]), "\n")
 
-# Store the returned components.
-pdf_ref    <- results$pdf_reference      # List with $present and $future PDFs for the reference.
-pdf_models <- results$pdf_models           # List with $present and $future PDFs for the models.
-ref_stats  <- results$reference_stats      # List with computed reference statistics (present and future).
+
+
+# Extract PDFs from the unified function results
+pdf_ref_present <- results$pdf_ref$present
+pdf_models_present <- results$pdf_models$present
+pdf_ref_future <- results$pdf_ref$future
+pdf_models_future <- results$pdf_models$future
+
 
 # Get the current date and time
 current_time <- Sys.time()
@@ -91,18 +121,84 @@ current_time <- Sys.time()
 formatted_time <- format(current_time, "%Y%m%d%H%M")
 
 # Concatenate the formatted time string with your desired filename
-filename <- paste0(formatted_time, "_my_workspace_ERA5_bias_corrected_7models_90-90.RData")
+filename <- paste0(formatted_time, "_my_workspace_ERA5_bias_corrected_new_7models_90-90.RData")
 
 # Save the workspace using the generated filename
 save.image(file = filename, compress = FALSE)
 
 test_hdist <- compute_partial_hdist(pdf_ref_future[180 + 131, 90 -7, ], pdf_ref_present[180 + 131, 90 -7, ], 1:512)
 
+# Plotting the 3D PDF of one gridpoint
+{
+  library(plotly)
+  library(abind)
+
+  # Example indices (adjust as needed)
+  lon_index <- 2  # selected longitude index
+  lat_index <- 2  # selected latitude index
+  model_idx <- 2  # select one model (from the pdf_models_future array)
+  nbins <- 8      # number of bins per variable
+
+  # Extract the PDF vector for the chosen grid point and model from the results.
+  pdf_vector <- results$pdf_ref_present[lon_index, lat_index, ]
+
+  # Reshape the 1D PDF vector into a 3D array.
+  pdf_3d <- array(pdf_vector, dim = c(nbins, nbins, nbins))
+
+  # Adjust range_var to extract the correct reference range for the chosen grid point
+  range_var_adj <- aperm(abind(range_var_final$ranges, along = 4), c(1, 2, 4, 3))
+  range_mat <- range_var_adj[lon_index + 130, lat_index + 90, , ]  # dimensions: [n_vars, 2]
+
+  print(range_mat)
+
+  # Compute bin edges and centers for each variable.
+  centers <- list()
+  for (v in 1:3) {
+    bin_edges <- seq(range_mat[v, 1], range_mat[v, 2], length.out = nbins + 1)
+    centers[[v]] <- (bin_edges[-1] + bin_edges[-length(bin_edges)]) / 2
+  }
+
+  # Create a grid of bin centers.
+  grid <- expand.grid(pr = centers[[1]], tas = centers[[2]], psl = centers[[3]])
+
+  # Flatten the 3D PDF into a vector.
+  pdf_flat <- as.vector(pdf_3d)
+  # Normalize PDF values for marker size.
+  normalized_pdf <- pdf_flat / max(pdf_flat, na.rm = TRUE)
+
+  # Plot the 3D scatter plot
+  fig <- plot_ly(
+    data = grid,
+    x = ~pr,
+    y = ~tas,
+    z = ~psl,
+    type = "scatter3d",
+    mode = "markers",
+    marker = list(
+      size = ~normalized_pdf * 75,  # Adjust scaling factor as needed
+      color = ~pdf_flat,
+      colorscale = "Viridis",
+      showscale = TRUE
+    ),
+    text = ~paste("PDF Value:", round(pdf_flat, 4))
+  ) %>% layout(
+    scene = list(
+      xaxis = list(title = "pr"),
+      yaxis = list(title = "tas"),
+      zaxis = list(title = "psl")
+    ),
+    title = paste("3D PDF for Model", model_idx, "Grid Point (Lon:", lon_index, ", Lat:", lat_index, ")")
+  )
+
+  fig
+}
+
 # Plotting the 3d pdf of one gridpoint
 {
+  if (exists("fig")) rm(fig)
   # Example indices (adjust as needed)
-  lon_index <- 131  # selected longitude index
-  lat_index <- 83   # selected latitude index
+  lon_index <- 1 # selected longitude index
+  lat_index <- 3 # selected latitude index
   model_idx <- 1 # select one model (from the pdf_models array)
   nbins <- 8       # number of bins per variable
 
@@ -117,6 +213,7 @@ test_hdist <- compute_partial_hdist(pdf_ref_future[180 + 131, 90 -7, ], pdf_ref_
   # Extract the reference range for that grid point.
   # We assume results$ref_range_present has dimensions: [lon, lat, n_vars, 2]
   range_mat <- results$ref_range_future[lon_index, lat_index, , ]  # dimensions: [3, 2]
+  print(range_mat)
 
   # Compute bin edges and centers for each variable.
   centers <- list()
@@ -142,32 +239,29 @@ test_hdist <- compute_partial_hdist(pdf_ref_future[180 + 131, 90 -7, ], pdf_ref_
     type = "scatter3d",
     mode = "markers",
     marker = list(
-      size = ~normalized_pdf * 75,  # Adjust scaling factor as needed
+      size = ~normalized_pdf * 75,
       color = ~pdf_flat,
       colorscale = "Viridis",
       showscale = TRUE
     ),
     text = ~paste("PDF Value:", round(pdf_flat, 4))
-  ) %>% layout(
-    scene = list(
-      xaxis = list(title = "pr"),
-      yaxis = list(title = "tas"),
-      zaxis = list(title = "psl")
-    ),
-    title = paste("3D PDF for Model", model_idx, "Grid Point (Lon:", lon_index, ", Lat:", lat_index, ")")
-  )
+  ) %>%
+    layout(
+      scene = list(
+        xaxis = list(title = "pr"),
+        yaxis = list(title = "tas"),
+        zaxis = list(title = "psl"),
+        aspectmode = "cube"  # <-- This ensures all axes are treated equally
+      ),
+      title = paste("3D PDF for Model", model_idx, "Grid Point (Lon:", lon_index, ", Lat:", lat_index, ")")
+    )
 
   fig
+
 
 }
 
 # --- Begin Complete Hellinger Distance Computation using compute_partial_hdist ---
-
-# Extract PDFs from the results
-pdf_ref_present <- pdf_ref$present
-pdf_models_present <- pdf_models$present
-pdf_ref_future <- pdf_ref$future
-pdf_models_future <- pdf_models$future
 
 # Total number of bins (joint PDF) per grid point
 n_bins_total <- nbins1d^(length(variables))
@@ -194,7 +288,7 @@ hist(h_dist_future, main = "Complete Hellinger Distance (Future)")
 
 smooth_cost <- 0.6
 tryCatch({
-  GC_result1 <- GraphCutHellinger_nD_lat(
+  GC_result01 <- GraphCutHellinger_nD_lat(
     pdf_models_future = pdf_models_future,
     h_dist = h_dist_present,
     weight_data = 1,               # Fixed data weight
@@ -214,7 +308,7 @@ tryCatch({
 {
   # Map of labels
   # Extract the label attribution for the current smooth cost
-  GC_labels <- GC_result1$label_attribution
+  GC_labels <- GC_result01$label_attribution
 
   # Convert the label matrix to a data frame for plotting
   label_df <- reshape2::melt(GC_labels, varnames = c("lon_idx", "lat_idx"), value.name = "label_attribution")
@@ -239,14 +333,14 @@ tryCatch({
   # Name the palette vector with model_names (in the same order)
   names(color_palette) <- model_names
 
-  p <- ggplot() +
+  p6 <- ggplot() +
     geom_tile(data = label_df, aes(x = lon, y = lat, fill = label_attribution)) +
     scale_fill_manual(
       values = color_palette,
       na.value = "white",
       guide = guide_legend(title = "Model Names", ncol = 1)
     ) +
-    ggtitle(paste("Label GC Hellinger - Lambda:", 0.1)) +
+    ggtitle(paste("Label GC Hellinger - Lambda:", 0.6)) +
     borders("world", colour = 'black', size = 0.12) +
     theme_bw() +
     theme(
@@ -268,7 +362,14 @@ tryCatch({
     ylab('Latitude') +
     easy_center_title()
 
-  p
+  p6
+
+  # Generate file name based on the smooth cost
+name <- paste0("figure/GC_labelling_smooth06_BC_present")
+
+# Save the plot as both PDF and PNG
+ggsave(paste0(name, ".pdf"), plot = p6, width = 20, height = 15, units = "cm", dpi = 300)
+ggsave(paste0(name, ".png"), plot = p6, width = 20, height = 15, units = "cm", dpi = 300)
 }
 
 
@@ -306,7 +407,7 @@ GC_hdist_present <- matrix(NA, nrow = length(lon), ncol = length(lat))
 GC_hdist_future <- matrix(NA, nrow = length(lon), ncol = length(lat))
 
 for(l in 1:(length(model_names))){  # Ensure that indexing aligns with model names
-  islabel <- which(GC_result1$label_attribution == l)
+  islabel <- which(GC_result01$label_attribution == l)
   GC_hdist_present[islabel] <- h_dist_present[,,l][islabel]
   GC_hdist_future[islabel] <- h_dist_future[,,l][islabel]
 }
@@ -358,8 +459,8 @@ test_df <- melt(GC_hdist_future, c("lon", "lat"), value.name = "H_dist")
 
 p6 <- ggplot() +
   geom_tile(data=test_df, aes(x=lon-180, y=lat-90, fill=H_dist))+
-  labs(subtitle = 'Projection period : 1998 - 2023')+
-  ggtitle(paste0('GC Bias corrected', ': Average Hellinger distance = ', round(mean(GC_hdist_future), 2)))+
+  labs(subtitle = 'Smooth = 0.6, Projection period : 1998 - 2023')+
+  ggtitle(paste0('GC Bias corrected', ': Average H = ', round(mean(GC_hdist_future), 2)))+
   scale_fill_gradient(low = "white", high = "#015a8c", limits = c(0.1, 0.70), oob = scales::squish)+
   borders("world", colour = 'black', lwd = 0.12) +
   scale_x_continuous(, expand = c(0, 0)) +
@@ -398,8 +499,8 @@ test_df <- melt(GC_hdist_present, c("lon", "lat"), value.name = "H_dist")
 
 p6 <- ggplot() +
   geom_tile(data=test_df, aes(x=lon-180, y=lat-90, fill=H_dist))+
-  labs(subtitle = 'Calibration period : 1950 - 1975')+
-  ggtitle(paste0('GC BC', ': Average Hellinger distance = ', round(mean(GC_hdist_present), 2)))+
+  labs(subtitle = 'Smooth = 0.6, Calibration period : 1950 - 1975')+
+  ggtitle(paste0('GC BC', ': Average H = ', round(mean(GC_hdist_present), 2)))+
   scale_fill_gradient(low = "white", high = "#015a8c", limits = c(0.1, 0.70), oob = scales::squish)+
   borders("world", colour = 'black', lwd = 0.12) +
   scale_x_continuous(, expand = c(0, 0)) +
@@ -511,7 +612,7 @@ p6
 {
 
   for (m in seq_along(model_names)) {
-    model_hdist <- h_dist_present[, , m]
+    model_hdist <- h_dist_future[, , m]
 
     # Melt the matrix into a dataframe with lon/lat
     test_df <- melt(model_hdist, varnames = c("lon_idx", "lat_idx"), value.name = "H_dist")
@@ -522,10 +623,10 @@ p6
     p <- ggplot() +
       geom_tile(data = test_df, aes(x = lon, y = lat, fill = H_dist)) +
       labs(subtitle = 'Projection period : 1998 - 2023') +
-      ggtitle(paste0(model_names[m], ': Average Hellinger distance = ',
+      ggtitle(paste0(model_names[m], ': Average H = ',
                      round(mean(model_hdist, na.rm = TRUE), 2))) +
       scale_fill_gradient(low = "white", high = "#015a8c", limits = c(0.1, 0.70), oob = scales::squish) +
-      borders("world2", colour = 'black', lwd = 0.12) +
+      borders("world", colour = 'black', lwd = 0.12) +
       scale_x_continuous(expand = c(0, 0)) +
       scale_y_continuous(expand = c(0, 0)) +
       theme(legend.position = 'bottom') +
@@ -549,4 +650,93 @@ p6
 
     print(p)
   }
+}
+
+
+
+# Inspect psl in era5
+{
+  library(ncdf4)
+
+  # User input
+  lon <- 0:180
+  lat <- -90:90
+  lon_idx <- 9
+  lat_idx <- 7
+  year_range <- 1950:1975
+  var <- "psl"
+
+  # Open NetCDF
+  f <- "data/CMIP6_merged_all/CMCC-ESM2/psl/psl_CMCC-ESM2_19500101-21001230.nc"
+  nc <- nc_open(f)
+
+  # Get grid
+  lon_file <- ncvar_get(nc, "lon")
+  lat_file <- ncvar_get(nc, "lat")
+  lon_file_adjusted <- ifelse(lon_file > 180, lon_file - 360, lon_file)
+  lon_user_adjusted <- ifelse(lon > 180, lon - 360, lon)
+
+  # Match user-defined region to file grid indices
+  lon_order <- order(lon_file_adjusted)
+  lon_file_sorted <- lon_file_adjusted[lon_order]
+  lon_file_original_sorted <- lon_file[lon_order]
+  lon_idx_unsorted <- match(lon_user_adjusted, lon_file_sorted)
+  lon_idx_in_file <- lon_order[lon_idx_unsorted]
+  lat_idx_in_file <- match(lat, lat_file)
+
+  # Extract date and match time indices
+  yyyy <- extract_years_from_time(nc)  # assuming this function is already defined
+  iyears <- which(yyyy %in% year_range)
+
+  # Compute final indices
+  start_lon <- min(lon_idx_in_file)
+  count_lon <- max(lon_idx_in_file) - start_lon + 1
+  start_lat <- min(lat_idx_in_file)
+  count_lat <- max(lat_idx_in_file) - start_lat + 1
+  start_time <- min(iyears)
+  count_time <- max(iyears) - start_time + 1
+
+  # Load data block
+  data_block <- ncvar_get(nc, var,
+                          start = c(start_lon, start_lat, start_time),
+                          count = c(count_lon, count_lat, count_time))
+
+  # Map user lon/lat idx to local offset
+  lon_file_subset <- lon_file[start_lon:(start_lon + count_lon - 1)]
+  lat_file_subset <- lat_file[start_lat:(start_lat + count_lat - 1)]
+  lon_idx_local <- match(lon_file_original_sorted[lon_idx_unsorted], lon_file_subset)
+  lat_idx_local <- match(lat, lat_file_subset)
+
+  # Extract time series
+  ts <- data_block[lon_idx_local[lon_idx], lat_idx_local[lat_idx], ]
+
+
+  nc_close(nc)
+
+}
+
+{
+  # Dimensions
+  nlon_local <- dim(data_block)[1]
+  nlat_local <- dim(data_block)[2]
+
+  # Initialize result matrices
+  mean_mat <- matrix(NA, nrow = nlon_local, ncol = nlat_local)
+  sd_mat   <- matrix(NA, nrow = nlon_local, ncol = nlat_local)
+  min_mat  <- matrix(NA, nrow = nlon_local, ncol = nlat_local)
+  max_mat  <- matrix(NA, nrow = nlon_local, ncol = nlat_local)
+
+  # Loop over grid points
+  for (i in seq_len(nlon_local)) {
+    for (j in seq_len(nlat_local)) {
+      ts <- ts[!is.na(ts)]  # Remove NAs just in case
+      if (length(ts) > 0) {
+        mean_mat[i, j] <- mean(data_block[i,j,])
+        sd_mat[i, j]   <- sd(data_block[i,j,])
+        min_mat[i, j]  <- min(data_block[i,j,])
+        max_mat[i, j]  <- max(data_block[i,j,])
+      }
+    }
+  }
+
 }

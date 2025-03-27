@@ -1,5 +1,5 @@
 # Set up parallel processing option (64 GiB maximum globals)
-options(future.globals.maxSize = 64.0 * 1024^3)
+options(future.globals.maxSize = 16 * 1024^3)
 
 #-------------------------------
 # Helper function for processing a single model.
@@ -7,42 +7,50 @@ options(future.globals.maxSize = 64.0 * 1024^3)
 #-------------------------------
 process_model_pdf <- function(m_idx, model_names, nlon, nlat, variables, data_dir,
                               year_present, year_future, reference_stats_present,
-                              ref_range_present, nbins) {
+                              ref_range_present, ref_range_future, nbins) {
   model_name <- as.character(model_names[[m_idx]])
   cat("Processing model:", model_name, "\n")
 
   n_vars <- length(variables)
-  # Pre-allocate lists for corrected data (present and future)
   corrected_data_present_list <- vector("list", n_vars)
   corrected_data_future_list  <- vector("list", n_vars)
-  # Pre-allocate lists for raw means (uncorrected) [nlon x nlat] for each variable
   raw_means_pres_list <- vector("list", n_vars)
   raw_means_fut_list  <- vector("list", n_vars)
-  # Pre-allocate arrays for out-of-range counts [nlon, nlat, n_vars]
   out_range_pres <- array(0, dim = c(nlon, nlat, n_vars))
   out_range_fut  <- array(0, dim = c(nlon, nlat, n_vars))
 
-  # --- Compute grid indices once using the first variable ---
+  # Read grid info from the first variable
   var0 <- variables[1]
   mod_dir0 <- paste0(data_dir, model_name, '/', var0, '/')
   mod_file0 <- list.files(path = mod_dir0, pattern = glob2rx(paste0(var0, "_", model_name, "*.nc")), full.names = TRUE)[1]
   if (is.na(mod_file0)) stop("Model file for ", var0, " not found for model ", model_name)
   nc_mod0 <- nc_open(mod_file0)
-  lon_file0 <- ncvar_get(nc_mod0, "lon")
-  lat_file0 <- ncvar_get(nc_mod0, "lat")
-  if(any(lon_file0 >= 180)) {
-    lon_file0 <- ifelse(lon_file0 >= 180, lon_file0 - 360, lon_file0)
-  }
-  sorted_indices <- order(lon_file0)
-  lon_file_sorted <- lon_file0[sorted_indices]
-  lon_idx <- match(lon, lon_file_sorted)
-  lat_idx <- match(lat, lat_file0)
-  if(any(is.na(lon_idx)) || any(is.na(lat_idx)))
-    stop("Grid indices for model ", model_name, " not found.")
+
+  lon_file <- ncvar_get(nc_mod0, "lon")
+  lat_file <- ncvar_get(nc_mod0, "lat")
+
+  # Normalize longitude to [-180, 180] if needed
+  lon_file_adjusted <- ifelse(lon_file >= 180, lon_file - 360, lon_file)
+  lon_user_adjusted <- ifelse(lon >= 180, lon - 360, lon)
+
+
+  # Sort file longitudes and keep original indices
+  lon_order <- order(lon_file_adjusted)
+  lon_file_sorted <- lon_file_adjusted[lon_order]
+  lon_file_original_sorted <- lon_file[lon_order]  # For NetCDF indexing
+
+  # Match user-specified longitudes and latitudes to file grid
+  lon_idx_unsorted <- match(lon_user_adjusted, lon_file_sorted)
+  if (any(is.na(lon_idx_unsorted))) stop("Some user-specified longitudes not found in NetCDF.")
+  lon_idx_in_file <- lon_order[lon_idx_unsorted]  # indices in original NetCDF file
+
+  lat_idx_in_file <- match(lat, lat_file)
+  if (any(is.na(lat_idx_in_file))) stop("Some user-specified latitudes not found in NetCDF.")
+
   nc_close(nc_mod0)
   gc()
 
-  # --- Now loop over variables, reusing the same indices ---
+  # Loop over variables
   for (v in seq_along(variables)) {
     var <- variables[v]
     mod_dir <- paste0(data_dir, model_name, '/', var, '/')
@@ -52,32 +60,44 @@ process_model_pdf <- function(m_idx, model_names, nlon, nlat, variables, data_di
     nc_mod <- nc_open(mod_file)
     yyyy <- extract_years_from_time(nc_mod)
     iyear_pres <- which(yyyy %in% year_present)
-    if (length(iyear_pres)==0)
-      stop("No present years for model ", model_name)
+    if (length(iyear_pres) == 0) stop("No present years for model ", model_name)
     iyear_fut <- which(yyyy %in% year_future)
-    if (length(iyear_fut)==0)
-      stop("No future years for model ", model_name)
+    if (length(iyear_fut) == 0) stop("No future years for model ", model_name)
 
-    # Read data once and subset using precomputed indices.
-    full_data_pres <- ncvar_get(nc_mod, var, start = c(1, min(lat_idx), min(iyear_pres)),
-                                count = c(-1, length(lat_idx), length(iyear_pres)))
-    full_data_pres <- full_data_pres[sorted_indices, , ]
-    mod_data_pres <- full_data_pres[lon_idx, , ]
-    if (var == "psl") mod_data_pres <- mod_data_pres / 100
-    rm(full_data_pres)
-    gc()
+    # Compute NetCDF read ranges
+    start_lon <- min(lon_idx_in_file)
+    count_lon <- max(lon_idx_in_file) - start_lon + 1
+    start_lat <- min(lat_idx_in_file)
+    count_lat <- max(lat_idx_in_file) - start_lat + 1
 
-    full_data_fut <- ncvar_get(nc_mod, var, start = c(1, min(lat_idx), min(iyear_fut)),
-                               count = c(-1, length(lat_idx), length(iyear_fut)))
-    full_data_fut <- full_data_fut[sorted_indices, , ]
-    mod_data_fut <- full_data_fut[lon_idx, , ]
-    if (var == "psl") mod_data_fut <- mod_data_fut / 100
+    # ---- Present data ----
+    start_time_pres <- min(iyear_pres)
+    count_time_pres <- max(iyear_pres) - start_time_pres + 1
 
-    rm(full_data_fut)
-    gc()
+    full_data_pres <- ncvar_get(nc_mod, var,
+                                start = c(start_lon, start_lat, start_time_pres),
+                                count = c(count_lon, count_lat, count_time_pres))
+
+    lon_file_subset <- lon_file[start_lon:(start_lon + count_lon - 1)]
+    lat_file_subset <- lat_file[start_lat:(start_lat + count_lat - 1)]
+    lon_idx_local <- match(lon_file_original_sorted[lon_idx_unsorted], lon_file_subset)
+    lat_idx_local <- match(lat, lat_file_subset)
+
+    mod_data_pres <- full_data_pres[lon_idx_local, lat_idx_local, ]
+
+    # ---- Future data ----
+    start_time_fut <- min(iyear_fut)
+    count_time_fut <- max(iyear_fut) - start_time_fut + 1
+
+    full_data_fut <- ncvar_get(nc_mod, var,
+                               start = c(start_lon, start_lat, start_time_fut),
+                               count = c(count_lon, count_lat, count_time_fut))
+
+    mod_data_fut <- full_data_fut[lon_idx_local, lat_idx_local, ]
 
     nc_close(nc_mod)
-    gc()  # Prompt garbage collection
+    gc()
+
 
     # Compute raw means (without correction) for each pixel for present and future.
     # These are matrices of size [nlon, nlat] for the current variable.
@@ -106,12 +126,15 @@ process_model_pdf <- function(m_idx, model_names, nlon, nlat, variables, data_di
 
         } else {
           ref_q90_pres <- reference_stats_present[[v]]$q90[i, j]
-
           mod_q90_pres <- as.numeric(quantile(ts_mod_pres, 0.90, na.rm = TRUE))
           corr_pres[i, j, ] <- ts_mod_pres * (ref_q90_pres / mod_q90_pres)
 
           mod_q90_fut <- as.numeric(quantile(ts_mod_fut, 0.90, na.rm = TRUE))
           corr_fut[i, j, ] <- ts_mod_fut * (ref_q90_pres / mod_q90_pres)
+
+          # Force negative values to 0 before applying the log transform
+          corr_pres[i, j, ][corr_pres[i, j, ] < 0] <- 0
+          corr_fut[i, j, ][corr_fut[i, j, ] < 0] <- 0
 
           corr_pres[i, j, ] <- log(corr_pres[i, j, ] + 1)
           corr_fut[i, j, ]  <- log(corr_fut[i, j, ] + 1)
@@ -146,7 +169,7 @@ process_model_pdf <- function(m_idx, model_names, nlon, nlat, variables, data_di
       pixel_data_mod_fut <- sapply(1:n_vars, function(v) corrected_data_future_list[[v]][i, j, ])
       range_mat_fut <- matrix(NA, n_vars, 2)
       for (v in seq_len(n_vars)) {
-        range_mat_fut[v, ] <- ref_range_present[i, j, v, ]
+        range_mat_fut[v, ] <- ref_range_future[i, j, v, ]
       }
       count_vec_fut <- sapply(1:n_vars, function(v)
         sum(pixel_data_mod_fut[, v] < range_mat_fut[v, 1] | pixel_data_mod_fut[, v] > range_mat_fut[v, 2]))
@@ -178,16 +201,13 @@ process_model_pdf <- function(m_idx, model_names, nlon, nlat, variables, data_di
 # Main function
 #-------------------------------
 compute_nd_pdf_bias_corrected_2 <- function(variables, reference_name, model_names, data_dir,
-                                            year_present, year_future, lon, lat, nbins, workers = 1,
-                                            buffer = 0.05, verbose = FALSE) {
+                                            year_present, year_future, lon, lat, nbins, workers,
+                                            buffer, verbose) {
 
   n_vars <- length(variables)
   nlon <- length(lon)
   nlat <- length(lat)
 
-  ## ----------------------------
-  ## SEGMENT 1: Process the reference data
-  ## ----------------------------
   pdf_ref_present <- array(NA, dim = c(nlon, nlat, nbins^n_vars))
   pdf_ref_future  <- array(NA, dim = c(nlon, nlat, nbins^n_vars))
 
@@ -207,44 +227,58 @@ compute_nd_pdf_bias_corrected_2 <- function(variables, reference_name, model_nam
     if (is.na(ref_file)) stop("Reference file for ", var, " not found.")
 
     nc_ref <- nc_open(ref_file)
+
     lon_file <- ncvar_get(nc_ref, "lon")
     lat_file <- ncvar_get(nc_ref, "lat")
-    if(any(lon_file >= 180)) {
-      lon_file <- ifelse(lon_file >= 180, lon_file - 360, lon_file)
-    }
-    sorted_indices <- order(lon_file)
-    lon_file_sorted <- lon_file[sorted_indices]
-    lon_indices <- match(lon, lon_file_sorted)
-    lat_indices <- match(lat, lat_file)
-    if(any(is.na(lon_indices)) || any(is.na(lat_indices)))
-      stop("Grid indices for reference not found.")
+
+    # Normalize longitudes to [-180, 180] range for both file and user inputs
+    lon_file_adjusted <- ifelse(lon_file >= 180, lon_file - 360, lon_file)
+    lon_user_adjusted <- ifelse(lon >= 180, lon - 360, lon)
+
+    lon_order <- order(lon_file_adjusted)
+    lon_file_sorted <- lon_file_adjusted[lon_order]
+    lon_file_original_sorted <- lon_file[lon_order]
+
+    lon_idx_unsorted <- match(lon_user_adjusted, lon_file_sorted)
+    if (any(is.na(lon_idx_unsorted))) stop("Some user-specified longitudes not found in reference NetCDF.")
+    lon_idx_in_file <- lon_order[lon_idx_unsorted]
+
+    lat_idx_in_file <- match(lat, lat_file)
+    if (any(is.na(lat_idx_in_file))) stop("Some user-specified latitudes not found in reference NetCDF.")
 
     yyyy <- extract_years_from_time(nc_ref)
     iyear_pres <- which(yyyy %in% year_present)
-    if (length(iyear_pres)==0)
-      stop("No present years found for reference ", reference_name)
+    if (length(iyear_pres)==0) stop("No present years found for reference ", reference_name)
     iyear_fut <- which(yyyy %in% year_future)
-    if (length(iyear_fut)==0)
-      stop("No future years found for reference ", reference_name)
+    if (length(iyear_fut)==0) stop("No future years found for reference ", reference_name)
+
+    start_lon <- min(lon_idx_in_file)
+    count_lon <- max(lon_idx_in_file) - start_lon + 1
+    start_lat <- min(lat_idx_in_file)
+    count_lat <- max(lat_idx_in_file) - start_lat + 1
+
+    start_time_pres <- min(iyear_pres)
+    count_time_pres <- max(iyear_pres) - start_time_pres + 1
 
     full_data_pres <- ncvar_get(nc_ref, var,
-                                start = c(1, min(lat_indices), min(iyear_pres)),
-                                count = c(-1, length(lat_indices), length(iyear_pres)))
-    full_data_pres <- full_data_pres[sorted_indices, , ]
-    ref_data_pres <- full_data_pres[lon_indices, , ]
-    if (var == "psl") ref_data_pres <- ref_data_pres / 100
+                                start = c(start_lon, start_lat, start_time_pres),
+                                count = c(count_lon, count_lat, count_time_pres))
 
+    lon_file_subset <- lon_file[start_lon:(start_lon + count_lon - 1)]
+    lat_file_subset <- lat_file[start_lat:(start_lat + count_lat - 1)]
+    lon_idx_local <- match(lon_file_original_sorted[lon_idx_unsorted], lon_file_subset)
+    lat_idx_local <- match(lat, lat_file_subset)
+
+    ref_data_pres <- full_data_pres[lon_idx_local, lat_idx_local, , drop = FALSE]
     rm(full_data_pres)
 
+    start_time_fut <- min(iyear_fut)
+    count_time_fut <- max(iyear_fut) - start_time_fut + 1
     full_data_fut <- ncvar_get(nc_ref, var,
-                               start = c(1, min(lat_indices), min(iyear_fut)),
-                               count = c(-1, length(lat_indices), length(iyear_fut)))
-    full_data_fut <- full_data_fut[sorted_indices, , ]
-    ref_data_fut <- full_data_fut[lon_indices, , ]
-    if (var == "psl") ref_data_fut <- ref_data_fut / 100
-
+                               start = c(start_lon, start_lat, start_time_fut),
+                               count = c(count_lon, count_lat, count_time_fut))
+    ref_data_fut <- full_data_fut[lon_idx_local, lat_idx_local, , drop = FALSE]
     rm(full_data_fut)
-
 
     nc_close(nc_ref)
     gc()
@@ -299,12 +333,12 @@ compute_nd_pdf_bias_corrected_2 <- function(variables, reference_name, model_nam
       i <- ((idx - 1) %% nlon) + 1
       j <- ((idx - 1) %/% nlon) + 1
       if (var == "pr") {
-        diff_pres <- max(ref_data_pres[i,j, ], na.rm = TRUE) - min(ref_data_pres[i,j, ], na.rm = TRUE)
-        range_pres[idx, 1] <- min(ref_data_pres[i,j, ], na.rm = TRUE) - buffer * diff_pres
+        diff_pres <- max(ref_data_pres[i,j, ], na.rm = TRUE)
+        range_pres[idx, 1] <- 0
         range_pres[idx, 2] <- max(ref_data_pres[i,j, ], na.rm = TRUE) + buffer * diff_pres
 
-        diff_fut <- max(ref_data_fut[i,j, ], na.rm = TRUE) - min(ref_data_fut[i,j, ], na.rm = TRUE)
-        range_fut[idx, 1] <- min(ref_data_fut[i,j, ], na.rm = TRUE) - buffer * diff_fut
+        diff_fut <- max(ref_data_fut[i,j, ], na.rm = TRUE)
+        range_fut[idx, 1] <- 0
         range_fut[idx, 2] <- max(ref_data_fut[i,j, ], na.rm = TRUE) + buffer * diff_fut
       } else {
         diff_pres <- max_pres[i,j] - min_pres[i,j]
@@ -350,6 +384,7 @@ compute_nd_pdf_bias_corrected_2 <- function(variables, reference_name, model_nam
       }
       pixel_data_fut <- sapply(1:n_vars, function(v) ref_data_future_all[i, j, , v])
       hist_fut <- compute_histND(pixel_data_fut, range_mat_fut, nbins)
+
       pdf_ref_future[i, j, ] <- hist_fut / sum(hist_fut)
     }
   }
@@ -376,7 +411,7 @@ compute_nd_pdf_bias_corrected_2 <- function(variables, reference_name, model_nam
   models_pdf_list <- future_lapply(seq_along(model_names),
                                    FUN = function(m_idx) process_model_pdf(m_idx, model_names, nlon, nlat, variables, data_dir,
                                                                            year_present, year_future, reference_stats_present,
-                                                                           ref_range_present, nbins))
+                                                                           ref_range_present, ref_range_future, nbins))
   plan(sequential)
 
   for (m_idx in seq_along(model_names)) {
