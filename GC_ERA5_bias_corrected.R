@@ -15,7 +15,6 @@ for(path in file_paths){
   source(path)
 }
 
-range_var_final <- readRDS('ranges/range_var_final_allModelsPar_1950-2023_90deg_3v.rds')
 
 # # Setting global variables
 # lon <- -10:10
@@ -50,7 +49,7 @@ nbins1d <<- 8
 # (The joint PDF will have nbins1d^n_vars bins)
 
 # Obtain the list of models from a file
-model_names <- read.table('model_names_pr_tas_psl_short.txt')
+model_names <- read.table('model_names_pr_tas_psl.txt')
 model_names <- as.list(model_names[['V1']])
 ref_index <<- 1
 
@@ -97,8 +96,8 @@ time_optimized <- system.time({
     lon,
     lat,
     nbins1d,
-    workers = 5,    # Adjust the number of workers as needed
-    buffer = 0.05,
+    workers = 4,    # Adjust the number of workers as needed
+    buffer = 0.10,
     verbose = TRUE
   )
 })
@@ -121,7 +120,7 @@ current_time <- Sys.time()
 formatted_time <- format(current_time, "%Y%m%d%H%M")
 
 # Concatenate the formatted time string with your desired filename
-filename <- paste0(formatted_time, "_my_workspace_ERA5_bias_corrected_new_7models_90-90.RData")
+filename <- paste0(formatted_time, "_my_workspace_ERA5_bias_corrected_new_22models_90-90.RData")
 
 # Save the workspace using the generated filename
 save.image(file = filename, compress = FALSE)
@@ -288,6 +287,23 @@ hist(h_dist_future, main = "Complete Hellinger Distance (Future)")
 
 smooth_cost <- 0.6
 tryCatch({
+  GC_result06 <- GraphCutHellinger_nD_lat(
+    pdf_models_future = pdf_models_future,
+    h_dist = h_dist_present,
+    weight_data = 1,               # Fixed data weight
+    weight_smooth = smooth_cost,   # Varying smooth cost
+    nBins = nbins1d^3,
+    lat = lat,
+    seed = 1,
+    verbose = TRUE,
+    rebuild = TRUE
+  )
+}, error = function(e) {
+  cat("Error encountered with smooth cost =", smooth_cost, ": ", e$message, "\n")
+})
+
+smooth_cost <- 0.1
+tryCatch({
   GC_result01 <- GraphCutHellinger_nD_lat(
     pdf_models_future = pdf_models_future,
     h_dist = h_dist_present,
@@ -308,7 +324,7 @@ tryCatch({
 {
   # Map of labels
   # Extract the label attribution for the current smooth cost
-  GC_labels <- GC_result01$label_attribution
+  GC_labels <- GC_result06$label_attribution
 
   # Convert the label matrix to a data frame for plotting
   label_df <- reshape2::melt(GC_labels, varnames = c("lon_idx", "lat_idx"), value.name = "label_attribution")
@@ -365,7 +381,7 @@ tryCatch({
   p6
 
   # Generate file name based on the smooth cost
-name <- paste0("figure/GC_labelling_smooth06_BC_present")
+name <- paste0("figure/GC_labelling_smooth01_BC_present_22model")
 
 # Save the plot as both PDF and PNG
 ggsave(paste0(name, ".pdf"), plot = p6, width = 20, height = 15, units = "cm", dpi = 300)
@@ -739,4 +755,10 @@ p6
     }
   }
 
+}
+
+
+# Hellinger distance on MV extremes :
+{
+  
 }
