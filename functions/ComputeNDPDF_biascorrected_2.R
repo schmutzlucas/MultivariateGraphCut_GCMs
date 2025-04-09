@@ -1,5 +1,5 @@
 # Set up parallel processing option (64 GiB maximum globals)
-options(future.globals.maxSize = 16 * 1024^3)
+options(future.globals.maxSize = 64 * 1024^3L)  # 64 GiB
 
 #-------------------------------
 # Helper function for processing a single model.
@@ -408,6 +408,13 @@ compute_nd_pdf_bias_corrected_2 <- function(variables, reference_name, model_nam
   out_range_fut_all  <- array(0, dim = c(nlon, nlat, n_vars, num_models))
 
   plan(multisession, workers = workers)
+  library(future)
+  globals <- future::globalsOf(
+    function() future_lapply(1, function(x) NULL),
+    substitute = FALSE
+  )
+  print(names(globals))
+  sapply(globals, object.size)
   models_pdf_list <- future_lapply(seq_along(model_names),
                                    FUN = function(m_idx) process_model_pdf(m_idx, model_names, nlon, nlat, variables, data_dir,
                                                                            year_present, year_future, reference_stats_present,

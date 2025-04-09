@@ -1318,7 +1318,7 @@ p6
     scale_y_continuous(limits = c(min_val, max_val), expand = c(0, 0)) +
     scale_color_gradient(low = "blue", high = "red") +
     labs(
-      title = "Partial H (LDR Masss = 0.1) : MMM | GC lambda = 0.1",
+      title = "Partial H (LDR Mass = 0.1) : MMM | GC lambda = 0.1",
       x = "MMM H",
       y = "GraphCut H",
       color = "Latitude"

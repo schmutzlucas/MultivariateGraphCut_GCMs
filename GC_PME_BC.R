@@ -17,14 +17,14 @@ for(path in file_paths){
 
 
 # Setting global variables
-lon <- -10:10
-lat <- -10:10
+lon <- -10:120
+lat <- 0:60
 lon_size <- length(lon)
 lat_size <- length(lat)
 
 # Temporal ranges
-year_present <<- 1950:1960
-year_future <<- 2090:2100
+year_present <<- 1950:1970
+year_future <<- 2080:2100
 
 
 
@@ -37,6 +37,8 @@ year_future <<- 2090:2100
 # # Temporal ranges
 # year_present <<- 1950:1975
 # year_future <<- 1998:2023
+
+workers <- 4
 
 # Data directory
 data_dir <<- 'data/CMIP6_merged_all/'
@@ -118,7 +120,7 @@ for (m in seq_along(model_names)) {
       lon,
       lat,
       nbins1d,
-      workers = 4,    # Adjust the number of workers as needed
+      workers = workers,    # Adjust the number of workers as needed
       buffer = 0.10,
       verbose = TRUE
     )
@@ -179,8 +181,8 @@ for (m in seq_along(model_names)) {
   GC06_hdist_present <- matrix(NA, nrow = length(lon), ncol = length(lat))
   GC06_hdist_future <- matrix(NA, nrow = length(lon), ncol = length(lat))
 
-  GC06_present <- array(NA, dim = c(length(lon), length(lat), nbins, length(model_names)))
-  GC06_future <- array(NA, dim = c(length(lon), length(lat), nbins, length(model_names)))
+  GC06_present <- array(NA, dim = c(length(lon), length(lat), nbins))
+  GC06_future <- array(NA, dim = c(length(lon), length(lat), nbins))
 
   for(l in 1:(length(model_names))){  # Ensure that indexing aligns with model names
     islabel <- which(GC06_result$label_attribution == l)
