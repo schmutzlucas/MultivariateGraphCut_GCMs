@@ -126,7 +126,6 @@ filename <- paste0(formatted_time, "_my_workspace_ERA5_bias_corrected_new_22mode
 # Save the workspace using the generated filename
 save.image(file = filename, compress = FALSE)
 
-test_hdist <- compute_partial_hdist(pdf_ref_future[180 + 131, 90 -7, ], pdf_ref_present[180 + 131, 90 -7, ], 1:512)
 
 # Plotting the 3D PDF of one gridpoint
 {
@@ -388,7 +387,7 @@ tryCatch({
 gc()
 
 
-  # Map of labels
+# Map of labels
 {
   # Extract the label attribution for the current smooth cost
   GC_labels <- GC_result01$label_attribution
@@ -521,13 +520,13 @@ MMM_hdist_future <- array(NA, dim = c(length(lon), length(lat)))
 for (i in seq_along(lon)) {
   for (j in seq_along(lat)) {
     # Compute Hellinger distance for present
-    MMM_hdist[i, j] <- sqrt(sum((sqrt(MMM_present[i, j, ]) - sqrt(pdf_ref_present[i, j, ]))^2)) / sqrt(2)
+    MMM_hdist_present[i, j] <- sqrt(sum((sqrt(MMM_present[i, j, ]) - sqrt(pdf_ref_present[i, j, ]))^2)) / sqrt(2)
 
     # Compute Hellinger distance for future
     MMM_hdist_future[i, j] <- sqrt(sum((sqrt(MMM_future[i, j, ]) - sqrt(pdf_ref_future[i, j, ]))^2)) / sqrt(2)
   }
 }
-
+gc()
 # Get the current date and time
 current_time <- Sys.time()
 
@@ -535,16 +534,13 @@ current_time <- Sys.time()
 formatted_time <- format(current_time, "%Y%m%d%H%M")
 
 # Concatenate the formatted time string with your desired filename
-filename <- paste0(formatted_time, "_my_workspace_ERA5_bias_corrected_7models_final.RData")
+filename <- paste0(formatted_time, "_my_workspace_ERA5_bias_corrected_22models_H_dist.RData")
 
 # Save the workspace using the generated filename
 save.image(file = filename, compress = FALSE)
 
 
-
 # Map H Dist future
-
-
 test_df <- melt(GC01_hdist_future, c("lon", "lat"), value.name = "H_dist")
 
 p6 <- ggplot() +
@@ -575,7 +571,7 @@ p6 <- ggplot() +
 p6
 
 # Generate file name based on the smooth cost
-name <- paste0("figure/GC_H_dist_smooth01_BC")
+name <- paste0("figure/GC_H_dist_smooth01_BC_projection")
 
 # Save the plot as both PDF and PNG
 ggsave(paste0(name, ".pdf"), plot = p6, width = 20, height = 15, units = "cm", dpi = 300)
@@ -616,7 +612,7 @@ p6 <- ggplot() +
 p6
 
 # Generate file name based on the smooth cost
-name <- paste0("figure/GC_H_dist_smooth06_BC")
+name <- paste0("figure/GC_H_dist_smooth06_BC_projection")
 
 # Save the plot as both PDF and PNG
 ggsave(paste0(name, ".pdf"), plot = p6, width = 20, height = 15, units = "cm", dpi = 300)
@@ -626,12 +622,12 @@ ggsave(paste0(name, ".png"), plot = p6, width = 20, height = 15, units = "cm", d
 # Map H Dist present
 
 
-test_df <- melt(GC_hdist_present, c("lon", "lat"), value.name = "H_dist")
+test_df <- melt(GC01_hdist_present, c("lon", "lat"), value.name = "H_dist")
 
 p6 <- ggplot() +
   geom_tile(data=test_df, aes(x=lon-180, y=lat-90, fill=H_dist))+
-  labs(subtitle = 'Smooth = 0.6, Calibration period : 1950 - 1975')+
-  ggtitle(paste0('GC BC', ': Average H = ', round(mean(GC_hdist_present), 2)))+
+  labs(subtitle = 'Smooth = 0.1, Calibration period : 1950 - 1975')+
+  ggtitle(paste0('GC BC', ': Average H = ', round(mean(GC01_hdist_present), 2)))+
   scale_fill_gradient(low = "white", high = "#015a8c", limits = c(0.1, 0.70), oob = scales::squish)+
   borders("world", colour = 'black', lwd = 0.12) +
   scale_x_continuous(, expand = c(0, 0)) +
@@ -656,7 +652,45 @@ p6 <- ggplot() +
 p6
 
 # Generate file name based on the smooth cost
-name <- paste0("figure/GC_H_dist_smooth06_BC_present")
+name <- paste0("figure/GC_H_dist_smooth01_BC_calibration")
+
+# Save the plot as both PDF and PNG
+ggsave(paste0(name, ".pdf"), plot = p6, width = 20, height = 15, units = "cm", dpi = 300)
+ggsave(paste0(name, ".png"), plot = p6, width = 20, height = 15, units = "cm", dpi = 300)
+
+
+
+test_df <- melt(GC06_hdist_present, c("lon", "lat"), value.name = "H_dist")
+
+p6 <- ggplot() +
+  geom_tile(data=test_df, aes(x=lon-180, y=lat-90, fill=H_dist))+
+  labs(subtitle = 'Smooth = 0.6, Calibration period : 1950 - 1975')+
+  ggtitle(paste0('GC BC', ': Average H = ', round(mean(GC06_hdist_present), 2)))+
+  scale_fill_gradient(low = "white", high = "#015a8c", limits = c(0.1, 0.70), oob = scales::squish)+
+  borders("world", colour = 'black', lwd = 0.12) +
+  scale_x_continuous(, expand = c(0, 0)) +
+  scale_y_continuous(, expand = c(0, 0))+
+  theme(legend.position = 'bottom')+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  theme(panel.background = element_blank())+
+  xlab('Longitude')+
+  ylab('Latitude') +
+  labs(fill='Hellinger \nDistance')+
+  theme_bw()+
+  theme(legend.key.size = unit(1, 'cm'), #change legend key size
+        legend.key.height = unit(1.4, 'cm'), #change legend key height
+        legend.key.width = unit(0.4, 'cm'), #change legend key width
+        legend.title = element_text(size=16), #change legend title font sizen
+        legend.text = element_text(size=12))+ #change legend text font size
+  theme(plot.title = element_text(size=24),
+        plot.subtitle = element_text(size = 20,hjust=0.5),
+        axis.text=element_text(size=14),
+        axis.title=element_text(size=16),)+
+  easy_center_title()
+p6
+
+# Generate file name based on the smooth cost
+name <- paste0("figure/GC_H_dist_smooth06_BC_calibration")
 
 # Save the plot as both PDF and PNG
 ggsave(paste0(name, ".pdf"), plot = p6, width = 20, height = 15, units = "cm", dpi = 300)
@@ -665,15 +699,13 @@ ggsave(paste0(name, ".png"), plot = p6, width = 20, height = 15, units = "cm", d
 
 
 # Map MMM H dist
-
-
-# Melt it into a data frame:
-test_df <- melt(MMM_hdist_future, varnames = c("lon", "lat"), value.name = "H_dist")
+#Present
+test_df <- melt(MMM_hdist, varnames = c("lon", "lat"), value.name = "H_dist")
 
 p6 <- ggplot() +
   geom_tile(data=test_df, aes(x=lon-180, y=lat-90, fill=H_dist))+
   labs(subtitle = 'Projection period : 1998 - 2023')+
-  ggtitle(paste0('MMM', ': Average Hellinger distance = ', round(mean(MMM_hdist_future), 2)))+
+  ggtitle(paste0('MMM', ': Average H = ', round(mean(MMM_hdist), 2)))+
   scale_fill_gradient(low = "white", high = "#015a8c", limits = c(0.1, 0.70), oob = scales::squish)+
   borders("world", colour = 'black', lwd = 0.12) +
   scale_x_continuous(, expand = c(0, 0)) +
@@ -698,7 +730,45 @@ p6 <- ggplot() +
 p6
 
 # Generate file name based on the smooth cost
-name <- paste0("figure/MMM_H_dist_BC")
+name <- paste0("figure/MMM_H_dist_BC_calibration")
+
+# Save the plot as both PDF and PNG
+ggsave(paste0(name, ".pdf"), plot = p6, width = 20, height = 15, units = "cm", dpi = 300)
+ggsave(paste0(name, ".png"), plot = p6, width = 20, height = 15, units = "cm", dpi = 300)
+
+#Future
+# Melt it into a data frame:
+test_df <- melt(MMM_hdist_future, varnames = c("lon", "lat"), value.name = "H_dist")
+
+p6 <- ggplot() +
+  geom_tile(data=test_df, aes(x=lon-180, y=lat-90, fill=H_dist))+
+  labs(subtitle = 'Projection period : 1998 - 2023')+
+  ggtitle(paste0('MMM', ': Average H = ', round(mean(MMM_hdist_future), 2)))+
+  scale_fill_gradient(low = "white", high = "#015a8c", limits = c(0.1, 0.70), oob = scales::squish)+
+  borders("world", colour = 'black', lwd = 0.12) +
+  scale_x_continuous(, expand = c(0, 0)) +
+  scale_y_continuous(, expand = c(0,0))+
+  theme(legend.position = 'bottom')+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  theme(panel.background = element_blank())+
+  xlab('Longitude')+
+  ylab('Latitude') +
+  labs(fill='Hellinger \nDistance')+
+  theme_bw()+
+  theme(legend.key.size = unit(1, 'cm'), #change legend key size
+        legend.key.height = unit(1.4, 'cm'), #change legend key height
+        legend.key.width = unit(0.4, 'cm'), #change legend key width
+        legend.title = element_text(size=16), #change legend title font sizen
+        legend.text = element_text(size=12))+ #change legend text font size
+  theme(plot.title = element_text(size=24),
+        plot.subtitle = element_text(size = 20,hjust=0.5),
+        axis.text=element_text(size=14),
+        axis.title=element_text(size=16),)+
+  easy_center_title()
+p6
+
+# Generate file name based on the smooth cost
+name <- paste0("figure/MMM_H_dist_BC_projection")
 
 # Save the plot as both PDF and PNG
 ggsave(paste0(name, ".pdf"), plot = p6, width = 20, height = 15, units = "cm", dpi = 300)
@@ -783,7 +853,7 @@ p6
   }
 }
 
-
+# Map of H dist for each model
 {
 
   for (m in seq_along(model_names)) {
@@ -826,8 +896,6 @@ p6
     print(p)
   }
 }
-
-
 
 # Inspect psl in era5
 {
@@ -890,6 +958,7 @@ p6
 
 }
 
+# Summary stats
 {
   # Dimensions
   nlon_local <- dim(data_block)[1]
@@ -932,7 +1001,7 @@ p6
     ldr_indices[[i]] <- vector("list", lat_size)
     for (j in seq_len(lat_size)) {
       # Compute the central region indices using tau=0.1
-      central_indices <- select_hdr_indices(pdf_ref_present[i, j, ], tau = 0.15)
+      central_indices <- select_hdr_indices(pdf_ref_future[i, j, ], tau = 0.10)
       # Then, define the low density indices as those not in the central region
       ldr_indices[[i]][[j]] <- setdiff(seq_len(nbins), central_indices)
     }
@@ -995,9 +1064,8 @@ p6
           axis.title = element_text(size = 12),
           legend.position = "bottom")
 
+
   # Compute partial H dist on the GC results :
-
-
   # H Dist GC
   # Initialize a lon x lat matrix for each smooth cost
   GC01_partial_hdist_present <- matrix(NA, nrow = length(lon), ncol = length(lat))
@@ -1047,8 +1115,6 @@ p6
 
 
   # MMM Map of partial hellinger distance future
-
-
   # Melt it into a data frame:
   test_df <- melt(MMM_partial_hdist, varnames = c("lon", "lat"), value.name = "partial_H_dist")
 
@@ -1171,8 +1237,338 @@ p6
 }
 
 
-# Crossplot
+# Crossplot of MMM vs GC H dist
+{
+  # Create a data frame from the grid
+  df_cross <- expand.grid(lon = lon, lat = lat)
 
+  # Add the MMM and GC Hellinger distances (flatten the matrices)
+  df_cross$MMM <- as.vector(MMM_hdist_future)
+  df_cross$GC  <- as.vector(GC01_hdist_future)
+
+  # Clean data (remove rows with NA)
+  df_clean <- df_cross[complete.cases(df_cross$MMM, df_cross$GC), ]
+
+  # Compute axis limits from the data
+  data_min <- min(df_clean$MMM, df_clean$GC, na.rm = TRUE)
+  data_max <- max(df_clean$MMM, df_clean$GC, na.rm = TRUE)
+  buffer   <- 0.05 * (data_max - data_min)  # 5% of the range
+
+  min_val <- max(0, data_min - buffer)  # prevent negative if working with distances
+  max_val <- data_max
+
+  # Load ggplot2
+  library(ggplot2)
+
+  # Plot the crossplot; color the points according to the latitude
+  ggplot(df_clean, aes(x = MMM, y = GC, color = lat)) +
+    geom_point(alpha = 0.5, size = 0.3) +
+    annotate(
+      "segment",
+      x = min_val, y = min_val, xend = max_val, yend = max_val,
+      linetype = "dashed", color = "black", linewidth = 0.5
+    ) +
+    scale_x_continuous(limits = c(min_val, max_val), expand = c(0, 0)) +
+    scale_y_continuous(limits = c(min_val, max_val), expand = c(0, 0)) +
+    scale_color_gradient(low = "blue", high = "red") +
+    labs(
+      title = "Hellinger Distance : MMM | GC lambda = 0.1",
+      x = "MMM H",
+      y = "GraphCut H",
+      color = "Latitude"
+    ) +
+    theme_minimal() +
+    theme(
+      axis.title = element_text(size = 14),
+      axis.text  = element_text(size = 12),
+      plot.title = element_text(size = 16, face = "bold", hjust = 0.5)
+    )
+
+
+  # Create a data frame from the grid
+  df_cross <- expand.grid(lon = lon, lat = lat)
+
+  # Add the MMM and GC Hellinger distances (flatten the matrices)
+  df_cross$MMM <- as.vector(MMM_partial_hdist)
+  df_cross$GC  <- as.vector(GC01_partial_hdist_future)
+
+  # Clean data (remove rows with NA)
+  df_clean <- df_cross[complete.cases(df_cross$MMM, df_cross$GC), ]
+
+  # Compute axis limits from the data
+  data_min <- min(df_clean$MMM, df_clean$GC, na.rm = TRUE)
+  data_max <- max(df_clean$MMM, df_clean$GC, na.rm = TRUE)
+  buffer   <- 0.05 * (data_max - data_min)  # 5% of the range
+
+  min_val <- max(0, data_min - buffer)  # prevent negative if working with distances
+  max_val <- data_max
+
+  # Load ggplot2
+  library(ggplot2)
+
+  # Plot the crossplot; color the points according to the latitude
+  ggplot(df_clean, aes(x = MMM, y = GC, color = lat)) +
+    geom_point(alpha = 0.5, size = 0.3) +
+    annotate(
+      "segment",
+      x = min_val, y = min_val, xend = max_val, yend = max_val,
+      linetype = "dashed", color = "black", linewidth = 0.5
+    ) +
+    scale_x_continuous(limits = c(min_val, max_val), expand = c(0, 0)) +
+    scale_y_continuous(limits = c(min_val, max_val), expand = c(0, 0)) +
+    scale_color_gradient(low = "blue", high = "red") +
+    labs(
+      title = "Partial H (LDR Masss = 0.1) : MMM | GC lambda = 0.1",
+      x = "MMM H",
+      y = "GraphCut H",
+      color = "Latitude"
+    ) +
+    theme_minimal() +
+    theme(
+      axis.title = element_text(size = 14),
+      axis.text  = element_text(size = 12),
+      plot.title = element_text(size = 16, face = "bold", hjust = 0.5)
+    )
+
+}
+
+
+# Crossplot of the H dist vs lat
 {
 
+  df_cross$MMM <- as.vector(MMM_hdist_future)
+  df_cross$GC  <- as.vector(GC01_hdist_future)
+  # Clean data
+  df_clean <- df_cross[complete.cases(df_cross$MMM, df_cross$GC), ]
+
+  # Convert to long format for plotting
+  library(tidyr)
+  df_long <- pivot_longer(
+    df_clean,
+    cols = c(MMM, GC),
+    names_to = "Method",
+    values_to = "Hellinger"
+  )
+
+  # Plot
+  library(ggplot2)
+
+  ggplot(df_long, aes(x = Hellinger, y = lat, color = Method)) +
+    geom_point(alpha = 0.4, size = 0.3) +
+    facet_wrap(~Method, nrow = 1) +
+    scale_color_manual(values = c("MMM" = "steelblue", "GC" = "tomato")) +
+    labs(
+      title = "Hellinger Distance vs Latitude",
+      y = "Latitude",
+      x = "Hellinger Distance"
+    ) +
+    theme_minimal() +
+    theme(
+      axis.title = element_text(size = 14),
+      axis.text  = element_text(size = 12),
+      plot.title = element_text(size = 16, face = "bold", hjust = 0.5),
+      strip.text = element_text(size = 13)
+    )
+
+}
+
+
+# Crossplot of the diff in H between MMM and GC by latitude with median
+{
+  diff_h <- MMM_hdist_future - GC01_hdist_future
+
+  # Create a data frame of all lon/lat pairs
+  df_test <- expand.grid(lon = lon, lat = lat)
+
+  # Flatten 'test' and assign to dataframe
+  df_test$Hellinger <- as.vector(diff_h)
+
+  # Remove missing values
+  df_test <- df_test[complete.cases(df_test$Hellinger), ]
+
+  # Add label for better method
+  df_test$Better <- ifelse(df_test$Hellinger < 0, "MMM better", "GC better")
+
+  # Compute median diff(H) per latitude
+  library(dplyr)
+  median_lat <- df_test %>%
+    group_by(lat) %>%
+    summarise(Hellinger = median(Hellinger, na.rm = TRUE)) %>%
+    mutate(Better = "Median")
+
+  # Combine data for consistent color mapping
+  df_plot <- bind_rows(df_test, median_lat)
+
+  # Plot
+  library(ggplot2)
+
+  ggplot(df_plot, aes(x = Hellinger, y = lat, color = Better)) +
+    geom_point(data = df_test, alpha = 1, size = 0.3) +
+    geom_point(data = median_lat, size = 0.8) +
+    scale_color_manual(
+      values = c("MMM better" = "blue", "GC better" = "red", "Median" = "black")
+    ) +
+    labs(
+      title = "Difference of H by latitude (H(MMM) - H(GC))",
+      y = "Latitude",
+      x = "diff(H)"
+    ) +
+    theme_minimal() +
+    theme(
+      axis.title = element_text(size = 14),
+      axis.text  = element_text(size = 12),
+      plot.title = element_text(size = 16, face = "bold", hjust = 0.5),
+      legend.title = element_text(size = 13),
+      legend.text  = element_text(size = 12)
+    )
+}
+
+# Crossplot of the diff in H between MMM and GC by latitude with median
+{
+  diff_h <- MMM_partial_hdist - GC01_partial_hdist_future
+
+  # Create a data frame of all lon/lat pairs
+  df_test <- expand.grid(lon = lon, lat = lat)
+
+  # Flatten 'test' and assign to dataframe
+  df_test$Hellinger <- as.vector(diff_h)
+
+  # Remove missing values
+  df_test <- df_test[complete.cases(df_test$Hellinger), ]
+
+  # Add label for better method
+  df_test$Better <- ifelse(df_test$Hellinger < 0, "MMM better", "GC better")
+
+  # Compute median diff(H) per latitude
+  library(dplyr)
+  median_lat <- df_test %>%
+    group_by(lat) %>%
+    summarise(Hellinger = median(Hellinger, na.rm = TRUE)) %>%
+    mutate(Better = "Median")
+
+  # Combine data for consistent color mapping
+  df_plot <- bind_rows(df_test, median_lat)
+
+  # Plot
+  library(ggplot2)
+
+  ggplot(df_plot, aes(x = Hellinger, y = lat, color = Better)) +
+    geom_point(data = df_test, alpha = 1, size = 0.3) +
+    geom_point(data = median_lat, size = 0.8) +
+    scale_color_manual(
+      values = c("MMM better" = "blue", "GC better" = "red", "Median" = "black")
+    ) +
+    labs(
+      title = "Difference of H by latitude (H(MMM) - H(GC))",
+      y = "Latitude",
+      x = "diff(H)"
+    ) +
+    theme_minimal() +
+    theme(
+      axis.title = element_text(size = 14),
+      axis.text  = element_text(size = 12),
+      plot.title = element_text(size = 16, face = "bold", hjust = 0.5),
+      legend.title = element_text(size = 13),
+      legend.text  = element_text(size = 12)
+    )
+}
+
+
+# Crossplot of the diff in H between MMM and GC by longitude with median
+{
+  diff_h <- MMM_hdist_future - GC01_hdist_future
+  # Create a data frame of all lon/lat pairs
+  df_test <- expand.grid(lon = lon, lat = lat)
+
+  # Flatten 'test' and assign to dataframe
+  df_test$Hellinger <- as.vector(diff_h)
+
+  # Remove missing values
+  df_test <- df_test[complete.cases(df_test$Hellinger), ]
+
+  # Add label for better method
+  df_test$Better <- ifelse(df_test$Hellinger < 0, "MMM better", "GC better")
+
+  # Compute median diff(H) per longitude
+  library(dplyr)
+  median_lon <- df_test %>%
+    group_by(lon) %>%
+    summarise(Hellinger = median(Hellinger, na.rm = TRUE)) %>%
+    mutate(Better = "Median")
+
+  # Combine data for consistent color mapping
+  df_plot <- bind_rows(df_test, median_lon)
+
+  # Plot
+  library(ggplot2)
+
+  ggplot(df_plot, aes(x = lon, y = Hellinger, color = Better)) +
+    geom_point(data = df_test, alpha = 1, size = 0.3) +
+    geom_point(data = median_lon, size = 0.8) +
+    scale_color_manual(
+      values = c("MMM better" = "blue", "GC better" = "red", "Median" = "black")
+    ) +
+    labs(
+      title = "Difference of H by longitude (H(MMM) - H(GC))",
+      x = "Longitude",
+      y = "diff(H)"
+    ) +
+    theme_minimal() +
+    theme(
+      axis.title = element_text(size = 14),
+      axis.text  = element_text(size = 12),
+      plot.title = element_text(size = 16, face = "bold", hjust = 0.5),
+      legend.title = element_text(size = 13),
+      legend.text  = element_text(size = 12)
+    )
+}
+
+
+# Crossplot of the diff in H between MMM and GC by longitude with median
+{
+  diff_h <- MMM_partial_hdist - GC01_partial_hdist_future
+  # Create a data frame of all lon/lat pairs
+  df_test <- expand.grid(lon = lon, lat = lat)
+
+  # Flatten 'test' and assign to dataframe
+  df_test$Hellinger <- as.vector(diff_h)
+
+  # Remove missing values
+  df_test <- df_test[complete.cases(df_test$Hellinger), ]
+
+  # Add label for better method
+  df_test$Better <- ifelse(df_test$Hellinger < 0, "MMM better", "GC better")
+
+  # Compute median diff(H) per longitude
+  library(dplyr)
+  median_lon <- df_test %>%
+    group_by(lon) %>%
+    summarise(Hellinger = median(Hellinger, na.rm = TRUE)) %>%
+    mutate(Better = "Median")
+
+  # Combine data for consistent color mapping
+  df_plot <- bind_rows(df_test, median_lon)
+
+  # Plot
+  library(ggplot2)
+
+  ggplot(df_plot, aes(x = lon, y = Hellinger, color = Better)) +
+    geom_point(data = df_test, alpha = 1, size = 0.3) +
+    geom_point(data = median_lon, size = 0.8) +
+    scale_color_manual(
+      values = c("MMM better" = "blue", "GC better" = "red", "Median" = "black")
+    ) +
+    labs(
+      title = "Difference of H by longitude (H(MMM) - H(GC))",
+      x = "Longitude",
+      y = "diff(H)"
+    ) +
+    theme_minimal() +
+    theme(
+      axis.title = element_text(size = 14),
+      axis.text  = element_text(size = 12),
+      plot.title = element_text(size = 16, face = "bold", hjust = 0.5),
+      legend.title = element_text(size = 13),
+      legend.text  = element_text(size = 12)
+    )
 }
