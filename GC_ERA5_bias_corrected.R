@@ -46,6 +46,7 @@ variables <- c('pr', 'tas', 'psl')
 
 # Bins for the PDFs (nbins1d is the number of bins per variable)
 nbins1d <<- 8
+nbins <<- nbins1d^(length(variables))
 # (The joint PDF will have nbins1d^n_vars bins)
 
 # Obtain the list of models from a file
@@ -133,22 +134,21 @@ test_hdist <- compute_partial_hdist(pdf_ref_future[180 + 131, 90 -7, ], pdf_ref_
   library(abind)
 
   # Example indices (adjust as needed)
-  lon_index <- 2  # selected longitude index
-  lat_index <- 2  # selected latitude index
+  lon_index <- 90 + 1  # selected longitude index
+  lat_index <- 90 + 45 # selected latitude index
   model_idx <- 2  # select one model (from the pdf_models_future array)
   nbins <- 8      # number of bins per variable
 
   # Extract the PDF vector for the chosen grid point and model from the results.
-  pdf_vector <- results$pdf_ref_present[lon_index, lat_index, ]
+  pdf_vector <- results$pdf_reference$future[lon_index, lat_index, ]
 
   # Reshape the 1D PDF vector into a 3D array.
   pdf_3d <- array(pdf_vector, dim = c(nbins, nbins, nbins))
 
   # Adjust range_var to extract the correct reference range for the chosen grid point
-  range_var_adj <- aperm(abind(range_var_final$ranges, along = 4), c(1, 2, 4, 3))
-  range_mat <- range_var_adj[lon_index + 130, lat_index + 90, , ]  # dimensions: [n_vars, 2]
-
+  range_mat <- results$ref_range_future[lon_index, lat_index, , ]  # dimensions: [3, 2]
   print(range_mat)
+
 
   # Compute bin edges and centers for each variable.
   centers <- list()
@@ -196,15 +196,84 @@ test_hdist <- compute_partial_hdist(pdf_ref_future[180 + 131, 90 -7, ], pdf_ref_
 {
   if (exists("fig")) rm(fig)
   # Example indices (adjust as needed)
-  lon_index <- 1 # selected longitude index
-  lat_index <- 3 # selected latitude index
+  lon_index <- 90 + 1  # selected longitude index
+  lat_index <- 90 + 45 # selected latitude index
   model_idx <- 1 # select one model (from the pdf_models array)
   nbins <- 8       # number of bins per variable
 
   # Extract the PDF vector for the chosen grid point and model.
   # Here pdf_models is from results$pdf_models$present and has dimensions:
   # [lon, lat, nbins^n_vars, num_models].
-  pdf_vector <- results$pdf_ref$future[lon_index, lat_index, ]
+  pdf_vector <- MMM_future[lon_index, lat_index, ]
+
+  # Reshape the 1D PDF vector into a 3D array.
+  pdf_3d <- array(pdf_vector, dim = c(nbins, nbins, nbins))
+
+  # Extract the reference range for that grid point.
+  # We assume results$ref_range_present has dimensions: [lon, lat, n_vars, 2]
+  range_mat <- results$ref_range_future[lon_index, lat_index, , ]  # dimensions: [3, 2]
+  print(range_mat)
+
+  # Compute bin edges and centers for each variable.
+  centers <- list()
+  for(v in 1:3) {
+    bin_edges <- seq(range_mat[v, 1], range_mat[v, 2], length.out = nbins + 1)
+    centers[[v]] <- (bin_edges[-1] + bin_edges[-length(bin_edges)])/2
+  }
+
+  # Create a grid of bin centers.
+  grid <- expand.grid(x = centers[[1]], y = centers[[2]], z = centers[[3]])
+
+  # Flatten the 3D PDF into a vector.
+  pdf_flat <- as.vector(pdf_3d)
+  # Normalize PDF values for marker size.
+  normalized_pdf <- pdf_flat / max(pdf_flat, na.rm = TRUE)
+
+  library(plotly)
+  fig <- plot_ly(
+    data = grid,
+    x = ~x,
+    y = ~y,
+    z = ~z,
+    type = "scatter3d",
+    mode = "markers",
+    marker = list(
+      size = ~normalized_pdf * 75,
+      color = ~pdf_flat,
+      colorscale = "Viridis",
+      showscale = TRUE
+    ),
+    text = ~paste("PDF Value:", round(pdf_flat, 4))
+  ) %>%
+    layout(
+      scene = list(
+        xaxis = list(title = "pr"),
+        yaxis = list(title = "tas"),
+        zaxis = list(title = "psl"),
+        aspectmode = "cube"  # <-- This ensures all axes are treated equally
+      ),
+      title = paste("3D PDF for Model", model_idx, "Grid Point (Lon:", lon_index, ", Lat:", lat_index, ")")
+    )
+
+  fig
+
+
+}
+
+
+# Plotting the 3d pdf of one gridpoint
+{
+  if (exists("fig")) rm(fig)
+  # Example indices (adjust as needed)
+  lon_index <- 90 + 1  # selected longitude index
+  lat_index <- 90 + 45 # selected latitude index
+  model_idx <- 1 # select one model (from the pdf_models array)
+  nbins <- 8       # number of bins per variable
+
+  # Extract the PDF vector for the chosen grid point and model.
+  # Here pdf_models is from results$pdf_models$present and has dimensions:
+  # [lon, lat, nbins^n_vars, num_models].
+  pdf_vector <- pdf_models_future[lon_index, lat_index, , model_idx]
 
   # Reshape the 1D PDF vector into a 3D array.
   pdf_3d <- array(pdf_vector, dim = c(nbins, nbins, nbins))
@@ -262,11 +331,8 @@ test_hdist <- compute_partial_hdist(pdf_ref_future[180 + 131, 90 -7, ], pdf_ref_
 
 # --- Begin Complete Hellinger Distance Computation using compute_partial_hdist ---
 
-# Total number of bins (joint PDF) per grid point
-n_bins_total <- nbins1d^(length(variables))
-
 # Create a nested list of selected indices for every grid point (using all bins)
-all_bins <- 1:n_bins_total
+all_bins <- 1:nbins
 selected_indices_all <- vector("list", length(lon))
 for(i in seq_along(lon)) {
   selected_indices_all[[i]] <- vector("list", length(lat))
@@ -301,6 +367,7 @@ tryCatch({
 }, error = function(e) {
   cat("Error encountered with smooth cost =", smooth_cost, ": ", e$message, "\n")
 })
+gc()
 
 smooth_cost <- 0.1
 tryCatch({
@@ -318,13 +385,13 @@ tryCatch({
 }, error = function(e) {
   cat("Error encountered with smooth cost =", smooth_cost, ": ", e$message, "\n")
 })
+gc()
 
 
-
-{
   # Map of labels
+{
   # Extract the label attribution for the current smooth cost
-  GC_labels <- GC_result06$label_attribution
+  GC_labels <- GC_result01$label_attribution
 
   # Convert the label matrix to a data frame for plotting
   label_df <- reshape2::melt(GC_labels, varnames = c("lon_idx", "lat_idx"), value.name = "label_attribution")
@@ -356,7 +423,7 @@ tryCatch({
       na.value = "white",
       guide = guide_legend(title = "Model Names", ncol = 1)
     ) +
-    ggtitle(paste("Label GC Hellinger - Lambda:", 0.6)) +
+    ggtitle(paste("Label GC Hellinger - Lambda:", 0.1)) +
     borders("world", colour = 'black', size = 0.12) +
     theme_bw() +
     theme(
@@ -381,11 +448,11 @@ tryCatch({
   p6
 
   # Generate file name based on the smooth cost
-name <- paste0("figure/GC_labelling_smooth01_BC_present_22model")
+  name <- paste0("figure/GC_labelling_smooth01_BC_22model")
 
-# Save the plot as both PDF and PNG
-ggsave(paste0(name, ".pdf"), plot = p6, width = 20, height = 15, units = "cm", dpi = 300)
-ggsave(paste0(name, ".png"), plot = p6, width = 20, height = 15, units = "cm", dpi = 300)
+  # Save the plot as both PDF and PNG
+  ggsave(paste0(name, ".pdf"), plot = p6, width = 20, height = 15, units = "cm", dpi = 300)
+  ggsave(paste0(name, ".png"), plot = p6, width = 20, height = 15, units = "cm", dpi = 300)
 }
 
 
@@ -419,13 +486,20 @@ legend("topright", legend = c("Valid", "NaN"), fill = c("white", "black"), borde
 
 # H Dist GC
 # Initialize a lon x lat matrix for each smooth cost
-GC_hdist_present <- matrix(NA, nrow = length(lon), ncol = length(lat))
-GC_hdist_future <- matrix(NA, nrow = length(lon), ncol = length(lat))
+GC01_hdist_present <- matrix(NA, nrow = length(lon), ncol = length(lat))
+GC01_hdist_future <- matrix(NA, nrow = length(lon), ncol = length(lat))
+
+GC06_hdist_present <- matrix(NA, nrow = length(lon), ncol = length(lat))
+GC06_hdist_future <- matrix(NA, nrow = length(lon), ncol = length(lat))
 
 for(l in 1:(length(model_names))){  # Ensure that indexing aligns with model names
   islabel <- which(GC_result01$label_attribution == l)
-  GC_hdist_present[islabel] <- h_dist_present[,,l][islabel]
-  GC_hdist_future[islabel] <- h_dist_future[,,l][islabel]
+  GC01_hdist_present[islabel] <- h_dist_present[,,l][islabel]
+  GC01_hdist_future[islabel] <- h_dist_future[,,l][islabel]
+
+  islabel <- which(GC_result06$label_attribution == l)
+  GC06_hdist_present[islabel] <- h_dist_present[,,l][islabel]
+  GC06_hdist_future[islabel] <- h_dist_future[,,l][islabel]
 }
 
 
@@ -471,12 +545,53 @@ save.image(file = filename, compress = FALSE)
 # Map H Dist future
 
 
-test_df <- melt(GC_hdist_future, c("lon", "lat"), value.name = "H_dist")
+test_df <- melt(GC01_hdist_future, c("lon", "lat"), value.name = "H_dist")
+
+p6 <- ggplot() +
+  geom_tile(data=test_df, aes(x=lon-180, y=lat-90, fill=H_dist))+
+  labs(subtitle = 'Smooth = 0.1, Projection period : 1998 - 2023')+
+  ggtitle(paste0('GC Bias corrected', ': Average H = ', round(mean(GC01_hdist_future), 2)))+
+  scale_fill_gradient(low = "white", high = "#015a8c", limits = c(0.1, 0.70), oob = scales::squish)+
+  borders("world", colour = 'black', lwd = 0.12) +
+  scale_x_continuous(, expand = c(0, 0)) +
+  scale_y_continuous(, expand = c(0, 0))+
+  theme(legend.position = 'bottom')+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  theme(panel.background = element_blank())+
+  xlab('Longitude')+
+  ylab('Latitude') +
+  labs(fill='Hellinger \nDistance')+
+  theme_bw()+
+  theme(legend.key.size = unit(1, 'cm'), #change legend key size
+        legend.key.height = unit(1.4, 'cm'), #change legend key height
+        legend.key.width = unit(0.4, 'cm'), #change legend key width
+        legend.title = element_text(size=16), #change legend title font sizen
+        legend.text = element_text(size=12))+ #change legend text font size
+  theme(plot.title = element_text(size=24),
+        plot.subtitle = element_text(size = 20,hjust=0.5),
+        axis.text=element_text(size=14),
+        axis.title=element_text(size=16),)+
+  easy_center_title()
+p6
+
+# Generate file name based on the smooth cost
+name <- paste0("figure/GC_H_dist_smooth01_BC")
+
+# Save the plot as both PDF and PNG
+ggsave(paste0(name, ".pdf"), plot = p6, width = 20, height = 15, units = "cm", dpi = 300)
+ggsave(paste0(name, ".png"), plot = p6, width = 20, height = 15, units = "cm", dpi = 300)
+
+
+
+# Map H Dist future
+
+
+test_df <- melt(GC06_hdist_future, c("lon", "lat"), value.name = "H_dist")
 
 p6 <- ggplot() +
   geom_tile(data=test_df, aes(x=lon-180, y=lat-90, fill=H_dist))+
   labs(subtitle = 'Smooth = 0.6, Projection period : 1998 - 2023')+
-  ggtitle(paste0('GC Bias corrected', ': Average H = ', round(mean(GC_hdist_future), 2)))+
+  ggtitle(paste0('GC Bias corrected', ': Average H = ', round(mean(GC06_hdist_future), 2)))+
   scale_fill_gradient(low = "white", high = "#015a8c", limits = c(0.1, 0.70), oob = scales::squish)+
   borders("world", colour = 'black', lwd = 0.12) +
   scale_x_continuous(, expand = c(0, 0)) +
@@ -669,6 +784,50 @@ p6
 }
 
 
+{
+
+  for (m in seq_along(model_names)) {
+    model_hdist <- partial_hdist_future[, , m]
+
+    # Melt the matrix into a dataframe with lon/lat
+    test_df <- melt(model_hdist, varnames = c("lon_idx", "lat_idx"), value.name = "H_dist")
+    test_df$lon <- lon[test_df$lon_idx]
+    test_df$lat <- lat[test_df$lat_idx]
+
+    # Plot
+    p <- ggplot() +
+      geom_tile(data = test_df, aes(x = lon, y = lat, fill = H_dist)) +
+      labs(subtitle = 'Projection period : 1998 - 2023') +
+      ggtitle(paste0(model_names[m], ': Average partial (0.10) H = ',
+                     round(mean(model_hdist, na.rm = TRUE), 2))) +
+      scale_fill_gradient(low = "white", high = "#015a8c", limits = c(0.1, 0.3), oob = scales::squish) +
+      borders("world", colour = 'black', lwd = 0.12) +
+      scale_x_continuous(expand = c(0, 0)) +
+      scale_y_continuous(expand = c(0, 0)) +
+      theme(legend.position = 'bottom') +
+      theme(panel.grid.major = element_blank(),
+            panel.grid.minor = element_blank(),
+            panel.background = element_blank()) +
+      xlab('Longitude') +
+      ylab('Latitude') +
+      labs(fill = 'Hellinger \nDistance') +
+      theme_bw() +
+      theme(legend.key.size = unit(1, 'cm'),
+            legend.key.height = unit(1.4, 'cm'),
+            legend.key.width = unit(0.4, 'cm'),
+            legend.title = element_text(size = 16),
+            legend.text = element_text(size = 12),
+            plot.title = element_text(size = 24),
+            plot.subtitle = element_text(size = 20, hjust = 0.5),
+            axis.text = element_text(size = 14),
+            axis.title = element_text(size = 16)) +
+      easy_center_title()
+
+    print(p)
+  }
+}
+
+
 
 # Inspect psl in era5
 {
@@ -760,5 +919,260 @@ p6
 
 # Hellinger distance on MV extremes :
 {
-  
+  # --- Step 1: Compute ldr_indices for each grid point ---
+  # The idea is to compute, for each grid point, the indices of the bins that are NOT in the "central" region.
+  # The central region is defined using select_hdr_indices(), which returns the bins containing the central (1-tau) mass.
+  # Here, tau=0.1 means we keep the central 90% and treat the remaining 10% as "low density" (i.e., extreme) bins.
+  #
+  # Assuming:
+  #   pdf_ref_future has dimensions [lon_size, lat_size, nbins]
+  #   nbins is defined, and lon_size = length(lon), lat_size = length(lat)
+  ldr_indices <- vector("list", lon_size)
+  for (i in seq_len(lon_size)) {
+    ldr_indices[[i]] <- vector("list", lat_size)
+    for (j in seq_len(lat_size)) {
+      # Compute the central region indices using tau=0.1
+      central_indices <- select_hdr_indices(pdf_ref_present[i, j, ], tau = 0.15)
+      # Then, define the low density indices as those not in the central region
+      ldr_indices[[i]][[j]] <- setdiff(seq_len(nbins), central_indices)
+    }
+  }
+
+  # --- Step 2: Compute partial Hellinger distances on the ldr regions ---
+  # We use compute_partial_hdist() to compute, for each grid point and for each model,
+  # the Hellinger distance between the reference and model PDFs, but only over the bins defined by the ldr_indices.
+  # This returns an array with dimensions [lon_size, lat_size, n_models]
+  partial_hdist_future <- compute_partial_hdist(pdf_ref_future, pdf_models_future, ldr_indices)
+
+  # --- Step 3: (Optional) Compute Mean Partial Hellinger Distances per model ---
+  # This gives a summary (scalar) for each model.
+  n_models <- length(model_names)
+  mean_partial_hdist <- sapply(seq_len(n_models), function(m) {
+    mean(partial_hdist_future[,, m], na.rm = TRUE)
+  })
+
+  # --- Step 4: (Optional) Compute Full Hellinger Distances for Comparison ---
+  # For example, if you have previously computed the full Hellinger distances in an array h_dist_future
+  mean_h_dist_future <- sapply(seq_len(n_models), function(m) {
+    mean(h_dist_future[,, m], na.rm = TRUE)
+  })
+
+  # --- Final Outputs ---
+  # partial_hdist: array [lon_size, lat_size, n_models] with the partial Hellinger distance (on ldr bins) at each grid point.
+  # mean_partial_hdist: vector of length n_models with average partial distances per model.
+  # mean_full_h_dist: vector of length n_models with average full Hellinger distances per model.
+
+  # Print results for inspection:
+  print("Mean Partial Hellinger Distance per model:")
+  print(mean_partial_hdist)
+  print("Mean Full Hellinger Distance per model:")
+  print(mean_h_dist_future)
+
+
+  # Ensure model_names is a character vector
+  model_names <- as.character(model_names)
+
+  # Create a dataframe for plotting
+  df_hdist <- data.frame(
+    Model = rep(model_names, 2),
+    Mean_Hellinger_Distance = c(mean_h_dist_future, mean_partial_hdist),
+    Type = rep(c("Full Hellinger Distance", "Partial Hellinger (Low Density Regions (10%))"), each = length(model_names)),
+    stringsAsFactors = FALSE
+  )
+
+  # Plot the results
+  ggplot(df_hdist, aes(x = Model, y = Mean_Hellinger_Distance, fill = Type)) +
+    geom_bar(stat = "identity", position = "dodge", color = "black") +
+    theme_minimal() +
+    scale_fill_manual(values = c("steelblue", "darkorange")) +
+    labs(
+      title = "Comparison of Full vs. Partial Hellinger Distance per Model",
+      x = "Climate Model",
+      y = "Mean Hellinger Distance",
+      fill = "Distance Type"
+    ) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
+          axis.title = element_text(size = 12),
+          legend.position = "bottom")
+
+  # Compute partial H dist on the GC results :
+
+
+  # H Dist GC
+  # Initialize a lon x lat matrix for each smooth cost
+  GC01_partial_hdist_present <- matrix(NA, nrow = length(lon), ncol = length(lat))
+  GC01_partial_hdist_future <- matrix(NA, nrow = length(lon), ncol = length(lat))
+
+  GC06_partial_hdist_present <- matrix(NA, nrow = length(lon), ncol = length(lat))
+  GC06_partial_hdist_future <- matrix(NA, nrow = length(lon), ncol = length(lat))
+
+  for(l in 1:(length(model_names))){  # Ensure that indexing aligns with model names
+    islabel <- which(GC_result01$label_attribution == l)
+    # GC01_partial_hdist_present[islabel] <- h_dist_present[,,l][islabel]
+    GC01_partial_hdist_future[islabel] <- partial_hdist_future[,,l][islabel]
+
+    islabel <- which(GC_result06$label_attribution == l)
+    # GC06_partial_hdist_present[islabel] <- h_dist_present[,,l][islabel]
+    GC06_partial_hdist_future[islabel] <- partial_hdist_future[,,l][islabel]
+  }
+
+
+  # --- Compute Partial Hellinger Distance for MMM (Future) on Low Density Regions ---
+
+  # Initialize the output matrix for partial Hellinger distances (MMM)
+
+  MMM_partial_hdist <- array(NA, dim = c(lon_size, lat_size))
+
+  for (i in seq_len(lon_size)) {
+    for (j in seq_len(lat_size)) {
+      # Extract the reference PDF vector at grid point (i, j)
+      pdf_ref_vec <- pdf_ref_future[i, j, ]
+      # Get the selected low density indices for this grid point
+      selected_bins <- ldr_indices[[i]][[j]]
+
+      if (length(selected_bins) > 0) {
+        MMM_partial_hdist[i, j] <- sqrt(
+          sum(( sqrt(MMM_future[i, j, selected_bins]) - sqrt(pdf_ref_vec[selected_bins]) )^2)
+        ) / sqrt(2)
+      } else {
+        MMM_partial_hdist[i, j] <- NA
+      }
+    }
+  }
+  # Print summary statistics
+  cat("Mean Partial Hellinger Distance for MMM (future):", mean(MMM_partial_hdist, na.rm = TRUE), "\n")
+
+
+
+
+
+  # MMM Map of partial hellinger distance future
+
+
+  # Melt it into a data frame:
+  test_df <- melt(MMM_partial_hdist, varnames = c("lon", "lat"), value.name = "partial_H_dist")
+
+  p6 <- ggplot() +
+    geom_tile(data=test_df, aes(x=lon-180, y=lat-90, fill=partial_H_dist))+
+    labs(subtitle = 'Projection period : 1998 - 2023')+
+    ggtitle(paste0('MMM', ': Avg partial H (0.10 LDR) = ', round(mean(MMM_partial_hdist), 2)))+
+    scale_fill_gradient(low = "white", high = "#015a8c", limits = c(0.1, 0.3), oob = scales::squish)+
+    borders("world", colour = 'black', lwd = 0.12) +
+    scale_x_continuous(, expand = c(0, 0)) +
+    scale_y_continuous(, expand = c(0,0))+
+    theme(legend.position = 'bottom')+
+    theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+    theme(panel.background = element_blank())+
+    xlab('Longitude')+
+    ylab('Latitude') +
+    labs(fill='Hellinger \nDistance')+
+    theme_bw()+
+    theme(legend.key.size = unit(1, 'cm'), #change legend key size
+          legend.key.height = unit(1.4, 'cm'), #change legend key height
+          legend.key.width = unit(0.4, 'cm'), #change legend key width
+          legend.title = element_text(size=16), #change legend title font sizen
+          legend.text = element_text(size=12))+ #change legend text font size
+    theme(plot.title = element_text(size=24),
+          plot.subtitle = element_text(size = 20,hjust=0.5),
+          axis.text=element_text(size=14),
+          axis.title=element_text(size=16),)+
+    easy_center_title()
+  p6
+
+  # Generate file name based on the smooth cost
+  name <- paste0("figure/MMM_partial_H_dist_BC")
+
+  # Save the plot as both PDF and PNG
+  ggsave(paste0(name, ".pdf"), plot = p6, width = 20, height = 15, units = "cm", dpi = 300)
+  ggsave(paste0(name, ".png"), plot = p6, width = 20, height = 15, units = "cm", dpi = 300)
+
+
+  # GC 01 Map of partial hellinger distance future
+
+
+  # Melt it into a data frame:
+  test_df <- melt(GC01_partial_hdist_future, varnames = c("lon", "lat"), value.name = "partial_H_dist")
+
+  p6 <- ggplot() +
+    geom_tile(data=test_df, aes(x=lon-180, y=lat-90, fill=partial_H_dist))+
+    labs(subtitle = 'Projection period : 1998 - 2023')+
+    ggtitle(paste0('GC lambda = 0.1', ': Avg partial H (0.10 LDR) = ', round(mean(GC01_partial_hdist_future), 2)))+
+    scale_fill_gradient(low = "white", high = "#015a8c", limits = c(0.1, 0.3), oob = scales::squish)+
+    borders("world", colour = 'black', lwd = 0.12) +
+    scale_x_continuous(, expand = c(0, 0)) +
+    scale_y_continuous(, expand = c(0,0))+
+    theme(legend.position = 'bottom')+
+    theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+    theme(panel.background = element_blank())+
+    xlab('Longitude')+
+    ylab('Latitude') +
+    labs(fill='Hellinger \nDistance')+
+    theme_bw()+
+    theme(legend.key.size = unit(1, 'cm'), #change legend key size
+          legend.key.height = unit(1.4, 'cm'), #change legend key height
+          legend.key.width = unit(0.4, 'cm'), #change legend key width
+          legend.title = element_text(size=16), #change legend title font sizen
+          legend.text = element_text(size=12))+ #change legend text font size
+    theme(plot.title = element_text(size=24),
+          plot.subtitle = element_text(size = 20,hjust=0.5),
+          axis.text=element_text(size=14),
+          axis.title=element_text(size=16),)+
+    easy_center_title()
+  p6
+
+  # Generate file name based on the smooth cost
+  name <- paste0("figure/GC01_partial_H_dist_BC")
+
+  # Save the plot as both PDF and PNG
+  ggsave(paste0(name, ".pdf"), plot = p6, width = 20, height = 15, units = "cm", dpi = 300)
+  ggsave(paste0(name, ".png"), plot = p6, width = 20, height = 15, units = "cm", dpi = 300)
+
+
+  # GC 06 Map of partial hellinger distance future
+
+
+  # Melt it into a data frame:
+  test_df <- melt(GC06_partial_hdist_future, varnames = c("lon", "lat"), value.name = "partial_H_dist")
+
+  p6 <- ggplot() +
+    geom_tile(data=test_df, aes(x=lon-180, y=lat-90, fill=partial_H_dist))+
+    labs(subtitle = 'Projection period : 1998 - 2023')+
+    ggtitle(paste0('GC lambda = 0.6', ': Avg partial H (0.10 LDR) = ', round(mean(GC06_partial_hdist_future), 2)))+
+    scale_fill_gradient(low = "white", high = "#015a8c", limits = c(0.1, 0.3), oob = scales::squish)+
+    borders("world", colour = 'black', lwd = 0.12) +
+    scale_x_continuous(, expand = c(0, 0)) +
+    scale_y_continuous(, expand = c(0,0))+
+    theme(legend.position = 'bottom')+
+    theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+    theme(panel.background = element_blank())+
+    xlab('Longitude')+
+    ylab('Latitude') +
+    labs(fill='Hellinger \nDistance')+
+    theme_bw()+
+    theme(legend.key.size = unit(1, 'cm'), #change legend key size
+          legend.key.height = unit(1.4, 'cm'), #change legend key height
+          legend.key.width = unit(0.4, 'cm'), #change legend key width
+          legend.title = element_text(size=16), #change legend title font sizen
+          legend.text = element_text(size=12))+ #change legend text font size
+    theme(plot.title = element_text(size=24),
+          plot.subtitle = element_text(size = 20,hjust=0.5),
+          axis.text=element_text(size=14),
+          axis.title=element_text(size=16),)+
+    easy_center_title()
+  p6
+
+  # Generate file name based on the smooth cost
+  name <- paste0("figure/GC06_partial_H_dist_BC")
+
+  # Save the plot as both PDF and PNG
+  ggsave(paste0(name, ".pdf"), plot = p6, width = 20, height = 15, units = "cm", dpi = 300)
+  ggsave(paste0(name, ".png"), plot = p6, width = 20, height = 15, units = "cm", dpi = 300)
+
+}
+
+
+# Crossplot
+
+{
+
 }
