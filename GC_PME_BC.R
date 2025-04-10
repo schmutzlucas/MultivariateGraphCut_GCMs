@@ -18,13 +18,13 @@ for(path in file_paths){
 
 # Setting global variables
 lon <- -10:120
-lat <- 0:60
+lat <- 0:75
 lon_size <- length(lon)
 lat_size <- length(lat)
 
 # Temporal ranges
-year_present <<- 1950:1970
-year_future <<- 2080:2100
+year_present <<- 1950:1975
+year_future <<- 2075:2100
 
 
 
@@ -38,7 +38,7 @@ year_future <<- 2080:2100
 # year_present <<- 1950:1975
 # year_future <<- 1998:2023
 
-workers <- 4
+workers <- 8
 
 # Data directory
 data_dir <<- 'data/CMIP6_merged_all/'
@@ -311,12 +311,10 @@ for (m in seq_along(model_names)) {
 
 # Get the current date and time
 current_time <- Sys.time()
-
 # Format the date and time as a string in the format 'yyyymmddhhmm'
 formatted_time <- format(current_time, "%Y%m%d%H%M")
-
 # Concatenate the formatted time string with your desired filename
 filename <- paste0(formatted_time, "_my_workspace_PME_bias_corrected_22models_10-10.RData")
-
 # Save the workspace using the generated filename
 save.image(file = filename, compress = FALSE)
+
