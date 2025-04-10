@@ -61,8 +61,10 @@ GC06_present_list <- list()
 GC06_future_list <- list()
 GC06_hdist_present_list <- list()
 GC06_hdist_future_list <- list()
+GC06_partial_hdist_future_list <- list()
 MMM_hdist_present_list <- list()
 MMM_hdist_future_list <- list()
+MMM_partial_hdist_future_list <- list()
 MMM_present_list <- list()
 MMM_future_list <- list()
 
@@ -296,15 +298,17 @@ for (m in seq_along(model_names)) {
 
 
   # Store results under the current reference model name
-  GC06_result_list[[reference_name]] <- GC06_result
-  GC06_present_list[[reference_name]] <- GC06_present
-  GC06_future_list[[reference_name]] <- GC06_future
-  GC06_hdist_present_list[[reference_name]] <- GC06_hdist_present
-  GC06_hdist_future_list[[reference_name]] <- GC06_hdist_future
-  MMM_hdist_present_list[[reference_name]] <- MMM_hdist_present
-  MMM_hdist_future_list[[reference_name]] <- MMM_hdist_future
-  MMM_present_list[[reference_name]] <- MMM_present
-  MMM_future_list[[reference_name]] <- MMM_future
+  GC06_result_list[[reference_name]] <-                 GC06_result
+  GC06_present_list[[reference_name]] <-                GC06_present
+  GC06_future_list[[reference_name]] <-                 GC06_future
+  GC06_hdist_present_list[[reference_name]] <-          GC06_hdist_present
+  GC06_hdist_future_list[[reference_name]] <-           GC06_hdist_future
+  GC06_partial_hdist_future_list[[reference_name]]  <-  GC06_partial_hdist_future
+  MMM_hdist_present_list[[reference_name]] <-           MMM_hdist_present
+  MMM_hdist_future_list[[reference_name]] <-            MMM_hdist_future
+  MMM_partial_hdist_future_list[[reference_name]] <-    MMM_partial_hdist_future
+  MMM_present_list[[reference_name]] <-                 MMM_present
+  MMM_future_list[[reference_name]] <-                  MMM_future
 
 }
 
@@ -318,3 +322,169 @@ filename <- paste0(formatted_time, "_my_workspace_PME_bias_corrected_22models_10
 # Save the workspace using the generated filename
 save.image(file = filename, compress = FALSE)
 
+
+
+# Boxplot of the H dist projection by ref
+# Get the name of the first reference model
+ref_name <- names(GC06_hdist_future_list)[1]
+
+# Extract the corresponding Hellinger matrices
+gc_h <- GC06_hdist_future_list[[ref_name]]
+mmm_h <- MMM_hdist_future_list[[ref_name]]
+
+# Flatten the matrices into vectors
+gc_values <- as.vector(gc_h)
+mmm_values <- as.vector(mmm_h)
+
+# Combine into a data frame for ggplot
+df <- data.frame(
+  Hellinger = c(gc_values, mmm_values),
+  Method = factor(rep(c("GraphCut", "MMM"), each = length(gc_values)))
+)
+
+# Remove NAs if any
+df <- na.omit(df)
+
+# Plot
+p <- ggplot(df, aes(x = Method, y = Hellinger, fill = Method)) +
+  geom_boxplot(outlier.size = 0.8, outlier.alpha = 0.3) +
+  scale_fill_manual(values = c("GraphCut" = "#0072B2", "MMM" = "#D55E00")) +
+  labs(
+    title = paste("Hellinger Distance (Future) - Reference:", ref_name),  # <-- fixed here
+    y = "Hellinger Distance",
+    x = ""
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(legend.position = "none")
+
+print(p)
+
+
+# Violin plot of the H dist by ref
+{
+  # Boxplot of the H dist projection by ref
+  # Get the name of the first reference model
+  ref_name <- names(GC06_hdist_future_list)[1]
+
+  # Extract the corresponding Hellinger matrices
+  gc_h <- GC06_hdist_future_list[[ref_name]]
+  mmm_h <- MMM_hdist_future_list[[ref_name]]
+
+  # Flatten the matrices into vectors
+  gc_values <- as.vector(gc_h)
+  mmm_values <- as.vector(mmm_h)
+
+  # Combine into a data frame for ggplot
+  df <- data.frame(
+    Hellinger = c(gc_values, mmm_values),
+    Method = factor(rep(c("GraphCut", "MMM"), each = length(gc_values)))
+  )
+
+  # Remove NAs if any
+  df <- na.omit(df)
+  library(ggplot2)
+  library(dplyr)
+
+  df_all$Reference <- factor(df_all$Reference, levels = unique(df_all$Reference))
+
+  ggplot(df_all, aes(x = Reference, y = Hellinger, fill = Method)) +
+    geom_violin(position = position_dodge(width = 0.6),
+                width = 2,      # Plus large horizontalement
+                adjust = 1,     # Lissage plus doux (tu peux tester 1, 1.5, 2)
+                alpha = 0.79) +
+    scale_fill_manual(values = c("GraphCut" = "#0072B2", "MMM" = "#D55E00")) +
+    labs(
+      title = "Distribution of Hellinger Distance (Future) by Reference Model",
+      x = "Reference Model",
+      y = "Hellinger Distance"
+    ) +
+    theme_minimal(base_size = 14) +
+    theme(
+      axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1, size = 8),
+      legend.position = "top",
+      plot.title = element_text(size = 16, face = "bold")
+    )
+
+}
+
+# Violin plot of the partial H dist by ref
+{
+
+  # Boxplot of the H dist projection by ref
+  # Get the name of the first reference model
+  ref_name <- names(GC06_hdist_future_list)[1]
+
+  # Extract the corresponding Hellinger matrices
+  gc_h <- GC06_partial_hdist_future_list[[ref_name]]
+  mmm_h <- MMM_partial_hdist_future_list[[ref_name]]
+
+  # Flatten the matrices into vectors
+  gc_values <- as.vector(gc_h)
+  mmm_values <- as.vector(mmm_h)
+
+  # Combine into a data frame for ggplot
+  df <- data.frame(
+    Hellinger = c(gc_values, mmm_values),
+    Method = factor(rep(c("GraphCut", "MMM"), each = length(gc_values)))
+  )
+
+  # Remove NAs if any
+  df <- na.omit(df)
+  library(ggplot2)
+  library(dplyr)
+
+  df_all$Reference <- factor(df_all$Reference, levels = unique(df_all$Reference))
+
+  ggplot(df_all, aes(x = Reference, y = Hellinger, fill = Method)) +
+    geom_violin(position = position_dodge(width = 0.6),
+                width = 2,      # Plus large horizontalement
+                adjust = 1,     # Lissage plus doux (tu peux tester 1, 1.5, 2)
+                alpha = 0.79) +
+    scale_fill_manual(values = c("GraphCut" = "#0072B2", "MMM" = "#D55E00")) +
+    labs(
+      title = "Distribution of Hellinger Distance (Future) by Reference Model",
+      x = "Reference Model",
+      y = "Hellinger Distance"
+    ) +
+    theme_minimal(base_size = 14) +
+    theme(
+      axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1, size = 8),
+      legend.position = "top",
+      plot.title = element_text(size = 16, face = "bold")
+    )
+
+}
+
+# Aggregated violin by method
+{
+  library(ggplot2)
+  library(dplyr)
+
+  # Flatten both lists into a long data.frame with method and value
+  gc_data <- do.call(c, lapply(GC06_hdist_future_list, as.vector))
+  mmm_data <- do.call(c, lapply(MMM_hdist_future_list, as.vector))
+
+  # Remove NA values
+  gc_data <- gc_data[!is.na(gc_data)]
+  mmm_data <- mmm_data[!is.na(mmm_data)]
+
+  # Combine into a data.frame
+  df_all_methods <- data.frame(
+    Method = factor(rep(c("GraphCut", "MMM"), times = c(length(gc_data), length(mmm_data))),
+                    levels = c("GraphCut", "MMM")),
+    Hellinger = c(gc_data, mmm_data)
+  )
+
+  # Plot
+  ggplot(df_all_methods, aes(x = Method, y = Hellinger, fill = Method)) +
+    geom_violin(scale = "area", trim = TRUE, adjust = 1.5) +
+    scale_fill_manual(values = c("GraphCut" = "#1f78b4", "MMM" = "#e66101")) +
+    theme_minimal(base_size = 14) +
+    labs(
+      title = "Distribution of Hellinger Distance (Future)",
+      subtitle = "Aggregated across all reference models",
+      y = "Hellinger Distance",
+      x = NULL
+    )
+
+}
