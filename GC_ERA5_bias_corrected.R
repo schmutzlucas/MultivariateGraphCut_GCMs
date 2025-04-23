@@ -386,6 +386,23 @@ tryCatch({
 })
 gc()
 
+smooth_cost <- 0.2
+tryCatch({
+  GC_result02 <- GraphCutHellinger_nD_lat(
+    pdf_models_future = pdf_models_future,
+    h_dist = h_dist_present,
+    weight_data = 1,               # Fixed data weight
+    weight_smooth = smooth_cost,   # Varying smooth cost
+    nBins = nbins1d^3,
+    lat = lat,
+    seed = 1,
+    verbose = TRUE,
+    rebuild = TRUE
+  )
+}, error = function(e) {
+  cat("Error encountered with smooth cost =", smooth_cost, ": ", e$message, "\n")
+})
+gc()
 
 # Map of labels
 {
@@ -1261,7 +1278,7 @@ p6
   library(ggplot2)
 
   # Plot the crossplot; color the points according to the latitude
-  ggplot(df_clean, aes(x = MMM, y = GC, color = lat)) +
+  p <- ggplot(df_clean, aes(x = MMM, y = GC, color = lat)) +
     geom_point(alpha = 0.5, size = 0.3) +
     annotate(
       "segment",
@@ -1284,6 +1301,10 @@ p6
       plot.title = element_text(size = 16, face = "bold", hjust = 0.5)
     )
 
+  p
+}
+
+{
 
   # Create a data frame from the grid
   df_cross <- expand.grid(lon = lon, lat = lat)
@@ -1459,7 +1480,7 @@ p6
       values = c("MMM better" = "blue", "GC better" = "red", "Median" = "black")
     ) +
     labs(
-      title = "Difference of H by latitude (H(MMM) - H(GC))",
+      title = "Difference of partial H by latitude (H(MMM) - H(GC))",
       y = "Latitude",
       x = "diff(H)"
     ) +
@@ -1559,7 +1580,7 @@ p6
       values = c("MMM better" = "blue", "GC better" = "red", "Median" = "black")
     ) +
     labs(
-      title = "Difference of H by longitude (H(MMM) - H(GC))",
+      title = "Difference of partial H by longitude (H(MMM) - H(GC))",
       x = "Longitude",
       y = "diff(H)"
     ) +
