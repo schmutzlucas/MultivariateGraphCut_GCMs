@@ -6,7 +6,7 @@ if(length(new.packages))
 
 library(devtools)
 lapply(list_of_packages, library, character.only = TRUE)
-# install_github("schmutzlucas/gcoWrapR")
+install_github("schmutzlucas/gcoWrapR")
 
 # Loading local functions
 source_code_dir <- 'functions/'  # The directory where all functions are saved.
@@ -29,19 +29,21 @@ for(path in file_paths){
 
 
 # Setting global variables
-lon <- -180:179
-lat <- -90:90
+# 2° grid from your my_grid_2deg.txt:
+lon <- seq(-180, 178, by = 2)  # length = 180
+lat <- seq(-90,   90,  by = 2)  # length =  91
+
 lon_size <- length(lon)
 lat_size <- length(lat)
 
 # Temporal ranges
-year_present <<- 1950:1975
-year_future <<- 2075:2100
+year_present <<- 1950:1980
+year_future <<- 2070:2100
 
-workers <- 3
+workers <- 8
 
 # Data directory
-data_dir <<- 'data/CMIP6_merged_all/'
+data_dir <<- 'data/CMIP6_merged_test/'
 
 # List of variables used
 variables <- c('pr', 'tas', 'psl')
@@ -74,7 +76,7 @@ smooth_costs <- c(0.05, 0.1, 0.6, 1, 2)
 
 
 # Charger les checkpoints si disponibles
-checkpoint_files <- list.files("checkpoints", pattern = "\\.rds$", full.names = TRUE)
+checkpoint_files <- list.files("checkpoints_PME_noBC", pattern = "\\.rds$", full.names = TRUE)
 
 for (f in checkpoint_files) {
   checkpoint <- readRDS(f)
@@ -206,10 +208,10 @@ for (m in seq_along(model_names)) {
 
   # Sauvegarde de sécurité après chaque modèle traité
   ref_short <- gsub("[^A-Za-z0-9]", "", reference_name)
-  checkpoint_file <- paste0("checkpoints/PME_", ref_short, "_", format(Sys.time(), "%Y%m%d_%H%M%S"), ".rds")
+  checkpoint_file <- paste0("checkpoints_PME_noBC/PME", ref_short, "_", format(Sys.time(), "%Y%m%d_%H%M%S"), ".rds")
 
   # Crée le dossier 'checkpoints' s'il n'existe pas
-  if (!dir.exists("checkpoints")) dir.create("checkpoints")
+  if (!dir.exists("checkpoints_PME_noBC")) dir.create("checkpoints_PME_noBC")
 
   saveRDS(
     list(
@@ -337,10 +339,10 @@ print(p)
 
   # Boxplot of the H dist projection by ref
   # Get the name of the first reference model
-  ref_name <- names(GC06_hdist_future_list)[1]
+  ref_name <- names(GC01_hdist_future_list)[1]
 
   # Extract the corresponding Hellinger matrices
-  gc_h <- GC06_partial_hdist_future_list[[ref_name]]
+  gc_h <- GC01_partial_hdist_future_list[[ref_name]]
   mmm_h <- MMM_partial_hdist_future_list[[ref_name]]
 
   # Flatten the matrices into vectors
@@ -744,8 +746,70 @@ print(p)
   ggsave(paste0(file_base, ".png"), plot = p_agg, width = 20, height = 15, units = "cm", dpi = 300)
 
   cat("Saved aggregated partial Hellinger distance plot to", file_base, "\n")
+}
 
 
+# Aggregated partial Hellinger for smooth 0.1 only
+{
+  library(ggplot2)
+  library(dplyr)
+
+  if (!dir.exists("figure")) dir.create("figure")
+
+  # Aggregate only for GC-0.1 and MMM
+  df_all <- do.call(rbind, lapply(names(MMM_partial_hdist_future_list), function(ref_name) {
+    mmm_vals <- as.vector(MMM_partial_hdist_future_list[[ref_name]])
+    df <- data.frame(
+      Hellinger = mmm_vals,
+      Method = "MMM",
+      SmoothCost = "MMM",
+      Reference = ref_name
+    )
+
+    if (!is.null(GC_partial_hdist_future_list[["0.1"]][[ref_name]])) {
+      gc_vals <- as.vector(GC_partial_hdist_future_list[["0.1"]][[ref_name]])
+      df <- rbind(df, data.frame(
+        Hellinger = gc_vals,
+        Method = "GraphCut",
+        SmoothCost = "0.1",
+        Reference = ref_name
+      ))
+    }
+
+    return(df)
+  }))
+
+  df_all <- na.omit(df_all)
+  df_all$MethodLabel <- ifelse(df_all$Method == "MMM", "MMM", "GC-0.1")
+  df_all$MethodLabel <- factor(df_all$MethodLabel, levels = c("GC-0.1", "MMM"))
+
+  p_agg <- ggplot(df_all, aes(x = MethodLabel, y = Hellinger, fill = MethodLabel)) +
+    geom_violin(scale = "area", trim = TRUE, adjust = 1.5, alpha = 0.85, width = 0.7) +
+    stat_summary(fun = mean, geom = "point", shape = 20, size = 2.2, color = "black", position = position_dodge(width = 0.7)) +
+    stat_summary(fun = median, geom = "crossbar", width = 0.4, color = "red", fatten = 1, position = position_dodge(width = 0.7)) +
+    scale_fill_manual(values = c(
+      "GC-0.1" = "#d95f02",
+      "MMM"    = "#e6ab02"
+    )) +
+    labs(
+      title = "Partial Hellinger Distance (Future)",
+      subtitle = "Aggregated across all references - Smooth = 0.1",
+      x = "Method",
+      y = "Partial Hellinger Distance",
+      fill = "Method"
+    ) +
+    theme_minimal(base_size = 14) +
+    theme(
+      axis.text.x = element_text(size = 11),
+      plot.title = element_text(size = 16, face = "bold"),
+      legend.position = "none"
+    )
+
+  file_base <- "figure/Aggregated_HdistPartial_BC_22models_Smooth01"
+  ggsave(paste0(file_base, ".pdf"), plot = p_agg, width = 20, height = 15, units = "cm", dpi = 300)
+  ggsave(paste0(file_base, ".png"), plot = p_agg, width = 20, height = 15, units = "cm", dpi = 300)
+
+  cat("✅ Aggregated plot for Smooth = 0.1 saved at", file_base, "\n")
 }
 
 # violin panel with 22 ref : H dist
@@ -826,11 +890,83 @@ print(p)
 
   # Save in high-resolution (4K scale, roughly)
   ggsave("figure/AllReferences_Hellinger_Grid_22models.png", plot = big_plot,
-         width = 3840/96, height = 2160/96, dpi = 300, units = "in")  # 4K: 3840×2160 pixels
+         width = 1920/96, height = 1080/96, dpi = 300, units = "in")  # 4K: 3840×2160 pixels
   ggsave("figure/AllReferences_Hellinger_Grid_22models.pdf", plot = big_plot,
-         width = 3840/96, height = 2160/96, dpi = 300, units = "in")
+         width = 1920/96, height = 1080/96, dpi = 300, units = "in")
 
   cat("✅ Multi-panel violin plot saved as 4K image and PDF.\n")
+
+}
+
+{
+  library(ggplot2)
+  library(dplyr)
+
+  # Filtered references
+  references_done <- names(MMM_hdist_future_list)
+
+  # Initialize dataframe to collect everything
+  df_all <- data.frame()
+
+  for (ref_name in references_done) {
+
+    # Get MMM values
+    mmm_vals <- as.vector(MMM_hdist_future_list[[ref_name]])
+    df_tmp <- data.frame(
+      Hellinger = mmm_vals,
+      Method = "MMM",
+      SmoothCost = "MMM",
+      Reference = ref_name
+    )
+
+    # Get GC-0.1 values
+    if (!is.null(GC_hdist_future_list[["0.1"]][[ref_name]])) {
+      gc_vals <- as.vector(GC_hdist_future_list[["0.1"]][[ref_name]])
+      df_tmp <- rbind(df_tmp, data.frame(
+        Hellinger = gc_vals,
+        Method = "GraphCut",
+        SmoothCost = "0.1",
+        Reference = ref_name
+      ))
+    }
+
+    df_all <- rbind(df_all, df_tmp)
+  }
+
+  df_all <- na.omit(df_all)
+  df_all$MethodLabel <- ifelse(df_all$Method == "MMM", "MMM", "GC-0.1")
+  df_all$MethodLabel <- factor(df_all$MethodLabel, levels = c("GC-0.1", "MMM"))
+
+  # One violin plot per method, faceted by reference
+  p <- ggplot(df_all, aes(x = MethodLabel, y = Hellinger, fill = MethodLabel)) +
+    geom_violin(scale = "area", adjust = 1.2, width = 0.7, alpha = 0.85) +
+    stat_summary(fun = mean, geom = "point", shape = 20, size = 2.2, color = "black", position = position_dodge(width = 0.7)) +
+    stat_summary(fun = median, geom = "crossbar", width = 0.4, color = "red", fatten = 1, position = position_dodge(width = 0.7)) +
+    scale_fill_manual(values = c(
+      "GC-0.1" = "#d95f02",
+      "MMM"    = "#e6ab02"
+    )) +
+    labs(
+      title = "Hellinger Distance (Future) by Reference – Smooth = 0.1",
+      x = "Method",
+      y = "Hellinger Distance"
+    ) +
+    theme_minimal(base_size = 12) +
+    theme(
+      axis.text.x = element_text(size = 10, angle = 0, hjust = 0.5),
+      axis.text.y = element_text(size = 10),
+      plot.title = element_text(size = 14, face = "bold")
+    ) +
+    facet_wrap(~Reference, ncol = 11)
+
+  # Save plot
+  ggsave("figure/Hellinger_Comparison_Smooth_0.1_AllRefs.png", plot = p,
+         width = 20, height = 10, units = "in", dpi = 300)
+    # Save plot
+  ggsave("figure/Hellinger_Comparison_Smooth_0.1_AllRefs.pdf", plot = p,
+         width = 20, height = 10, units = "in", dpi = 300)
+
+  cat("✅ Violin plot for Smooth = 0.1 and MMM saved.\n")
 
 }
 

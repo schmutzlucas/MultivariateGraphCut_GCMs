@@ -49,6 +49,7 @@ compute_nd_pdf_optimized <- function(variables, model_names, data_dir, year_pres
   # Set up parallel processing for each model
   plan(multisession, workers = workers)  # Use a limited number of workers
   options(future.globals.maxSize = 8 * 1024^3)  # Allow up to 8 GiB for exporting globals
+  plan(sequential)  # Reset to sequential
 
   # Process models in parallel for each time period
   pdf_matrix_list <- future_lapply(seq_along(model_names), function(m) {

@@ -6,7 +6,7 @@ if(length(new.packages))
 
 library(devtools)
 lapply(list_of_packages, library, character.only = TRUE)
-install_github("thaos/gcoWrapR")
+install_github("schmutzlucas/gcoWrapR")
 
 
 # Loading local functions
@@ -17,11 +17,11 @@ for(path in file_paths){source(path)}
 range_var_final <- readRDS('ranges/range_var_final_allModelsPar_1950-2023_90deg_3v.rds')
 
 # Setting global variables
-lon <- 0:359
+lon <- -180:179
 lat <- -90:90
 # Temporal ranges
 year_present <<- 1950:1975
-year_future <<- 1998:2023
+year_future <<- 1999:2024
 # data directory
 data_dir <<- 'data/CMIP6_merged_all/'
 
@@ -277,7 +277,7 @@ save.image(file = filename, compress = FALSE)
 
 
 # Extract the label attribution for the current smooth cost
-GC_labels <- GC_result1_lat$label_attribution
+GC_labels <- GC_result_0.05$label_attribution
 
 # Convert the label matrix to a data frame for plotting
 label_df <- melt(GC_labels, c("lon", "lat"), value.name = "label_attribution")
@@ -521,14 +521,25 @@ cat("Sum of selected values:", sum(selected_values), "\n")
 }
 
 
+# Latitude vector, assuming it's evenly spaced and ranges from -90 to 90
+lat_vals <- -90:90  # or whatever your actual lat grid is
+cos_weights <- cos(lat_vals * pi / 180)  # Convert degrees to radians
+
+# Create a matrix matching GC01_hdist_future shape with weights repeated across longitudes
+weight_matrix <- matrix(rep(cos_weights, each = nrow(GC_hdist_future_0.05)),
+                        nrow = nrow(GC_hdist_future_0.05), byrow = FALSE)
 
 
-test_df <- melt(GC_hdist_future, c("lon", "lat"), value.name = "H_dist")
+
+
+
+test_df <- melt(GC_hdist_future_0.05, c("lon", "lat"), value.name = "H_dist")
 
 p5 <- ggplot() +
   geom_tile(data=test_df, aes(x=lon, y=lat-90, fill=H_dist))+
   labs(subtitle = 'Projection period : 1999 - 2014')+
-  ggtitle(paste0('GraphCut MV', ': Mean Hellinger distance = ', round(mean(GC_hdist_future), 2)))+
+  ggtitle(paste0('GraphCut MV', ': Mean Hellinger distance = ', round(sum(GC_hdist_future_0.05 * weight_matrix, na.rm = TRUE) /
+                                                                        sum(weight_matrix[!is.na(GC_hdist_future_0.05)]), 3)))+
   scale_fill_gradient(low = "white", high = "#015a8c", limits = c(0.1, 0.70), oob = scales::squish)+
   borders("world2", colour = 'black', lwd = 0.12) +
   scale_x_continuous(, expand = c(0, 0)) +
@@ -566,7 +577,9 @@ test_df <- melt(MMM_hdist_future, c("lon", "lat"), value.name = "H_dist")
 p6 <- ggplot() +
   geom_tile(data=test_df, aes(x=lon, y=lat-90, fill=H_dist))+
   labs(subtitle = 'Projection period : 1999 - 2014')+
-  ggtitle(paste0('MMM', ': Average Hellinger distance = ', round(mean(MMM_hdist_future), 2)))+
+  ggtitle(paste0('MMM', ': Average Hellinger distance = ',   round(sum(MMM_hdist_future * weight_matrix, na.rm = TRUE) /
+                                                                     sum(weight_matrix[!is.na(MMM_hdist_future)]), 3)))+
+
   scale_fill_gradient(low = "white", high = "#015a8c", limits = c(0.1, 0.70), oob = scales::squish)+
   borders("world2", colour = 'black', lwd = 0.12) +
   scale_x_continuous(, expand = c(0, 0)) +

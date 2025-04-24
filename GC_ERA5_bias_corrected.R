@@ -6,7 +6,7 @@ if(length(new.packages))
 
 library(devtools)
 lapply(list_of_packages, library, character.only = TRUE)
-# install_github("schmutzlucas/gcoWrapR")
+install_github("schmutzlucas/gcoWrapR")
 
 # Loading local functions
 source_code_dir <- 'functions/'  # The directory where all functions are saved.
@@ -404,10 +404,46 @@ tryCatch({
 })
 gc()
 
+smooth_cost <- 0.3
+tryCatch({
+  GC_result03 <- GraphCutHellinger_nD_lat(
+    pdf_models_future = pdf_models_future,
+    h_dist = h_dist_present,
+    weight_data = 1,               # Fixed data weight
+    weight_smooth = smooth_cost,   # Varying smooth cost
+    nBins = nbins1d^3,
+    lat = lat,
+    seed = 1,
+    verbose = TRUE,
+    rebuild = TRUE
+  )
+}, error = function(e) {
+  cat("Error encountered with smooth cost =", smooth_cost, ": ", e$message, "\n")
+})
+gc()
+
+smooth_cost <- 0.5
+tryCatch({
+  GC_result05 <- GraphCutHellinger_nD_lat(
+    pdf_models_future = pdf_models_future,
+    h_dist = h_dist_present,
+    weight_data = 1,               # Fixed data weight
+    weight_smooth = smooth_cost,   # Varying smooth cost
+    nBins = nbins1d^3,
+    lat = lat,
+    seed = 1,
+    verbose = TRUE,
+    rebuild = TRUE
+  )
+}, error = function(e) {
+  cat("Error encountered with smooth cost =", smooth_cost, ": ", e$message, "\n")
+})
+gc()
+
 # Map of labels
 {
   # Extract the label attribution for the current smooth cost
-  GC_labels <- GC_result01$label_attribution
+  GC_labels <- GC_result03$label_attribution
 
   # Convert the label matrix to a data frame for plotting
   label_df <- reshape2::melt(GC_labels, varnames = c("lon_idx", "lat_idx"), value.name = "label_attribution")
@@ -442,8 +478,9 @@ gc()
     ggtitle(paste("Label GC Hellinger - Lambda:", 0.1)) +
     borders("world", colour = 'black', size = 0.12) +
     theme_bw() +
+    coord_fixed(ratio = 1.3, xlim = c(-180, 180), ylim = c(-84, 90), expand = FALSE)+
     theme(
-      legend.position = 'right',
+      legend.position = 'none',
       panel.grid.major = element_blank(),
       panel.grid.minor = element_blank(),
       panel.background = element_blank(),
@@ -464,11 +501,11 @@ gc()
   p6
 
   # Generate file name based on the smooth cost
-  name <- paste0("figure/GC_labelling_smooth01_BC_22model")
+  name <- paste0("figure/GC_labelling_smooth03_BC_22model_cover")
 
   # Save the plot as both PDF and PNG
-  ggsave(paste0(name, ".pdf"), plot = p6, width = 20, height = 15, units = "cm", dpi = 300)
-  ggsave(paste0(name, ".png"), plot = p6, width = 20, height = 15, units = "cm", dpi = 300)
+  ggsave(paste0(name, ".pdf"), plot = p6, width = 18, height = 18, units = "cm", dpi = 300)
+  ggsave(paste0(name, ".png"), plot = p6, width = 18, height = 18, units = "cm", dpi = 300)
 }
 
 
@@ -508,10 +545,17 @@ GC01_hdist_future <- matrix(NA, nrow = length(lon), ncol = length(lat))
 GC06_hdist_present <- matrix(NA, nrow = length(lon), ncol = length(lat))
 GC06_hdist_future <- matrix(NA, nrow = length(lon), ncol = length(lat))
 
+GC03_hdist_present <- matrix(NA, nrow = length(lon), ncol = length(lat))
+GC03_hdist_future <- matrix(NA, nrow = length(lon), ncol = length(lat))
+
 for(l in 1:(length(model_names))){  # Ensure that indexing aligns with model names
   islabel <- which(GC_result01$label_attribution == l)
   GC01_hdist_present[islabel] <- h_dist_present[,,l][islabel]
   GC01_hdist_future[islabel] <- h_dist_future[,,l][islabel]
+
+  islabel <- which(GC_result03$label_attribution == l)
+  GC03_hdist_present[islabel] <- h_dist_present[,,l][islabel]
+  GC03_hdist_future[islabel] <- h_dist_future[,,l][islabel]
 
   islabel <- which(GC_result06$label_attribution == l)
   GC06_hdist_present[islabel] <- h_dist_present[,,l][islabel]
@@ -528,9 +572,9 @@ MMM_present <- apply(pdf_models_present, c(1, 2, 3), mean)
 # Compute Multi-Model Mean for Future
 MMM_future <- apply(pdf_models_future, c(1, 2, 3), mean)
 
-
-# Initialize arrays to store the Hellinger distance for MMM
-MMM_hdist <- array(NA, dim = c(length(lon), length(lat)))
+-
+  # Initialize arrays to store the Hellinger distance for MMM
+  MMM_hdist <- array(NA, dim = c(length(lon), length(lat)))
 MMM_hdist_future <- array(NA, dim = c(length(lon), length(lat)))
 
 # Compute Hellinger distance for the Multi-Model Mean
@@ -560,14 +604,26 @@ save.image(file = filename, compress = FALSE)
 # Map H Dist future
 test_df <- melt(GC01_hdist_future, c("lon", "lat"), value.name = "H_dist")
 
+# Latitude vector, assuming it's evenly spaced and ranges from -90 to 90
+lat_vals <- -90:90  # or whatever your actual lat grid is
+cos_weights <- cos(lat_vals * pi / 180)  # Convert degrees to radians
+
+# Create a matrix matching GC01_hdist_future shape with weights repeated across longitudes
+weight_matrix <- matrix(rep(cos_weights, each = nrow(GC01_hdist_future)),
+                        nrow = nrow(GC01_hdist_future), byrow = FALSE)
+
+
+
 p6 <- ggplot() +
   geom_tile(data=test_df, aes(x=lon-180, y=lat-90, fill=H_dist))+
   labs(subtitle = 'Smooth = 0.1, Projection period : 1998 - 2023')+
-  ggtitle(paste0('GC Bias corrected', ': Average H = ', round(mean(GC01_hdist_future), 2)))+
-  scale_fill_gradient(low = "white", high = "#015a8c", limits = c(0.1, 0.70), oob = scales::squish)+
+  ggtitle(paste0('GC Bias corrected', ': Mean H = ', round(sum(GC01_hdist_future * weight_matrix, na.rm = TRUE) /
+                                                             sum(weight_matrix[!is.na(GC01_hdist_future)]), 3)))+
+  scale_fill_gradient(low = "white", high = "#015a8c", limits = c(0.1, 0.4), oob = scales::squish)+
   borders("world", colour = 'black', lwd = 0.12) +
   scale_x_continuous(, expand = c(0, 0)) +
   scale_y_continuous(, expand = c(0, 0))+
+  coord_fixed(ratio = 1.3, xlim = c(-180, 180), ylim = c(-84, 90), expand = FALSE)+
   theme(legend.position = 'bottom')+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
   theme(panel.background = element_blank())+
@@ -588,7 +644,7 @@ p6 <- ggplot() +
 p6
 
 # Generate file name based on the smooth cost
-name <- paste0("figure/GC_H_dist_smooth01_BC_projection")
+name <- paste0("figure/GC_H_dist_smooth01_BC_projection_new")
 
 # Save the plot as both PDF and PNG
 ggsave(paste0(name, ".pdf"), plot = p6, width = 20, height = 15, units = "cm", dpi = 300)
@@ -604,11 +660,13 @@ test_df <- melt(GC06_hdist_future, c("lon", "lat"), value.name = "H_dist")
 p6 <- ggplot() +
   geom_tile(data=test_df, aes(x=lon-180, y=lat-90, fill=H_dist))+
   labs(subtitle = 'Smooth = 0.6, Projection period : 1998 - 2023')+
-  ggtitle(paste0('GC Bias corrected', ': Average H = ', round(mean(GC06_hdist_future), 2)))+
-  scale_fill_gradient(low = "white", high = "#015a8c", limits = c(0.1, 0.70), oob = scales::squish)+
+  ggtitle(paste0('GC Bias corrected', ': Mean H = ', round(sum(GC06_hdist_future * weight_matrix, na.rm = TRUE) /
+                                                             sum(weight_matrix[!is.na(GC06_hdist_future)]), 3)))+
+  scale_fill_gradient(low = "white", high = "#015a8c", limits = c(0.1, 0.4), oob = scales::squish)+
   borders("world", colour = 'black', lwd = 0.12) +
   scale_x_continuous(, expand = c(0, 0)) +
   scale_y_continuous(, expand = c(0, 0))+
+  coord_fixed(ratio = 1.3, xlim = c(-180, 180), ylim = c(-84, 90), expand = FALSE)+
   theme(legend.position = 'bottom')+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
   theme(panel.background = element_blank())+
@@ -629,7 +687,50 @@ p6 <- ggplot() +
 p6
 
 # Generate file name based on the smooth cost
-name <- paste0("figure/GC_H_dist_smooth06_BC_projection")
+name <- paste0("figure/GC_H_dist_smooth06_BC_projection_test")
+
+# Save the plot as both PDF and PNG
+ggsave(paste0(name, ".pdf"), plot = p6, width = 20, height = 15, units = "cm", dpi = 300)
+ggsave(paste0(name, ".png"), plot = p6, width = 20, height = 15, units = "cm", dpi = 300)
+
+
+
+# Map H Dist future
+
+
+test_df <- melt(GC03_hdist_future, c("lon", "lat"), value.name = "H_dist")
+
+p6 <- ggplot() +
+  geom_tile(data=test_df, aes(x=lon-180, y=lat-90, fill=H_dist))+
+  labs(subtitle = 'Smooth = 0.3, Projection period : 1998 - 2023')+
+  ggtitle(paste0('GC Bias corrected', ': Mean H = ', round(sum(GC06_hdist_future * weight_matrix, na.rm = TRUE) /
+                                                             sum(weight_matrix[!is.na(GC06_hdist_future)]), 3)))+
+  scale_fill_gradient(low = "white", high = "#015a8c", limits = c(0.1, 0.4), oob = scales::squish)+
+  borders("world", colour = 'black', lwd = 0.12) +
+  scale_x_continuous(, expand = c(0, 0)) +
+  scale_y_continuous(, expand = c(0, 0))+
+  coord_fixed(ratio = 1.3, xlim = c(-180, 180), ylim = c(-84, 90), expand = FALSE)+
+  theme(legend.position = 'bottom')+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  theme(panel.background = element_blank())+
+  xlab('Longitude')+
+  ylab('Latitude') +
+  labs(fill='Hellinger \nDistance')+
+  theme_bw()+
+  theme(legend.key.size = unit(1, 'cm'), #change legend key size
+        legend.key.height = unit(1.4, 'cm'), #change legend key height
+        legend.key.width = unit(0.4, 'cm'), #change legend key width
+        legend.title = element_text(size=16), #change legend title font sizen
+        legend.text = element_text(size=12))+ #change legend text font size
+  theme(plot.title = element_text(size=24),
+        plot.subtitle = element_text(size = 20,hjust=0.5),
+        axis.text=element_text(size=14),
+        axis.title=element_text(size=16),)+
+  easy_center_title()
+p6
+
+# Generate file name based on the smooth cost
+name <- paste0("figure/GC_H_dist_smooth03_BC_projection_test")
 
 # Save the plot as both PDF and PNG
 ggsave(paste0(name, ".pdf"), plot = p6, width = 20, height = 15, units = "cm", dpi = 300)
@@ -760,11 +861,13 @@ test_df <- melt(MMM_hdist_future, varnames = c("lon", "lat"), value.name = "H_di
 p6 <- ggplot() +
   geom_tile(data=test_df, aes(x=lon-180, y=lat-90, fill=H_dist))+
   labs(subtitle = 'Projection period : 1998 - 2023')+
-  ggtitle(paste0('MMM', ': Average H = ', round(mean(MMM_hdist_future), 2)))+
-  scale_fill_gradient(low = "white", high = "#015a8c", limits = c(0.1, 0.70), oob = scales::squish)+
+  ggtitle(paste0('MMM', ': Mean H = ', round(sum(MMM_hdist_future * weight_matrix, na.rm = TRUE) /
+                                               sum(weight_matrix[!is.na(MMM_hdist_future)]), 3)))+
+  scale_fill_gradient(low = "white", high = "#015a8c", limits = c(0.1, 0.4), oob = scales::squish)+
   borders("world", colour = 'black', lwd = 0.12) +
   scale_x_continuous(, expand = c(0, 0)) +
-  scale_y_continuous(, expand = c(0,0))+
+  scale_y_continuous(, expand = c(0, 0))+
+  coord_fixed(ratio = 1.3, xlim = c(-180, 180), ylim = c(-84, 90), expand = FALSE)+
   theme(legend.position = 'bottom')+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
   theme(panel.background = element_blank())+
@@ -785,7 +888,7 @@ p6 <- ggplot() +
 p6
 
 # Generate file name based on the smooth cost
-name <- paste0("figure/MMM_H_dist_BC_projection")
+name <- paste0("figure/MMM_H_dist_BC_projection_new")
 
 # Save the plot as both PDF and PNG
 ggsave(paste0(name, ".pdf"), plot = p6, width = 20, height = 15, units = "cm", dpi = 300)
@@ -803,7 +906,7 @@ p6 <- ggplot() +
   geom_tile(data=test_df, aes(x=lon-180, y=lat-90, fill=H_dist))+
   labs(subtitle = 'Projection period : 1998 - 2023')+
   ggtitle(paste0('GC Bias corrected', ': Average Hellinger distance = ', round(mean(h_dist_future[,,1]), 2)))+
-  scale_fill_gradient(low = "white", high = "#015a8c", limits = c(0.1, 0.70), oob = scales::squish)+
+  scale_fill_gradient(low = "white", high = "#015a8c", limits = c(0.1, 0.40), oob = scales::squish)+
   scale_x_continuous(, expand = c(0, 0)) +
   scale_y_continuous(, expand = c(0, 0))+
   theme(legend.position = 'bottom')+
@@ -841,12 +944,14 @@ p6
     p <- ggplot() +
       geom_tile(data = test_df, aes(x = lon, y = lat, fill = H_dist)) +
       labs(subtitle = 'Projection period : 1998 - 2023') +
-      ggtitle(paste0(model_names[m], ': Average H = ',
-                     round(mean(model_hdist, na.rm = TRUE), 2))) +
-      scale_fill_gradient(low = "white", high = "#015a8c", limits = c(0.1, 0.70), oob = scales::squish) +
+      ggtitle(paste0(model_names[m], ': Area-weighted H = ', round(sum(model_hdist * weight_matrix, na.rm = TRUE) /
+                                                                     sum(weight_matrix[!is.na(model_hdist)]), 3)))+
+
+      scale_fill_gradient(low = "white", high = "#015a8c", limits = c(0.1, 0.4), oob = scales::squish)+
       borders("world", colour = 'black', lwd = 0.12) +
-      scale_x_continuous(expand = c(0, 0)) +
-      scale_y_continuous(expand = c(0, 0)) +
+      scale_x_continuous(, expand = c(0, 0)) +
+      scale_y_continuous(, expand = c(0, 0))+
+      coord_fixed(ratio = 1.3, xlim = c(-180, 180), ylim = c(-84, 90), expand = FALSE)+
       theme(legend.position = 'bottom') +
       theme(panel.grid.major = element_blank(),
             panel.grid.minor = element_blank(),
