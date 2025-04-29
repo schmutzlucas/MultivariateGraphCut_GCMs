@@ -280,12 +280,18 @@ save.image(file = filename, compress = FALSE)
 GC_labels <- GC_result_0.05$label_attribution
 
 # Convert the label matrix to a data frame for plotting
-label_df <- melt(GC_labels, c("lon", "lat"), value.name = "label_attribution")
-label_df$lat <- label_df$lat - 90  # Adjust latitudes if necessary
+label_df <- reshape2::melt(GC_labels, varnames = c("lon_idx", "lat_idx"), value.name = "label_attribution")
 
-# Convert label_attribution to a factor with ALL model names as levels
-label_df$label_attribution <- factor(label_df$label_attribution, levels = seq_along(model_names), labels = model_names)
+# Explicitly assign correct longitude and latitude values
+label_df$lon <- lon[label_df$lon_idx]  # Map longitude indices to values
+label_df$lat <- lat[label_df$lat_idx]    # Map latitude indices to values
 
+# Force label_attribution to be a factor with levels in the exact order of model_names.
+label_df$label_attribution <- factor(label_df$label_attribution,
+                                     levels = seq_along(model_names),
+                                     labels = model_names)
+
+# Create a named color palette: each model name is explicitly mapped to its color.
 color_palette <- c(
   "#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd",
   "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf",
@@ -293,39 +299,46 @@ color_palette <- c(
   "#c49c94", "#f7b6d2", "#c7c7c7", "#dbdb8d", "#9edae5",
   "#393b79", "#5254a3", "#6b6ecf"
 )
+# Name the palette vector with model_names (in the same order)
+names(color_palette) <- model_names
 
-
-# Create the plot
-p <- ggplot() +
+p6 <- ggplot() +
   geom_tile(data = label_df, aes(x = lon, y = lat, fill = label_attribution)) +
-  scale_fill_manual(values = color_palette, na.value = "white", guide = guide_legend(title = "Model Names", ncol = 1)) +  # Keep all model names in the legend
-  ggtitle(paste("Label GC Hellinger - Lambda:", smooth_cost)) +
-  borders("world2", colour = 'black', lwd = 0.12) +
-  theme(legend.position = 'bottom') +
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
-  theme(panel.background = element_blank()) +
-  xlab('Longitude') +
-  ylab('Latitude') +
+  scale_fill_manual(
+    values = color_palette,
+    na.value = "white",
+    guide = guide_legend(title = "Model Names", ncol = 1)
+  ) +
+  ggtitle(paste("Label GC Hellinger - Lambda:", 0.1)) +
+  borders("world", colour = 'black', size = 0.12) +
   theme_bw() +
+  coord_fixed(ratio = 1.3, xlim = c(-180, 180), ylim = c(-84, 90), expand = FALSE)+
   theme(
-    legend.key.size = unit(0.5, 'cm'),        # Reduce legend key size
-    legend.key.height = unit(0.5, 'cm'),      # Reduce legend key height
-    legend.key.width = unit(0.5, 'cm'),       # Reduce legend key width
-    legend.title = element_text(size = 10),   # Reduce legend title font size
-    legend.text = element_text(size = 8),     # Reduce legend text font size
+    legend.position = 'none',
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.background = element_blank(),
+    legend.key.size = unit(0.5, 'cm'),
+    legend.key.height = unit(0.5, 'cm'),
+    legend.key.width = unit(0.5, 'cm'),
+    legend.title = element_text(size = 10),
+    legend.text = element_text(size = 8),
     plot.title = element_text(size = 16),
     plot.subtitle = element_text(size = 12, hjust = 0.5),
     axis.text = element_text(size = 10),
     axis.title = element_text(size = 12)
   ) +
+  xlab('Longitude') +
+  ylab('Latitude') +
   easy_center_title()
-p
+
+p6
 # Generate file name based on the smooth cost
 name <- paste0("figure/Labels_GC_Hellinger_smooth_1950-1975_3v")
 
 # Save the plot as both PDF and PNG
-ggsave(paste0(name, ".pdf"), plot = p, width = 20, height = 15, units = "cm", dpi = 300)
-ggsave(paste0(name, ".png"), plot = p, width = 20, height = 15, units = "cm", dpi = 300)
+ggsave(paste0(name, ".pdf"), plot = p6, width = 20, height = 15, units = "cm", dpi = 300)
+ggsave(paste0(name, ".png"), plot = p6, width = 20, height = 15, units = "cm", dpi = 300)
 
 
 
