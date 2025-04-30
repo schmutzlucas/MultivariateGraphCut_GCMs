@@ -177,44 +177,40 @@ tryCatch({
 })
 
 smooth_cost <- 0.05
-# Wrap each iteration in tryCatch to handle errors gracefully
 tryCatch({
-  # Run Graph Cut with the varying smooth cost
-  GC_result_0.05 <- GraphCutHellinger_nD(
-    pdf_models_future = pdf_models_present,
+  GC_result_0.05 <- GraphCutHellinger_nD_lat(
+    pdf_models_future = pdf_models_future,
     h_dist = h_dist,
     weight_data = 1,               # Fixed data weight
     weight_smooth = smooth_cost,   # Varying smooth cost
     nBins = nbins1d^3,
+    lat = lat,
     seed = 1,
     verbose = TRUE,
-    rebuild = FALSE
+    rebuild = TRUE
   )
-
-
 }, error = function(e) {
   cat("Error encountered with smooth cost =", smooth_cost, ": ", e$message, "\n")
 })
+gc()
 
 smooth_cost <- 0.1
-# Wrap each iteration in tryCatch to handle errors gracefully
 tryCatch({
-  # Run Graph Cut with the varying smooth cost
-  GC_result_0.1 <- GraphCutHellinger_nD(
-    pdf_models_future = pdf_models_present,
+  GC_result_0.1 <- GraphCutHellinger_nD_lat(
+    pdf_models_future = pdf_models_future,
     h_dist = h_dist,
     weight_data = 1,               # Fixed data weight
     weight_smooth = smooth_cost,   # Varying smooth cost
     nBins = nbins1d^3,
+    lat = lat,
     seed = 1,
     verbose = TRUE,
-    rebuild = FALSE
+    rebuild = TRUE
   )
-
-
 }, error = function(e) {
   cat("Error encountered with smooth cost =", smooth_cost, ": ", e$message, "\n")
 })
+gc()
 
 
 smooth_cost <- 0.15
@@ -419,16 +415,49 @@ ggsave(paste0(name, ".png"), plot = p6, width = 20, height = 15, units = "cm", d
 
 
 
-test_df <- melt(GC_hdist_future_0.05, c("lon", "lat"), value.name = "H_dist")
+# 1) Melt into long format
+test_df <- melt(
+  GC_hdist_future_0.05,
+  varnames   = c("lon_idx","lat_idx"),
+  value.name = "H_dist"
+)
+# recover real lon/lat
+test_df$lon <- lon[ test_df$lon_idx ]
+test_df$lat <- lat[ test_df$lat_idx ]
+
+# 2) Wrap longitudes to [-180,180]
+test_df$lon_wrapped <- ifelse(test_df$lon > 180,
+                              test_df$lon - 360,
+                              test_df$lon)
+
+# 3) build cosine‐latitude weights [360×181]
+cos_weights   <- cos(lat * pi/180)           # length=181
+weight_matrix <- matrix(
+  rep(cos_weights, each = length(lon)),     # repeat each lat‐weight for every lon
+  nrow = length(lon),
+  ncol = length(lat),
+  byrow = FALSE
+)
+
+# 4) compute global, area‐weighted mean H_dist
+global_H <- sum(GC_hdist_future_0.05 * weight_matrix, na.rm = TRUE) /
+  sum(weight_matrix, na.rm = TRUE)
 
 p6 <- ggplot() +
-  geom_tile(data=test_df, aes(x=lon, y=lat-90, fill=H_dist))+
-  labs(subtitle = 'Projection period : 1998 - 2023')+
-  ggtitle(paste0('GC', ': Average Hellinger distance = ', round(mean(GC_hdist_future_0.05), 2)))+
-  scale_fill_gradient(low = "white", high = "#015a8c", limits = c(0.1, 0.70), oob = scales::squish)+
-  borders("world2", colour = 'black', lwd = 0.12) +
+  geom_tile(data=test_df, aes(x=lon_wrapped, y=lat, fill=H_dist))+
+  labs(subtitle = 'Smooth = 0.1, Projection period : 1998 - 2023')+
+  ggtitle(paste0('Graphcut MV', ': Global H = ', round(global_H, 3)))+
+  scale_fill_gradient(
+    low    = "white",
+    high   = "#015a8c",
+    limits = c(0.1, 0.5),
+    breaks = seq(0.1, 0.5, length.out = 3),
+    oob    = scales::squish
+  ) +
+  borders("world", colour = 'black', lwd = 0.12) +
   scale_x_continuous(, expand = c(0, 0)) +
   scale_y_continuous(, expand = c(0, 0))+
+  coord_fixed(ratio = 1.3, xlim = c(-180, 180), ylim = c(-84, 90), expand = FALSE)+
   theme(legend.position = 'bottom')+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
   theme(panel.background = element_blank())+
@@ -449,24 +478,57 @@ p6 <- ggplot() +
 p6
 
 # Generate file name based on the smooth cost
-name <- paste0("figure/GC_H_dist_smooth005")
+name <- paste0("figure/GC_H_dist_smooth005_EGU2")
 
 # Save the plot as both PDF and PNG
 ggsave(paste0(name, ".pdf"), plot = p6, width = 20, height = 15, units = "cm", dpi = 300)
 ggsave(paste0(name, ".png"), plot = p6, width = 20, height = 15, units = "cm", dpi = 300)
 
 
-# Melt it into a data frame:
-test_df <- melt(MMM_hdist_future, varnames = c("lon", "lat"), value.name = "H_dist")
+
+# 1) Melt into long format
+test_df <- melt(
+  GC_hdist_future_0.1,
+  varnames   = c("lon_idx","lat_idx"),
+  value.name = "H_dist"
+)
+# recover real lon/lat
+test_df$lon <- lon[ test_df$lon_idx ]
+test_df$lat <- lat[ test_df$lat_idx ]
+
+# 2) Wrap longitudes to [-180,180]
+test_df$lon_wrapped <- ifelse(test_df$lon > 180,
+                              test_df$lon - 360,
+                              test_df$lon)
+
+# 3) build cosine‐latitude weights [360×181]
+cos_weights   <- cos(lat * pi/180)           # length=181
+weight_matrix <- matrix(
+  rep(cos_weights, each = length(lon)),     # repeat each lat‐weight for every lon
+  nrow = length(lon),
+  ncol = length(lat),
+  byrow = FALSE
+)
+
+# 4) compute global, area‐weighted mean H_dist
+global_H <- sum(GC_hdist_future_0.1 * weight_matrix, na.rm = TRUE) /
+  sum(weight_matrix, na.rm = TRUE)
 
 p6 <- ggplot() +
-  geom_tile(data=test_df, aes(x=lon, y=lat-90, fill=H_dist))+
-  labs(subtitle = 'Projection period : 1998 - 2023')+
-  ggtitle(paste0('MMM', ': Average Hellinger distance = ', round(mean(MMM_hdist_future), 2)))+
-  scale_fill_gradient(low = "white", high = "#015a8c", limits = c(0.1, 0.70), oob = scales::squish)+
-  borders("world2", colour = 'black', lwd = 0.12) +
+  geom_tile(data=test_df, aes(x=lon_wrapped, y=lat, fill=H_dist))+
+  labs(subtitle = 'Smooth = 0.1, Projection period : 1998 - 2023')+
+  ggtitle(paste0('Graphcut MV', ': Global H = ', round(global_H, 3)))+
+  scale_fill_gradient(
+    low    = "white",
+    high   = "#015a8c",
+    limits = c(0.1, 0.5),
+    breaks = seq(0.1, 0.5, length.out = 3),
+    oob    = scales::squish
+  ) +
+  borders("world", colour = 'black', lwd = 0.12) +
   scale_x_continuous(, expand = c(0, 0)) +
-  scale_y_continuous(, expand = c(0,0))+
+  scale_y_continuous(, expand = c(0, 0))+
+  coord_fixed(ratio = 1.3, xlim = c(-180, 180), ylim = c(-84, 90), expand = FALSE)+
   theme(legend.position = 'bottom')+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
   theme(panel.background = element_blank())+
@@ -487,11 +549,108 @@ p6 <- ggplot() +
 p6
 
 # Generate file name based on the smooth cost
-name <- paste0("figure/MMM_H_dist")
+name <- paste0("figure/GC_H_dist_smooth01_EGU")
 
 # Save the plot as both PDF and PNG
 ggsave(paste0(name, ".pdf"), plot = p6, width = 20, height = 15, units = "cm", dpi = 300)
 ggsave(paste0(name, ".png"), plot = p6, width = 20, height = 15, units = "cm", dpi = 300)
+
+
+
+
+# --- Plotting MMM H-dist Future exactly like the GC figure -----------------
+
+
+# assume lon = 0:359, lat = -90:90, and MMM_hdist_future is your [360×181] matrix
+
+# 1) Melt into long format
+test_df <- melt(
+  MMM_hdist_future,
+  varnames   = c("lon_idx", "lat_idx"),
+  value.name = "H_dist"
+)
+# recover real lon/lat
+test_df$lon <- lon[ test_df$lon_idx ]
+test_df$lat <- lat[ test_df$lat_idx ]
+
+# 2) Wrap longitudes to [-180,180]
+test_df$lon_wrapped <- ifelse(
+  test_df$lon > 180,
+  test_df$lon - 360,
+  test_df$lon
+)
+
+# 3) build cosine‐latitude weights [360×181]
+cos_weights   <- cos(lat * pi/180)           # length = 181
+weight_matrix <- matrix(
+  rep(cos_weights, each = length(lon)),     # repeat each lat‐weight for every lon
+  nrow = length(lon),
+  ncol = length(lat),
+  byrow = FALSE
+)
+
+# 4) compute global, area‐weighted mean H_dist
+global_H_mmm <- sum(MMM_hdist_future * weight_matrix, na.rm = TRUE) /
+  sum(weight_matrix, na.rm = TRUE)
+
+# 5) Plot
+p_mmm <- ggplot() +
+  geom_tile(
+    data = test_df,
+    aes(x = lon_wrapped, y = lat, fill = H_dist)
+  ) +
+  labs(subtitle = 'Projection period : 1998 - 2023') +
+  ggtitle(
+    paste0('MMM', ': Global H = ', round(global_H_mmm, 3))
+  ) +
+  scale_fill_gradient(
+    low    = "white",
+    high   = "#015a8c",
+    limits = c(0.1, 0.5),                     # cover the full span you want
+    breaks = seq(0.1, 0.5, length.out = 3),         # exactly 0,0.2,0.4,0.6
+    oob    = scales::squish
+  ) +
+  borders("world", colour = 'black', lwd = 0.12) +
+  scale_x_continuous(expand = c(0, 0)) +
+  scale_y_continuous(expand = c(0, 0)) +
+  coord_fixed(
+    ratio = 1.3,
+    xlim  = c(-180, 180),
+    ylim  = c(-84, 90),
+    expand = FALSE
+  ) +
+  theme(legend.position       = 'bottom',
+        panel.grid.major      = element_blank(),
+        panel.grid.minor      = element_blank(),
+        panel.background      = element_blank()) +
+  xlab('Longitude') +
+  ylab('Latitude') +
+  labs(fill = 'Hellinger \nDistance') +
+  theme_bw() +
+  theme(
+    legend.key.size       = unit(1,  'cm'),
+    legend.key.height     = unit(1.4,'cm'),
+    legend.key.width      = unit(0.4,'cm'),
+    legend.title          = element_text(size = 16),
+    legend.text           = element_text(size = 12),
+    plot.title            = element_text(size = 24),
+    plot.subtitle         = element_text(size = 20, hjust = 0.5),
+    axis.text             = element_text(size = 14),
+    axis.title            = element_text(size = 16)
+  ) +
+  easy_center_title()
+
+print(p_mmm)
+
+
+# Generate file name based on the smooth cost
+name <- paste0("figure/MMM_H_dist_EGU")
+
+# Save the plot as both PDF and PNG
+ggsave(paste0(name, ".pdf"), plot = p_mmm, width = 20, height = 15, units = "cm", dpi = 300)
+ggsave(paste0(name, ".png"), plot = p_mmm, width = 20, height = 15, units = "cm", dpi = 300)
+
+
 
 # Initialize arrays to store the GC-selected PDFs
 pdf_GC_present <- array(NA, dim = c(lon_size, lat_size, nbins))
@@ -1232,7 +1391,7 @@ hist(all_diffs,
 
 
 # Convert the label matrix to a data frame for plotting
-label_df <- reshape2::melt(GC_result061_new$label_attribution, varnames = c("lon_idx", "lat_idx"), value.name = "label_attribution")
+label_df <- reshape2::melt(GC_result_0.05$label_attribution, varnames = c("lon_idx", "lat_idx"), value.name = "label_attribution")
 
 #  Explicitly assign latitude and longitude values
 label_df$lon <- lon[label_df$lon_idx]  # Match lon index to actual longitude

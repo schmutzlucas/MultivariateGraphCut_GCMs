@@ -14,7 +14,9 @@ source_code_dir <- 'functions/' #The directory where all functions are saved.
 file_paths <- list.files(source_code_dir, full.names = T)
 for(path in file_paths){source(path)}
 
-range_var_final <- readRDS('ranges/range_var_final_allModelsPar_1950-2023_90deg_3v.rds')
+range_var_final <- readRDS('ranges/range_var_final_allModelsPar_2025-2100_90deg_3v_PME.rds')
+
+range_var_final$ranges$pr[,,1] <- 0
 
 # Setting global variables
 lon <- -180:179
@@ -40,7 +42,7 @@ nbins1d <<- 8
 variables <- c('pr', 'tas', 'psl')
 
 # Obtains the list of models from the model names or from a file
-model_names <- read.table('model_names_pr_tas_psl_perfect_model.txt')
+model_names <- read.table('model_names_pr_tas_psl_perfect_model_without_duplicate.txt')
 model_names <- as.list(model_names[['V1']])
 # Index of the reference
 ref_index <<- 1
@@ -74,7 +76,7 @@ current_time <- Sys.time()
 formatted_time <- format(current_time, "%Y%m%d%H%M")
 
 # Concatenate the formatted time string with your desired filename
-filename <- paste0(formatted_time, "_my_workspace_PME_allModels_beforeOptim_3v.RData")
+filename <- paste0(formatted_time, "_my_workspace_PME_allModels_beforeOptim_3v_nodup.RData")
 
 # Save the workspace using the generated filename
 save.image(file = filename, compress = FALSE)
@@ -93,12 +95,12 @@ if (any(is.na(keep_idx))) {
        paste(short_models[is.na(keep_idx)], collapse = ", "))
 }
 
-# 3. subset your 4-D PDF arrays along the model dimension (4th dim)
-pdf_present_all <- tmp$present[,,, keep_idx]
-pdf_future_all  <- tmp$future[,,, keep_idx]
+## 3. subset your 4-D PDF arrays along the model dimension (4th dim)
+#pdf_present_all <- tmp$present[,,, keep_idx]
+#pdf_future_all  <- tmp$future[,,, keep_idx]
 
-# 4. update all_models to the shorter list
-all_models <- as.list(short_models)
+pdf_present_all <- tmp$present
+pdf_future_all  <- tmp$future
 
 
 # --- initialize structures ---------------------------------------------------
@@ -121,7 +123,7 @@ selected_indices_all <- lapply(seq_len(lon_size), function(i)
 )
 
 # smoothness weights to sweep
-smooth_costs <- c(0.05, 0.1, 0.6, 0.7, 0.8, 0.9, 1, 1.1, 1.2, 1.3)
+smooth_costs <- c(0.1, 0.2, 0.3, 0.6, 1, 1.2)
 
 # pre-allocate result lists
 GC_result_list               <- setNames(vector("list", length(smooth_costs)), as.character(smooth_costs))
@@ -200,7 +202,7 @@ process_ref <- function(m) {
         rebuild           = FALSE
       )
     }, error = function(e) NULL)
-
+    gc()
     if (!is.null(gc_out)) {
       # unpack
       hgp <- hgf <- hpp <- matrix(NA, lon_size, lat_size)
@@ -260,6 +262,7 @@ for(out in all_outputs) {
 }
 
 plan(sequential)
+gc()
 
 # done – now all *_list objects filled exactly as in the serial loop.
 
@@ -270,27 +273,15 @@ current_time <- Sys.time()
 formatted_time <- format(current_time, "%Y%m%d%H%M")
 
 # Concatenate the formatted time string with your desired filename
-filename <- paste0(formatted_time, "_my_workspace_PME_allModels_results.RData")
+filename <- paste0(formatted_time, "_my_workspace_PME_allModels_results_and_figure_no_dup.RData")
 
 # Save the workspace using the generated filename
 save.image(file = filename, compress = FALSE)
 
 
-# the two reference names you want to drop
-drop_models <- c("CMCC-CM2-SR5", "CMCC-ESM2")
-
-# tmp1 will now be a copy of GC_hdist_future_list
-# but with those two references removed from every cost
-tmp1 <- lapply(GC_hdist_future_list, function(cost_list) {
-  cost_list[ ! names(cost_list) %in% drop_models ]
-})
-
-tmp2 <- MMM_hdist_future_list[ ! names(MMM_hdist_future_list) %in% drop_models ]
-
-
 
 # Extract the label attribution for the current smooth cost
-GC_labels <- GC_result_list$`0.1`$`MIROC-ES2L`$label_attribution
+GC_labels <- GC_result_list$`0.1`$`MIROC6`$label_attribution
 
 # Convert the label matrix to a data frame for plotting
 label_df <- reshape2::melt(GC_labels, varnames = c("lon_idx", "lat_idx"), value.name = "label_attribution")
@@ -512,100 +503,10 @@ p6
 
 }
 
-
-# Violins aggrégés par méthode sans jumeaux
+# --------------------------------------------------------------------------
+# Build Global / Land / Ocean violins by masking, without spatial joins
+# --------------------------------------------------------------------------
 {
-
-  library(ggplot2)
-  library(dplyr)
-  library(RColorBrewer)
-
-  if (!dir.exists("figure")) dir.create("figure")
-
-  # 1) Gather the smooth costs that actually exist
-  smooth_costs <- names(GC_hdist_future_list)
-  smooth_costs <- as.character(sort(as.numeric(smooth_costs)))
-
-  # 2) Build the big data.frame across MMM + all GC-cost methods
-  df_all <- do.call(rbind, lapply(names(tmp2), function(ref_name) {
-    # MMM
-    mmm_vals <- as.vector(tmp2[[ref_name]])
-    df <- data.frame(
-      Hellinger  = mmm_vals,
-      Method     = "MMM",
-      SmoothCost = "MMM",
-      Reference  = ref_name,
-      stringsAsFactors = FALSE
-    )
-    # each GraphCut cost
-    for (cost in smooth_costs) {
-      gc_map <- tmp1[[cost]][[ref_name]]
-      if (!is.null(gc_map)) {
-        df <- rbind(df, data.frame(
-          Hellinger  = as.vector(gc_map),
-          Method     = "GraphCut",
-          SmoothCost = cost,
-          Reference  = ref_name,
-          stringsAsFactors = FALSE
-        ))
-      }
-    }
-    return(df)
-  }))
-
-  df_all <- na.omit(df_all)
-
-  # 3) Build a single label factor that orders first the GC methods, then MMM
-  method_labels <- c(paste0("GC-", smooth_costs), "MMM")
-  df_all$MethodLabel <- with(df_all,
-                             ifelse(Method=="MMM", "MMM", paste0("GC-", SmoothCost))
-  )
-  df_all$MethodLabel <- factor(df_all$MethodLabel, levels = method_labels)
-
-  # 4) Plot
-  # generate a GC palette of the correct length
-  library(RColorBrewer)
-  n_gc <- length(smooth_costs)
-  gc_colors <- colorRampPalette(brewer.pal(8, "Set2"))(n_gc)
-  names(gc_colors) <- paste0("GC-", smooth_costs)
-
-  all_colors <- c(gc_colors, MMM = "#e6ab02")
-
-  p_agg <- ggplot(df_all, aes(x = MethodLabel, y = Hellinger, fill = MethodLabel)) +
-    geom_violin(scale = "area", trim = TRUE, adjust = 1.5, alpha = 0.85, width = 0.7) +
-    stat_summary(fun = mean, geom = "point", shape = 20, size = 2.2,
-                 color = "black", position = position_dodge(width = 0.7)) +
-    stat_summary(fun = median, geom = "crossbar", width = 0.4,
-                 color = "red", fatten = 1, position = position_dodge(width = 0.7)) +
-    scale_fill_manual(values = all_colors) +
-    labs(
-      title    = "Distribution of Hellinger Distance (Future)",
-      subtitle = "Aggregated across all reference models",
-      x        = "Method",
-      y        = "Hellinger Distance",
-      fill     = "Method"
-    ) +
-    theme_minimal(base_size = 14) +
-    theme(
-      axis.text.x     = element_text(size = 11, angle = 45, hjust = 1),
-      plot.title      = element_text(size = 16, face = "bold"),
-      legend.position = "none"
-    )
-
-
-  file_base <- "figure/Aggregated_Hdist_BC_22models"
-  ggsave(paste0(file_base, ".pdf"), p_agg, width = 20, height = 15, units = "cm", dpi = 300)
-  ggsave(paste0(file_base, ".png"), p_agg, width = 20, height = 15, units = "cm", dpi = 300)
-
-  cat("Saved aggregated Hellinger distance plot to", file_base, "\n")
-
-}
-
-{
-  # --------------------------------------------------------------------------
-  # Build Global / Land / Ocean violins by masking, without spatial joins
-  # --------------------------------------------------------------------------
-
   library(ggplot2)
   library(dplyr)
   library(RColorBrewer)
@@ -623,9 +524,9 @@ p6
 
   # 1) build data.frame by slicing each mat:
   df_list <- list()
-  for(ref in names(tmp2)) {
+  for(ref in names(MMM_hdist_future_list)) {
     # MMM global
-    mmm <- tmp2[[ref]]
+    mmm <- MMM_hdist_future_list[[ref]]
     df_list[[paste(ref,"MMM","Global")]] <- data.frame(
       Hellinger=as.vector(mmm),
       MethodLabel="MMM",
@@ -650,7 +551,7 @@ p6
     # GC for each λ
     for(cost in smooth_costs) {
       label <- paste0("GC-",cost)
-      gc  <- tmp1[[cost]][[ref]]  # a lon×lat matrix
+      gc  <- GC_hdist_future_list[[cost]][[ref]]  # a lon×lat matrix
       if(is.null(gc)) next
 
       df_list[[paste(ref,label,"Global")]] <- data.frame(
@@ -800,9 +701,9 @@ p6
     )
 
   # Save in high-resolution (4K scale, roughly)
-  ggsave("figure/AllReferences_Hellinger_Grid_22models.png", plot = big_plot,
+  ggsave("figure/AllReferences_Hellinger_Grid_22models1.png", plot = big_plot,
          width = 1920/96, height = 1080/96, dpi = 300, units = "in")  # 4K: 3840×2160 pixels
-  ggsave("figure/AllReferences_Hellinger_Grid_22models.pdf", plot = big_plot,
+  ggsave("figure/AllReferences_Hellinger_Grid_22models1.pdf", plot = big_plot,
          width = 1920/96, height = 1080/96, dpi = 300, units = "in")
 
   cat("✅ Multi-panel violin plot saved as 4K image and PDF.\n")
@@ -852,8 +753,8 @@ p6
   stats_list <- list()
 
   # MMM entries
-  for(ref in names(tmp2)) {
-    vals <- as.vector(tmp2[[ref]])
+  for(ref in names(MMM_hdist_future_list)) {
+    vals <- as.vector(MMM_hdist_future_list[[ref]])
     stats_list[[length(stats_list)+1]] <- data.frame(
       Reference   = ref,
       MethodLabel = "MMM",
@@ -866,8 +767,8 @@ p6
   # GraphCut entries
   for(cost in smooth_costs) {
     label <- paste0("GC-", cost)
-    for(ref in names(tmp1[[cost]])) {
-      mat   <- tmp1[[cost]][[ref]]
+    for(ref in names(GC_hdist_future_list[[cost]])) {
+      mat   <- GC_hdist_future_list[[cost]][[ref]]
       if (is.null(mat)) next
       vals  <- as.vector(mat)
       stats_list[[length(stats_list)+1]] <- data.frame(
@@ -887,7 +788,7 @@ p6
   global_list <- list()
 
   # MMM global
-  all_mmm <- unlist(lapply(tmp2, as.vector))
+  all_mmm <- unlist(lapply(MMM_hdist_future_list, as.vector))
   global_list[[length(global_list)+1]] <- data.frame(
     Reference   = "ALL",
     MethodLabel = "MMM",
@@ -899,7 +800,7 @@ p6
   # GraphCut global
   for(cost in smooth_costs) {
     label <- paste0("GC-", cost)
-    mats  <- tmp1[[cost]]
+    mats  <- GC_hdist_future_list[[cost]]
     all_gc <- unlist(lapply(mats, as.vector))
     global_list[[length(global_list)+1]] <- data.frame(
       Reference   = "ALL",
@@ -1013,7 +914,72 @@ p6
 }
 
 
-# Aggregated partial Hellinger for smooth 1 only
+# Aggregated Hellinger for smooth 1 only
+{
+  library(ggplot2)
+  library(dplyr)
+
+  if (!dir.exists("figure")) dir.create("figure")
+
+  # Aggregate only for GC-1 and MMM
+  df_all <- do.call(rbind, lapply(names(MMM_hdist_future_list), function(ref_name) {
+    mmm_vals <- as.vector(MMM_partial_hdist_future_list[[ref_name]])
+    df <- data.frame(
+      Hellinger = mmm_vals,
+      Method = "MMM",
+      SmoothCost = "MMM",
+      Reference = ref_name
+    )
+
+    if (!is.null(GC_hdist_future_list[["0.1"]][[ref_name]])) {
+      gc_vals <- as.vector(GC_hdist_future_list[["0.1"]][[ref_name]])
+      df <- rbind(df, data.frame(
+        Hellinger = gc_vals,
+        Method = "GraphCut",
+        SmoothCost = "0.1",
+        Reference = ref_name
+      ))
+    }
+
+    return(df)
+  }))
+
+  df_all <- na.omit(df_all)
+  df_all$MethodLabel <- ifelse(df_all$Method == "MMM", "MMM", "GC-0.1")
+  df_all$MethodLabel <- factor(df_all$MethodLabel, levels = c("GC-0.1", "MMM"))
+
+  p_agg <- ggplot(df_all, aes(x = MethodLabel, y = Hellinger, fill = MethodLabel)) +
+    geom_violin(scale = "area", trim = TRUE, adjust = 1.5, alpha = 0.85, width = 0.7) +
+    stat_summary(fun = mean, geom = "point", shape = 20, size = 2.2, color = "black", position = position_dodge(width = 0.7)) +
+    stat_summary(fun = median, geom = "crossbar", width = 0.4, color = "red", fatten = 1, position = position_dodge(width = 0.7)) +
+    scale_fill_manual(values = c(
+      "GC-0.1" = "#d95f02",
+      "MMM"    = "#e6ab02"
+    )) +
+    labs(
+      title = "Hellinger Distance (Future)",
+      subtitle = "Aggregated across all references - Smooth = 0.1",
+      x = "Method",
+      y = "Hellinger Distance",
+      fill = "Method"
+    ) +
+    theme_minimal(base_size = 14) +
+    theme(
+      axis.text.x = element_text(size = 11),
+      plot.title = element_text(size = 16, face = "bold"),
+      legend.position = "none"
+    )
+
+  file_base <- "figure/Aggregated_Hdist_BC_22models_Smooth01_noBC1"
+  ggsave(paste0(file_base, ".pdf"), plot = p_agg, width = 20, height = 15, units = "cm", dpi = 300)
+  ggsave(paste0(file_base, ".png"), plot = p_agg, width = 20, height = 15, units = "cm", dpi = 300)
+
+  cat("✅ Aggregated plot for Smooth = 1 saved at", file_base, "\n")
+}
+
+
+
+# Aggregated partial Hellinger for smooth 0.1 only
 {
   library(ggplot2)
   library(dplyr)
@@ -1030,12 +996,12 @@ p6
       Reference = ref_name
     )
 
-    if (!is.null(GC_partial_hdist_future_list[["1"]][[ref_name]])) {
-      gc_vals <- as.vector(GC_partial_hdist_future_list[["1"]][[ref_name]])
+    if (!is.null(GC_partial_hdist_future_list[["0.1"]][[ref_name]])) {
+      gc_vals <- as.vector(GC_partial_hdist_future_list[["0.1"]][[ref_name]])
       df <- rbind(df, data.frame(
         Hellinger = gc_vals,
         Method = "GraphCut",
-        SmoothCost = "1",
+        SmoothCost = "0.1",
         Reference = ref_name
       ))
     }
@@ -1044,20 +1010,20 @@ p6
   }))
 
   df_all <- na.omit(df_all)
-  df_all$MethodLabel <- ifelse(df_all$Method == "MMM", "MMM", "GC-1")
-  df_all$MethodLabel <- factor(df_all$MethodLabel, levels = c("GC-1", "MMM"))
+  df_all$MethodLabel <- ifelse(df_all$Method == "MMM", "MMM", "GC-0.1")
+  df_all$MethodLabel <- factor(df_all$MethodLabel, levels = c("GC-0.1", "MMM"))
 
   p_agg <- ggplot(df_all, aes(x = MethodLabel, y = Hellinger, fill = MethodLabel)) +
     geom_violin(scale = "area", trim = TRUE, adjust = 1.5, alpha = 0.85, width = 0.7) +
     stat_summary(fun = mean, geom = "point", shape = 20, size = 2.2, color = "black", position = position_dodge(width = 0.7)) +
     stat_summary(fun = median, geom = "crossbar", width = 0.4, color = "red", fatten = 1, position = position_dodge(width = 0.7)) +
     scale_fill_manual(values = c(
-      "GC-1" = "#d95f02",
+      "GC-0.1" = "#d95f02",
       "MMM"    = "#e6ab02"
     )) +
     labs(
       title = "Partial Hellinger Distance (Future)",
-      subtitle = "Aggregated across all references - Smooth = 1",
+      subtitle = "Aggregated across all references - Smooth = 0.1",
       x = "Method",
       y = "Partial Hellinger Distance",
       fill = "Method"
@@ -1069,7 +1035,7 @@ p6
       legend.position = "none"
     )
 
-  file_base <- "figure/Aggregated_HdistPartial_BC_22models_Smooth1_noBC"
+  file_base <- "figure/Aggregated_HdistPartial_BC_22models_Smooth01_noBC1"
   ggsave(paste0(file_base, ".pdf"), plot = p_agg, width = 20, height = 15, units = "cm", dpi = 300)
   ggsave(paste0(file_base, ".png"), plot = p_agg, width = 20, height = 15, units = "cm", dpi = 300)
 
@@ -1099,12 +1065,12 @@ p6
     )
 
     # Get GC-1 values
-    if (!is.null(GC_hdist_future_list[["1"]][[ref_name]])) {
-      gc_vals <- as.vector(GC_hdist_future_list[["1"]][[ref_name]])
+    if (!is.null(GC_hdist_future_list[["0.1"]][[ref_name]])) {
+      gc_vals <- as.vector(GC_hdist_future_list[["0.1"]][[ref_name]])
       df_tmp <- rbind(df_tmp, data.frame(
         Hellinger = gc_vals,
         Method = "GraphCut",
-        SmoothCost = "1",
+        SmoothCost = "0.1",
         Reference = ref_name
       ))
     }
@@ -1114,7 +1080,7 @@ p6
 
   df_all <- na.omit(df_all)
   df_all$MethodLabel <- ifelse(df_all$Method == "MMM", "MMM", "GC-1")
-  df_all$MethodLabel <- factor(df_all$MethodLabel, levels = c("GC-1", "MMM"))
+  df_all$MethodLabel <- factor(df_all$MethodLabel, levels = c("GC-0.1", "MMM"))
 
   # One violin plot per method, faceted by reference
   p <- ggplot(df_all, aes(x = MethodLabel, y = Hellinger, fill = MethodLabel)) +
@@ -1126,7 +1092,7 @@ p6
       "MMM"    = "#e6ab02"
     )) +
     labs(
-      title = "Hellinger Distance (Future) by Reference – Smooth = 1",
+      title = "Hellinger Distance (Future) by Reference – Smooth = 0.1",
       x = "Method",
       y = "Hellinger Distance"
     ) +
@@ -1139,12 +1105,95 @@ p6
     facet_wrap(~Reference, ncol = 9)
 
   # Save plot
-  ggsave("figure/Hellinger_Comparison_Smooth_1_AllRefs_nobc.png", plot = p,
+  ggsave("figure/Hellinger_Comparison_Smooth_01_AllRefs_nobc.png", plot = p,
          width = 20, height = 10, units = "in", dpi = 300)
   # Save plot
-  ggsave("figure/Hellinger_Comparison_Smooth_1_AllRefs_nobc.pdf", plot = p,
+  ggsave("figure/Hellinger_Comparison_Smooth_01_AllRefs_nobc.pdf", plot = p,
          width = 20, height = 10, units = "in", dpi = 300)
 
   cat("✅ Violin plot for Smooth = 0.1 and MMM saved.\n")
 
+}
+
+
+
+# Single grid point pdf
+
+{
+  library(plotly)
+
+  # Example grid point indices
+  lon_index <- 95 # Example longitude index
+  lat_index <- 90   # Example latitude index
+
+  # Extract the 512-bin PDF vector for the specific grid point
+  pdf_vector <- tmp$future[lon_index, lat_index, ,1]
+
+  # Reshape the PDF vector into a 3D array of dimensions [8, 8, 8]
+  nbins <- 8
+  pdf_3d <- array(pdf_vector, dim = c(nbins, nbins, nbins))
+
+  # Extract the ranges for the variables from range_var_final
+  range_var <- range_var_final$ranges
+  var1_min <- range_var$pr[lon_index, lat_index, 1]
+  var1_max <- range_var$pr[lon_index, lat_index, 2]
+  var2_min <- range_var$tas[lon_index, lat_index, 1]
+  var2_max <- range_var$tas[lon_index, lat_index, 2]
+  var3_min <- range_var$psl[lon_index, lat_index, 1]
+  var3_max <- range_var$psl[lon_index, lat_index, 2]
+
+  # Create bin edges for each variable
+  x_bins <- seq(var1_min, var1_max, length.out = nbins + 1)
+  y_bins <- seq(var2_min, var2_max, length.out = nbins + 1)
+  z_bins <- seq(var3_min, var3_max, length.out = nbins + 1)
+
+  # Create the coordinates for the centers of the bins
+  x_centers <- (x_bins[-1] + x_bins[-length(x_bins)]) / 2
+  y_centers <- (y_bins[-1] + y_bins[-length(y_bins)]) / 2
+  z_centers <- (z_bins[-1] + z_bins[-length(z_bins)]) / 2
+
+  # Expand the grid of coordinates
+  grid <- expand.grid(x = x_centers, y = y_centers, z = z_centers)
+
+  # Flatten the PDF array into a vector
+  pdf_flat <- as.vector(pdf_3d)
+
+  # Combine the coordinates with the PDF values
+  plot_data <- data.frame(
+    x = grid$x,
+    y = grid$y,
+    z = grid$z,
+    value = pdf_flat
+  )
+
+  # Normalize PDF values for marker size
+  normalized_pdf <- pdf_flat / max(pdf_flat, na.rm = TRUE)
+
+  # Plot the 3D histogram
+  fig <- plot_ly(
+    data = plot_data,
+    x = ~x,
+    y = ~y,
+    z = ~z,
+    type = "scatter3d",
+    mode = "markers",
+    marker = list(
+      size = ~normalized_pdf * 75,  # Adjust size scaling factor
+      color = ~value,
+      colorscale = "Viridis",
+      showscale = TRUE
+    ),
+    text = ~paste("PDF Value:", round(value, 4))
+  ) %>%
+    layout(
+      scene = list(
+        xaxis = list(title = "Variable 1 (pr)"),
+        yaxis = list(title = "Variable 2 (tas)"),
+        zaxis = list(title = "Variable 3 (psl)")
+      ),
+      title = paste("3D PDF for Grid Point (Lon:", lon_index, ", Lat:", lat_index, ")")
+    )
+
+  # Show the plot
+  fig
 }

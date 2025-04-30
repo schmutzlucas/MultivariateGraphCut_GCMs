@@ -16,7 +16,7 @@ library(future)
 library(future.apply)
 library(ncdf4)
 library(devtools)
-install_github("thaos/gcoWrapR")
+install_github("schmutzlucas/gcoWrapR")
 
 # --------- 2. Load Custom Functions ---------
 source_code_dir <- 'functions/'  # Define function directory path
@@ -29,13 +29,13 @@ cat("Script started at: ", format(start_time, "%Y-%m-%d %H:%M:%S"), "\n")
 # --------- 3. Global Variables ---------
 lon <- 0:359  # Longitude range
 lat <- -90:90  # Latitude range
-year_interest <- 1950:2023  # Years of interest
+year_interest <- 2025:2100  # Years of interest
 data_dir <- 'data/CMIP6_merged_all/'  # Directory for climate data
 variables <- c('pr', 'tas', 'psl')  # List of variables
-model_names <- read.table('model_names_pr_tas_psl.txt')$V1  # List of models
+model_names <- read.table('model_names_pr_tas_psl_perfect_model_without_duplicate.txt')$V1  # List of models
 
 # --------- 4. Parallel Processing Setup ---------
-plan(multisession, workers = 4)  # Set up parallel backend with 8 workers
+plan(multisession, workers = 12)  # Set up parallel backend with 8 workers
 
 # --------- 5. Function to Extract Years from Time NetCDF ---------
 extract_years_from_time <- function(nc_var) {
@@ -124,7 +124,7 @@ final_ranges <- lapply(seq_along(variables), function(v) {
 names(final_ranges) <- variables
 
 # --------- 9. Save the Final Merged Ranges ---------
-saveRDS(list( ranges = final_ranges), 'ranges/range_var_final_allModelsPar_1950-2023_90deg_3v.rds')
+saveRDS(list( ranges = final_ranges), 'ranges/range_var_final_allModelsPar_2025-2100_90deg_3v_PME.rds')
 
 # --------- 10. Display Script Execution Time ---------
 end_time <- Sys.time()
