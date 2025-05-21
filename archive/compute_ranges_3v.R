@@ -1,5 +1,5 @@
-# Function to calculate ranges for a single variable
 calculate_ranges <- function(variable, model_names, data_dir, year_interest, lon, lat) {
+
   range_var <- array(data = NA, dim = c(length(lon), length(lat), 2, length(model_names)))
 
   # Loop through models
@@ -11,8 +11,7 @@ calculate_ranges <- function(variable, model_names, data_dir, year_interest, lon
     pattern <- glob2rx(paste0(variable, "_", model_name, "*.nc"))
 
     # Get the filepath
-    file_name <- list.files(path = dir_path,
-                            pattern = pattern)
+    file_name <- list.files(path = dir_path, pattern = pattern)
     file_path <- paste0(dir_path, file_name)
     print(file_path)
     print(format(Sys.time(), "%Y%m%d%H%M"))
@@ -24,25 +23,31 @@ calculate_ranges <- function(variable, model_names, data_dir, year_interest, lon
     yyyy <- substr(as.character(nc.get.time.series(nc_var)), 1, 4)
     iyyyy <- which(yyyy %in% year_interest)
 
-    # Get the entire 2D-time model as array
-    tmp_grid_var <- ncvar_get(nc_var, variable, start = c(1, 1, min(iyyyy)), count = c(-1, -1, length(iyyyy)))
+    # Get the dimensions of the longitude and latitude variables
+    lon_var <- ncvar_get(nc_var, "lon")
+    lat_var <- ncvar_get(nc_var, "lat")
 
-    # For each grid point...
-    for (i in seq_along(lon)) {
-      for (j in seq_along(lat)) {
-        if (i %% 10 == 0 && j %% 100 == 0) {
-          print(c(m, model_name, i, j))
-        }
-        tmp_var <- tmp_grid_var[i, j, ]
+    # Find the indices that match the requested lon and lat ranges
+    lon_indices <- which(lon_var %in% lon)
+    lat_indices <- which(lat_var %in% lat)
 
-        if (variable == 'pr') {
-          tmp_var <- log2((tmp_var * 86400) + 1)
-        }
+    # Ensure the indices are contiguous ranges
+    start_lon <- min(lon_indices)
+    count_lon <- length(lon_indices)
+    start_lat <- min(lat_indices)
+    count_lat <- length(lat_indices)
 
-        range_var[i, j, 1, m] <- min(tmp_var)
-        range_var[i, j, 2, m] <- max(tmp_var)
-      }
+    # Get the 3D data as array
+    tmp_grid_var <- ncvar_get(nc_var, variable, start = c(start_lon, start_lat, min(iyyyy)),
+                              count = c(count_lon, count_lat, length(iyyyy)))
+
+    if (variable == 'pr') {
+      tmp_grid_var <- log((tmp_grid_var) + 1)
     }
+
+range_var[, , 1, m] <- matrixStats::rowMins(matrix(tmp_grid_var, nrow = prod(dim(tmp_grid_var)[1:2])), na.rm = TRUE)
+range_var[, , 2, m] <- matrixStats::rowMaxs(matrix(tmp_grid_var, nrow = prod(dim(tmp_grid_var)[1:2])), na.rm = TRUE)
+
 
     # Close the file
     nc_close(nc_var)
@@ -53,8 +58,9 @@ calculate_ranges <- function(variable, model_names, data_dir, year_interest, lon
   return(range_var)
 }
 
+
 # Install and load necessary libraries
-list_of_packages <- read.table("package_list.txt", sep="\n")$V1
+list_of_packages <- read.table("../package_list.txt", sep="\n")$V1
 new.packages <- list_of_packages[!(list_of_packages %in% installed.packages()[,"Package"])]
 if(length(new.packages))
   install.packages(new.packages, repos = "https://cloud.r-project.org")
@@ -71,33 +77,38 @@ for(path in file_paths){source(path)}
 
 
 # Method 3
-model_names <- read.table('model_names_long.txt')
+model_names <- read.table('../model_names_pr_tas_psl_perfect_model.txt')
 model_names <- as.list(model_names[['V1']])
-# Index of the reference
-ref_index <<- 1
+
 
 # Setting global variables
 lon <- 0:359
 lat <- -90:90
 # Temporal ranges
-year_interest <- 1950:2022
+year_interest <- 1950:2100
 # data directory
 data_dir <- 'data/CMIP6_merged_all/'
 
 
 # List of variables
-variables <- c('pr', 'tas')
+variables <- c('pr', 'tas', 'psl')
 
 # Calculate ranges for the first variable
 range_var_1 <- calculate_ranges(variables[1], model_names, data_dir, year_interest, lon, lat)
 # Calculate ranges for the second variable
 range_var_2 <- calculate_ranges(variables[2], model_names, data_dir, year_interest, lon, lat)
+# Calculate ranges for the third variable
+range_var_3 <- calculate_ranges(variables[3], model_names, data_dir, year_interest, lon, lat)
 
-saveRDS(range_var_1, 'ranges/pr_log_range_allModels_1950-2022.rds', compress = FALSE)
-saveRDS(range_var_2, 'ranges/tas_range_allModels_1950-2022.rds', compress = FALSE)
+saveRDS(range_var_1, 'ranges/pr_log_range_AllModelsPar_1950-2100_90deg_3v.rds', compress = FALSE)
+saveRDS(range_var_2, 'ranges/tas_range_AllModelsPar_1950-2100_90deg_3v.rds', compress = FALSE)
+saveRDS(range_var_3, 'ranges/psl_range_AllModelsPar_1950-2100_90deg_3v.rds', compress = FALSE)
+
+# Initialize the final range list for all variables
 range_var_final <- list()
 range_var_final[[variables[1]]] <- array(data = NA, dim = c(length(lon), length(lat), 2))
 range_var_final[[variables[2]]] <- array(data = NA, dim = c(length(lon), length(lat), 2))
+range_var_final[[variables[3]]] <- array(data = NA, dim = c(length(lon), length(lat), 2))
 
 # For each grid point...
 for (i in seq_along(lon)) {
@@ -107,7 +118,11 @@ for (i in seq_along(lon)) {
 
     range_var_final[[variables[2]]][i, j, 1] <- min(range_var_2[i, j, 1, ])
     range_var_final[[variables[2]]][i, j, 2] <- max(range_var_2[i, j, 2, ])
+
+    range_var_final[[variables[3]]][i, j, 1] <- min(range_var_3[i, j, 1, ])
+    range_var_final[[variables[3]]][i, j, 2] <- max(range_var_3[i, j, 2, ])
   }
 }
 
-saveRDS(range_var_final, 'ranges/range_var_final_allModels_1950-2022.rds', compress = FALSE)
+# Save the final combined ranges
+saveRDS(range_var_final, '../ranges/range_var_final_allModelsPar_1950-2100_90deg_3v.rds', compress = FALSE)

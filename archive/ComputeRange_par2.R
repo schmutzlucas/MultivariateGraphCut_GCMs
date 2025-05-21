@@ -1,5 +1,5 @@
 # Install and load necessary libraries
-list_of_packages <- read.table("package_list.txt", sep = "\n")$V1
+list_of_packages <- read.table("../package_list.txt", sep = "\n")$V1
 new.packages <- list_of_packages[!(list_of_packages %in% installed.packages()[, "Package"])]
 if (length(new.packages)) install.packages(new.packages, repos = "https://cloud.r-project.org")
 
@@ -26,7 +26,7 @@ lat <- -70:70
 year_interest <- 1950:2022
 data_dir <- 'data/CMIP6_merged_all/'
 variables <- c('pr', 'tas', 'psl')
-model_names <- read.table('model_names_pr_tas_psl.txt')$V1
+model_names <- read.table('../model_names_pr_tas_psl.txt')$V1
 
 # Setting up parallel backend
 num_cores <- detectCores() - 1  # Use all but one core

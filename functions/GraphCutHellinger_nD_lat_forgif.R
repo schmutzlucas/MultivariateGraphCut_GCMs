@@ -48,6 +48,7 @@ GraphCutHellinger_nD_lat_gif <- function(
   weight_smooth,
   nBins,
   iterations,
+  labelling,
   lat,
   seed,
   verbose,
@@ -182,12 +183,22 @@ GraphCutHellinger_nD_lat_gif <- function(
     lat_weights = lat_weights_cpp
   ))
 
+  ## -----------------------------------------------------------------
+  ##  Label initialisation
+  ## -----------------------------------------------------------------
+  if (is.null(labelling)) {
+    ## 1st frame (iterations = 0) – random map from the seed
+    set.seed(seed)
+    for (z in 0:(width * height - 1))
+      gco$setLabel(z, sample.int(n_labs, 1) - 1)   # C++ is 0-based
+  } else {
+    ## Subsequent frames – start from the previous labelling
+    if (!all(dim(labelling) == c(width, height)))
+      stop("Provided 'labelling' matrix has wrong dimensions.")
 
-  # Initialize labels randomly
-  set.seed(seed)
-  for (z in 0:((width * height) - 1)) {
-    random_label <- sample(0:(n_labs - 1), 1)
-    gco$setLabel(z, random_label)
+    for (j in 1:height)
+      for (i in 1:width)
+        gco$setLabel((i - 1) + width * (j - 1), labelling[i, j] - 1)
   }
 
   # Perform graph cut optimization

@@ -30,7 +30,7 @@
 #'
 #' @import ncdf4
 #' @export
-list_of_packages <- read.table("package_list.txt", sep = "\n")$V1
+list_of_packages <- read.table("../package_list.txt", sep = "\n")$V1
 new.packages <- list_of_packages[!(list_of_packages %in% installed.packages()[, "Package"])]
 if (length(new.packages)) install.packages(new.packages, repos = "https://cloud.r-project.org")
 
@@ -64,7 +64,7 @@ lat <- -90:90
 year_interest <- 1950:2023
 data_dir <- 'data/CMIP6_merged_all/'
 variables <- c('pr', 'tas', 'psl')
-model_names <- read.table('model_names_pr_tas_psl.txt')$V1
+model_names <- read.table('../model_names_pr_tas_psl.txt')$V1
 
 # 4. Set up parallel backend using `future` package
 # This enables parallel processing with 4 workers for faster computation
@@ -148,7 +148,7 @@ for (i in seq_along(lon)) {
 }
 
 # 10. Save the final merged ranges
-saveRDS(range_var_final, 'ranges/range_var_final_allModelsPar_1950-2023_90deg_3v.rds', compress = FALSE)
+saveRDS(range_var_final, '../ranges/range_var_final_allModelsPar_1950-2023_90deg_3v.rds', compress = FALSE)
 
 # Display script execution time and completion message
 end_time <- Sys.time()

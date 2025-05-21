@@ -59,7 +59,7 @@ calculate_ranges <- function(variable, model_names, data_dir, year_interest, lon
 
 
 # Install and load necessary libraries
-list_of_packages <- read.table("package_list.txt", sep="\n")$V1
+list_of_packages <- read.table("../package_list.txt", sep="\n")$V1
 new.packages <- list_of_packages[!(list_of_packages %in% installed.packages()[,"Package"])]
 if(length(new.packages))
   install.packages(new.packages, repos = "https://cloud.r-project.org")
@@ -76,7 +76,7 @@ for(path in file_paths){source(path)}
 
 
 # Method 3
-model_names <- read.table('model_names_long.txt')
+model_names <- read.table('../model_names_long.txt')
 model_names <- as.list(model_names[['V1']])
 
 # Index of the reference

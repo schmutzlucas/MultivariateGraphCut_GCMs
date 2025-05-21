@@ -36,7 +36,7 @@ nbins <<- nbins1d^(length(variables))
 
 
 # Obtains the list of models from the model names or from a file
-model_names <- read.table('model_names_pr_tas_psl_short.txt')
+model_names <- read.table('model_names_pr_tas_psl.txt')
 model_names <- as.list(model_names[['V1']])
 # Index of the reference
 ref_index <<- 1
@@ -1471,3 +1471,5 @@ image(1:width, 1:height, test_mat,
       xlab = "x (width index)", ylab = "y (height index)",
       main = paste("Pixel index", p, "set to 1"),
       col = c("white", "black"))
+
+

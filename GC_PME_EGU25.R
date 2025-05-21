@@ -504,7 +504,7 @@ p6
 }
 
 # --------------------------------------------------------------------------
-# Build Global / Land / Ocean violins by masking, without spatial joins
+# Build Global / Land / Ocean violins
 # --------------------------------------------------------------------------
 {
   library(ggplot2)
@@ -922,7 +922,7 @@ p6
   if (!dir.exists("figure")) dir.create("figure")
 
   # Aggregate only for GC-1 and MMM
-  df_all <- do.call(rbind, lapply(names(MMM_hdist_future_list), function(ref_name) {
+  df_all <- do.call(rbind, lapply(names(MMM_partial_hdist_future_list), function(ref_name) {
     mmm_vals <- as.vector(MMM_partial_hdist_future_list[[ref_name]])
     df <- data.frame(
       Hellinger = mmm_vals,
@@ -931,12 +931,12 @@ p6
       Reference = ref_name
     )
 
-    if (!is.null(GC_hdist_future_list[["0.1"]][[ref_name]])) {
-      gc_vals <- as.vector(GC_hdist_future_list[["0.1"]][[ref_name]])
+    if (!is.null(GC_partial_hdist_future_list[["1"]][[ref_name]])) {
+      gc_vals <- as.vector(GC_partial_hdist_future_list[["1"]][[ref_name]])
       df <- rbind(df, data.frame(
         Hellinger = gc_vals,
         Method = "GraphCut",
-        SmoothCost = "0.1",
+        SmoothCost = "1",
         Reference = ref_name
       ))
     }
@@ -945,20 +945,21 @@ p6
   }))
 
   df_all <- na.omit(df_all)
-  df_all$MethodLabel <- ifelse(df_all$Method == "MMM", "MMM", "GC-0.1")
-  df_all$MethodLabel <- factor(df_all$MethodLabel, levels = c("GC-0.1", "MMM"))
+  df_all$MethodLabel <- ifelse(df_all$Method == "MMM", "MMM", "GC-1")
+  df_all$MethodLabel <- factor(df_all$MethodLabel, levels = c("GC-1", "MMM"))
 
   p_agg <- ggplot(df_all, aes(x = MethodLabel, y = Hellinger, fill = MethodLabel)) +
     geom_violin(scale = "area", trim = TRUE, adjust = 1.5, alpha = 0.85, width = 0.7) +
     stat_summary(fun = mean, geom = "point", shape = 20, size = 2.2, color = "black", position = position_dodge(width = 0.7)) +
     stat_summary(fun = median, geom = "crossbar", width = 0.4, color = "red", fatten = 1, position = position_dodge(width = 0.7)) +
+    scale_y_continuous(limits = c(0, 1), expand = c(0, 0)) +
     scale_fill_manual(values = c(
-      "GC-0.1" = "#d95f02",
-      "MMM"    = "#e6ab02"
+      "GC-1" = "#F0E442",
+      "MMM"  = "#1EAD52"
     )) +
     labs(
       title = "Hellinger Distance (Future)",
-      subtitle = "Aggregated across all references - Smooth = 0.1",
+      subtitle = "Aggregated across all references - Smooth = 1",
       x = "Method",
       y = "Hellinger Distance",
       fill = "Method"
@@ -970,7 +971,71 @@ p6
       legend.position = "none"
     )
 
-  file_base <- "figure/Aggregated_Hdist_BC_22models_Smooth01_noBC1"
+  file_base <- "figure/Aggregated_partial_Hdist_BC_22models_Smooth1_noBC11"
+  ggsave(paste0(file_base, ".pdf"), plot = p_agg, width = 20, height = 15, units = "cm", dpi = 300)
+  ggsave(paste0(file_base, ".png"), plot = p_agg, width = 20, height = 15, units = "cm", dpi = 300)
+
+  cat("✅ Aggregated plot for Smooth = 1 saved at", file_base, "\n")
+}
+
+
+# Aggregated Hellinger for smooth 1 only
+{
+  library(ggplot2)
+  library(dplyr)
+
+  if (!dir.exists("figure")) dir.create("figure")
+
+  # Aggregate only for GC-1 and MMM
+  df_all <- do.call(rbind, lapply(names(MMM_hdist_future_list), function(ref_name) {
+    mmm_vals <- as.vector(MMM_hdist_future_list[[ref_name]])
+    df <- data.frame(
+      Hellinger = mmm_vals,
+      Method = "MMM",
+      SmoothCost = "MMM",
+      Reference = ref_name
+    )
+
+    if (!is.null(GC_hdist_future_list[["1"]][[ref_name]])) {
+      gc_vals <- as.vector(GC_hdist_future_list[["1"]][[ref_name]])
+      df <- rbind(df, data.frame(
+        Hellinger = gc_vals,
+        Method = "GC-1",
+        SmoothCost = "1",
+        Reference = ref_name
+      ))
+    }
+
+    return(df)
+  }))
+
+  df_all <- na.omit(df_all)
+  df_all$MethodLabel <- ifelse(df_all$Method == "MMM", "MMM", "GC-1")
+  df_all$MethodLabel <- factor(df_all$MethodLabel, levels = c("MMM", "GC-1"))
+
+  p_agg <- ggplot(df_all, aes(x = MethodLabel, y = Hellinger, fill = MethodLabel)) +
+    geom_violin(scale = "area", trim = TRUE, adjust = 1.5, alpha = 0.85, width = 0.7) +
+    stat_summary(fun = mean, geom = "point", shape = 20, size = 3, color = "black", position = position_dodge(width = 0.7)) +
+    stat_summary(fun = median, geom = "crossbar", width = 0.5, color = "red", fatten = 1.5, position = position_dodge(width = 0.7)) +
+    scale_y_continuous(limits = c(0, 1), expand = c(0, 0)) +
+    scale_fill_manual(values = c(
+      "GC-1" = "#F0E442",
+      "MMM"  = "#1EAD52"
+    )) +
+    labs(
+      title = "Aggregated H across all references",
+      x = "Method",
+      y = "H",
+      fill = "Method"
+    ) +
+    theme_minimal(base_size = 16) +
+    theme(
+      axis.text.x = element_text(size = 11),
+      plot.title = element_text(size = 26, face = "bold"),
+      legend.position = "none"
+    )
+
+  file_base <- "figure/Aggregated_Hdist_BC_22models_Smooth1_noBC11"
   ggsave(paste0(file_base, ".pdf"), plot = p_agg, width = 20, height = 15, units = "cm", dpi = 300)
   ggsave(paste0(file_base, ".png"), plot = p_agg, width = 20, height = 15, units = "cm", dpi = 300)
 
@@ -979,7 +1044,7 @@ p6
 
 
 
-# Aggregated partial Hellinger for smooth 0.1 only
+# Aggregated partial Hellinger for smooth 1 only
 {
   library(ggplot2)
   library(dplyr)
@@ -996,12 +1061,12 @@ p6
       Reference = ref_name
     )
 
-    if (!is.null(GC_partial_hdist_future_list[["0.1"]][[ref_name]])) {
-      gc_vals <- as.vector(GC_partial_hdist_future_list[["0.1"]][[ref_name]])
+    if (!is.null(GC_partial_hdist_future_list[["1"]][[ref_name]])) {
+      gc_vals <- as.vector(GC_partial_hdist_future_list[["1"]][[ref_name]])
       df <- rbind(df, data.frame(
         Hellinger = gc_vals,
         Method = "GraphCut",
-        SmoothCost = "0.1",
+        SmoothCost = "1",
         Reference = ref_name
       ))
     }
@@ -1010,32 +1075,33 @@ p6
   }))
 
   df_all <- na.omit(df_all)
-  df_all$MethodLabel <- ifelse(df_all$Method == "MMM", "MMM", "GC-0.1")
-  df_all$MethodLabel <- factor(df_all$MethodLabel, levels = c("GC-0.1", "MMM"))
+  df_all$MethodLabel <- ifelse(df_all$Method == "MMM", "MMM", "GC-1")
+  df_all$MethodLabel <- factor(df_all$MethodLabel, levels = c("MMM", "GC-1"))
 
   p_agg <- ggplot(df_all, aes(x = MethodLabel, y = Hellinger, fill = MethodLabel)) +
     geom_violin(scale = "area", trim = TRUE, adjust = 1.5, alpha = 0.85, width = 0.7) +
-    stat_summary(fun = mean, geom = "point", shape = 20, size = 2.2, color = "black", position = position_dodge(width = 0.7)) +
-    stat_summary(fun = median, geom = "crossbar", width = 0.4, color = "red", fatten = 1, position = position_dodge(width = 0.7)) +
+    stat_summary(fun = mean, geom = "point", shape = 20, size = 3, color = "black", position = position_dodge(width = 0.7)) +
+    stat_summary(fun = median, geom = "crossbar", width = 0.5, color = "red", fatten = 1.5, position = position_dodge(width = 0.7)) +
+    scale_y_continuous(limits = c(0, 1), expand = c(0, 0)) +
     scale_fill_manual(values = c(
-      "GC-0.1" = "#d95f02",
-      "MMM"    = "#e6ab02"
+      "GC-1" = "#F0E442",
+      "MMM"  = "#1EAD52"
     )) +
     labs(
-      title = "Partial Hellinger Distance (Future)",
-      subtitle = "Aggregated across all references - Smooth = 0.1",
+      title = "Aggregated H across all references",
       x = "Method",
-      y = "Partial Hellinger Distance",
+      y = "H",
       fill = "Method"
     ) +
-    theme_minimal(base_size = 14) +
+    theme_minimal(base_size = 16) +
     theme(
       axis.text.x = element_text(size = 11),
-      plot.title = element_text(size = 16, face = "bold"),
+      plot.title = element_text(size = 26, face = "bold"),
       legend.position = "none"
     )
 
-  file_base <- "figure/Aggregated_HdistPartial_BC_22models_Smooth01_noBC1"
+
+  file_base <- "figure/Aggregated_HdistPartial_BC_22models_Smooth1_noBC1"
   ggsave(paste0(file_base, ".pdf"), plot = p_agg, width = 20, height = 15, units = "cm", dpi = 300)
   ggsave(paste0(file_base, ".png"), plot = p_agg, width = 20, height = 15, units = "cm", dpi = 300)
 
@@ -1043,78 +1109,204 @@ p6
 }
 
 
+# all refs violins partial H
 {
   library(ggplot2)
   library(dplyr)
 
-  # Filtered references
-  references_done <- names(MMM_hdist_future_list)
+  if (!dir.exists("figure")) dir.create("figure")
 
-  # Initialize dataframe to collect everything
-  df_all <- data.frame()
-
-  for (ref_name in references_done) {
-
-    # Get MMM values
-    mmm_vals <- as.vector(MMM_hdist_future_list[[ref_name]])
-    df_tmp <- data.frame(
-      Hellinger = mmm_vals,
-      Method = "MMM",
-      SmoothCost = "MMM",
-      Reference = ref_name
+  # Build the combined data.frame
+  df_all <- do.call(rbind, lapply(names(MMM_partial_hdist_future_list), function(ref_name) {
+    # MMM
+    df <- data.frame(
+      Hellinger  = as.vector(MMM_partial_hdist_future_list[[ref_name]]),
+      Method     = "MMM",
+      Reference  = ref_name,
+      stringsAsFactors = FALSE
     )
-
-    # Get GC-1 values
-    if (!is.null(GC_hdist_future_list[["0.1"]][[ref_name]])) {
-      gc_vals <- as.vector(GC_hdist_future_list[["0.1"]][[ref_name]])
-      df_tmp <- rbind(df_tmp, data.frame(
-        Hellinger = gc_vals,
-        Method = "GraphCut",
-        SmoothCost = "0.1",
-        Reference = ref_name
+    # GC-1
+    if (!is.null(GC_partial_hdist_future_list[["1"]][[ref_name]])) {
+      df <- rbind(df, data.frame(
+        Hellinger  = as.vector(GC_partial_hdist_future_list[["1"]][[ref_name]]),
+        Method     = "GC-1",
+        Reference  = ref_name,
+        stringsAsFactors = FALSE
       ))
     }
-
-    df_all <- rbind(df_all, df_tmp)
-  }
+    df
+  }))
 
   df_all <- na.omit(df_all)
-  df_all$MethodLabel <- ifelse(df_all$Method == "MMM", "MMM", "GC-1")
-  df_all$MethodLabel <- factor(df_all$MethodLabel, levels = c("GC-0.1", "MMM"))
+  df_all$Method <- factor(df_all$Method, levels = c("MMM", "GC-1"))
 
-  # One violin plot per method, faceted by reference
-  p <- ggplot(df_all, aes(x = MethodLabel, y = Hellinger, fill = MethodLabel)) +
-    geom_violin(scale = "area", adjust = 1.2, width = 0.7, alpha = 0.85) +
-    stat_summary(fun = mean, geom = "point", shape = 20, size = 2.2, color = "black", position = position_dodge(width = 0.7)) +
-    stat_summary(fun = median, geom = "crossbar", width = 0.4, color = "red", fatten = 1, position = position_dodge(width = 0.7)) +
-    scale_fill_manual(values = c(
-      "GC-1" = "#d95f02",
-      "MMM"    = "#e6ab02"
-    )) +
+  # Plot
+  p_agg <- ggplot(df_all, aes(x = Method, y = Hellinger, fill = Method)) +
+    # violins with legend for fill
+    geom_violin(scale       = "area",
+                trim        = TRUE,
+                adjust      = 1.5,
+                alpha       = 0.85,
+                width       = 0.7,
+                show.legend = TRUE) +
+
+    # mean and median summaries, but do NOT add them to the legend
+    stat_summary(fun         = mean,
+                 geom        = "point",
+                 shape       = 21,
+                 size        = 2.5,
+                 color       = "black",
+                 fill        = "black",
+                 show.legend = FALSE) +
+    stat_summary(fun         = median,
+                 geom        = "crossbar",
+                 width       = 0.4,
+                 fatten      = 1,
+                 size        = 1.2,
+                 color       = "red",
+                 show.legend = FALSE) +
+
+    # your custom fill colours
+    scale_fill_manual(name = "Method",
+                      values = c("GC-1" = "#F0E442",
+                                 "MMM"  = "#1EAD52")) +
+
+    # facet by reference
+    facet_wrap(~ Reference, ncol = 8) +
+
+    # force y from 0 to 1 if you still want
+    scale_y_continuous(limits = c(0, 1), expand = c(0, 0)) +
+
+    # labels + theme
     labs(
-      title = "Hellinger Distance (Future) by Reference – Smooth = 0.1",
-      x = "Method",
-      y = "Hellinger Distance"
+      title    = "Per Grid-Point H by Reference",
+      x        = "Method",
+      y        = "H"
     ) +
-    theme_minimal(base_size = 12) +
+    theme_minimal(base_size = 16) +
     theme(
-      axis.text.x = element_text(size = 10, angle = 0, hjust = 0.5),
-      axis.text.y = element_text(size = 10),
-      plot.title = element_text(size = 14, face = "bold")
-    ) +
-    facet_wrap(~Reference, ncol = 9)
+      legend.position  = "right",
+      legend.key.size    = unit(2.0, "cm"),       # increase the swatch size
+      legend.key.width   = unit(1.2, "cm"),       # adjust width if you like
+      legend.key.height  = unit(1.2, "cm"),
+      legend.title       = element_text(size = 20),  # larger title
+      legend.text        = element_text(size = 18),  # larger legend labels
+      legend.key       = element_blank(),
+      axis.text.x      = element_text(size = 10),
+      axis.text.y      = element_text(size = 10),
+      plot.title       = element_text(size = 26, face = "bold"),
+      panel.grid.major = element_line(color = "grey80"),
+      panel.grid.minor = element_blank()
+    )
 
-  # Save plot
-  ggsave("figure/Hellinger_Comparison_Smooth_01_AllRefs_nobc.png", plot = p,
-         width = 20, height = 10, units = "in", dpi = 300)
-  # Save plot
-  ggsave("figure/Hellinger_Comparison_Smooth_01_AllRefs_nobc.pdf", plot = p,
-         width = 20, height = 10, units = "in", dpi = 300)
+  # Save
+  ggsave("figure/Partial_Hellinger_Comparison_Smooth_1_AllRefs_justcolours.png",
+         plot = p_agg, width = 20, height = 10, units = "in", dpi = 300)
+  ggsave("figure/Partial_Hellinger_Comparison_Smooth_1_AllRefs_justcolours.pdf",
+         plot = p_agg, width = 20, height = 10, units = "in", dpi = 300)
 
-  cat("✅ Violin plot for Smooth = 0.1 and MMM saved.\n")
-
+  cat("✅ Violin plot with just the Method fill legend saved.\n")
 }
 
+
+# all refs violins partial H
+{
+  library(ggplot2)
+  library(dplyr)
+
+  if (!dir.exists("figure")) dir.create("figure")
+
+  # Build the combined data.frame
+  df_all <- do.call(rbind, lapply(names(MMM_hdist_future_list), function(ref_name) {
+    # MMM
+    df <- data.frame(
+      Hellinger  = as.vector(MMM_hdist_future_list[[ref_name]]),
+      Method     = "MMM",
+      Reference  = ref_name,
+      stringsAsFactors = FALSE
+    )
+    # GC-1
+    if (!is.null(GC_hdist_future_list[["1"]][[ref_name]])) {
+      df <- rbind(df, data.frame(
+        Hellinger  = as.vector(GC_hdist_future_list[["1"]][[ref_name]]),
+        Method     = "GC-1",
+        Reference  = ref_name,
+        stringsAsFactors = FALSE
+      ))
+    }
+    df
+  }))
+
+  df_all <- na.omit(df_all)
+  df_all$Method <- factor(df_all$Method, levels = c("MMM", "GC-1"))
+
+  # Plot
+  p_agg <- ggplot(df_all, aes(x = Method, y = Hellinger, fill = Method)) +
+    # violins with legend for fill
+    geom_violin(scale       = "area",
+                trim        = TRUE,
+                adjust      = 1.5,
+                alpha       = 0.85,
+                width       = 0.7,
+                show.legend = TRUE) +
+
+    # mean and median summaries, but do NOT add them to the legend
+    stat_summary(fun         = mean,
+                 geom        = "point",
+                 shape       = 21,
+                 size        = 2.5,
+                 color       = "black",
+                 fill        = "black",
+                 show.legend = FALSE) +
+    stat_summary(fun         = median,
+                 geom        = "crossbar",
+                 width       = 0.4,
+                 fatten      = 1,
+                 size        = 1.2,
+                 color       = "red",
+                 show.legend = FALSE) +
+
+    # your custom fill colours
+    scale_fill_manual(name = "Method",
+                      values = c("GC-1" = "#F0E442",
+                                 "MMM"  = "#1EAD52")) +
+
+    # facet by reference
+    facet_wrap(~ Reference, ncol = 8) +
+
+    # force y from 0 to 1 if you still want
+    scale_y_continuous(limits = c(0, 1), expand = c(0, 0)) +
+
+    # labels + theme
+    labs(
+      title    = "Per Grid-Point H by Reference",
+      x        = "Method",
+      y        = "H"
+    ) +
+    theme_minimal(base_size = 16) +
+    theme(
+      legend.position  = "right",
+      legend.key.size    = unit(2.0, "cm"),       # increase the swatch size
+      legend.key.width   = unit(1.2, "cm"),       # adjust width if you like
+      legend.key.height  = unit(1.2, "cm"),
+      legend.title       = element_text(size = 20),  # larger title
+      legend.text        = element_text(size = 18),  # larger legend labels
+      legend.key       = element_blank(),
+      axis.text.x      = element_text(size = 10),
+      axis.text.y      = element_text(size = 10),
+      plot.title       = element_text(size = 26, face = "bold"),
+      panel.grid.major = element_line(color = "grey80"),
+      panel.grid.minor = element_blank()
+    )
+
+  # Save
+  ggsave("figure/Hellinger_Comparison_Smooth_1_AllRefs_justcolours.png",
+         plot = p_agg, width = 20, height = 10, units = "in", dpi = 300)
+  ggsave("figure/Hellinger_Comparison_Smooth_1_AllRefs_justcolours.pdf",
+         plot = p_agg, width = 20, height = 10, units = "in", dpi = 300)
+
+  cat("✅ Violin plot with just the Method fill legend saved.\n")
+}
 
 
 # Single grid point pdf
