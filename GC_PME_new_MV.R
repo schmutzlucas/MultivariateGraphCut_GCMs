@@ -50,7 +50,7 @@ lon_size <- length(lon)
 lat_size <- length(lat)
 # Temporal ranges
 year_present <<- 1950:1975
-year_future <<- 1998:2024
+year_future <<- 2075:2100
 # data directory
 data_dir <<- 'data/CMIP6_merged_all/'
 
@@ -63,7 +63,7 @@ nbins2d <- 16    # 2-D pairs
 nbins1d <- 32    # 1-D marginals
 
 ## 2.  model list
-model_names <- scan("model_names_pr_tas_psl.txt", what = "", quiet = TRUE)
+model_names <- scan("model_names_pr_tas_psl_perfect_model_without_duplicate.txt", what = "", quiet = TRUE)
 
 ## 3.  number of parallel workers
 workers <- 1   # adapt to your machine
@@ -166,12 +166,12 @@ hist(h_dist_fut,  main="H-dist Future  (all bins)")
 # --------------------------------------------------------------------
 #  5) run GraphCut on the 3-D cost map
 # --------------------------------------------------------------------
-smooth_cost <- 0.1
+smooth_cost <- 1
 
 GC_result <- tryCatch({
   GraphCutHellinger_nD_lat(
-    pdf_models_future = pdf3_models_fut,   # using “present” PDFs for labeling
-    h_dist            = h_dist_pres,        # datacost = Hellinger(pres)
+    pdf_models_future = pdf3_models_fut,
+    h_dist            = h_dist_pres,
     weight_data       = 1,
     weight_smooth     = smooth_cost,
     nBins             = nbins_total3d,
@@ -184,7 +184,6 @@ GC_result <- tryCatch({
   cat("⚠️  GraphCut failed at smooth_cost =", smooth_cost, ":\n", e$message, "\n")
   NULL
 })
-gc()
 
 
 {

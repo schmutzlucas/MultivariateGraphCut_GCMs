@@ -108,42 +108,74 @@ make_frame <- function(lab_matrix, title_text = NULL) {
     labs(title = title_text %||% "")
 }
 
-# ------------------------------------------------------------
-# 3.  Render PNGs and assemble the GIF ------------------------
-# ------------------------------------------------------------
-png_dir <- file.path(tempdir(), "frames_gc")
-dir.create(png_dir, showWarnings = FALSE)
+# # ------------------------------------------------------------
+# # 3.  Render PNGs and assemble the GIF ------------------------
+# # ------------------------------------------------------------
+# png_dir <- file.path(tempdir(), "frames_gc")
+# dir.create(png_dir, showWarnings = FALSE)
+#
+# # Full-HD size expressed in inches at 300 dpi
+# dpi_png <- 300
+# w_in    <- 1920 / dpi_png          # 6.4″
+# h_in    <- 1080 / dpi_png          # 3.6″
+#
+# for (k in seq_along(GC_results)) {
+#   lab  <- GC_results[[k]]$label_attribution
+#   ggsave(file.path(png_dir, sprintf("frame_%03d.png", k - 1)),
+#          plot   = make_frame(lab, sprintf("Graphcut iteration %d", k - 1)),
+#          width  = w_in, height = h_in,
+#          units  = "in", dpi = dpi_png)
+# }
+#
+#
+#
+# # turn the stack into a GIF (or MP4) ------------------------------------
+# png_files <- list.files(png_dir, pattern = "png$", full.names = TRUE)
+#
+# w_px <- 1920
+# h_px <- 1080            # or 960 if you want a perfect 2:1 world map
+#
+# gifski(png_files,
+#        gif_file = "figure/graphcut_evolution.gif",
+#        width    = w_px,          # <-- keep these two lines
+#        height   = h_px,
+#        delay    = 1)
+#
+#
+# # For MP4 instead of GIF:
+# # av::av_encode_video(png_files, "figure/graphcut_evolution.mp4",
+# #                     framerate = 1)
+#
+# cat("GIF written to", normalizePath("figure/graphcut_evolution030.gif"), "\n")
 
-# Full-HD size expressed in inches at 300 dpi
+
+
+# ------------------------------------------------------------
+# 3.  Render PNGs – one file per frame  -----------------------
+# ------------------------------------------------------------
+
+# create the output folder once
+png_dir <- file.path("figure", "GraphCutEvolution")
+dir.create(png_dir, recursive = TRUE, showWarnings = FALSE)
+
+# Full-HD raster size: 1920 × 1080 px @ 300 dpi
 dpi_png <- 300
-w_in    <- 1920 / dpi_png          # 6.4″
-h_in    <- 1080 / dpi_png          # 3.6″
+w_in    <- 1920 / dpi_png    # 6.4 in
+h_in    <- 1080 / dpi_png    # 3.6 in
 
 for (k in seq_along(GC_results)) {
   lab  <- GC_results[[k]]$label_attribution
-  ggsave(file.path(png_dir, sprintf("frame_%03d.png", k - 1)),
-         plot   = make_frame(lab, sprintf("Graphcut iteration %d", k - 1)),
-         width  = w_in, height = h_in,
-         units  = "in", dpi = dpi_png)
+  file <- file.path(png_dir, sprintf("frame_%03d.png", k - 1))
+
+  ggsave(filename = file,
+         plot     = make_frame(lab, sprintf("Graph-cut iteration %d", k - 1)),
+         width    = w_in,
+         height   = h_in,
+         units    = "in",
+         dpi      = dpi_png)
 }
 
+cat("✅", length(GC_results), "PNG frames written to",
+    normalizePath(png_dir), "\n")
 
 
-# turn the stack into a GIF (or MP4) ------------------------------------
-png_files <- list.files(png_dir, pattern = "png$", full.names = TRUE)
-
-w_px <- 1920
-h_px <- 1080            # or 960 if you want a perfect 2:1 world map
-
-gifski(png_files,
-       gif_file = "figure/graphcut_evolution.gif",
-       width    = w_px,          # <-- keep these two lines
-       height   = h_px,
-       delay    = 1)
-
-
-# For MP4 instead of GIF:
-# av::av_encode_video(png_files, "figure/graphcut_evolution.mp4",
-#                     framerate = 1)
-
-cat("GIF written to", normalizePath("figure/graphcut_evolution030.gif"), "\n")
