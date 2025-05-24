@@ -26,3 +26,4 @@ plotly
 PCICt
 ggeasy
 matrixStats
+RColorBrewer

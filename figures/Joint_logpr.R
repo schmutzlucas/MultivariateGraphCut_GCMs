@@ -38,7 +38,7 @@
 
   ## Model 1
 
-  nc <- nc_open('data/CMIP6/FGOALS-f3-L/tas/tas_FGOALS-f3-L_historical_r1i1p1f1_19500101-20141230_merged_regridded_v20191019.nc')
+  nc <- nc_open('data/CMIP6_merged_all/EC-Earth3-CC/tas/tas_EC-Earth3-CC_19500101-21001230.nc')
   var <- 'tas'
   # Temporal ranges
   year_present <- 1970:2014
@@ -47,9 +47,9 @@
   tas <- ncvar_get(nc, var, start = c(lon, lat, min(iyyyy)), count = c(1, 1, length(iyyyy)))
 
   var <- 'pr'
-  nc <- nc_open('data/CMIP6/FGOALS-f3-L/pr/pr_FGOALS-f3-L_historical_r1i1p1f1_19500101-20141230_merged_regridded_v20191019.nc')
+  nc <- nc_open('data/CMIP6_merged_all/EC-Earth3-CC/pr/pr_EC-Earth3-CC_19500101-21001230.nc')
   pr <- ncvar_get(nc, var, start = c(lon, lat, min(iyyyy)), count = c(1, 1, length(iyyyy)))
-  pr <- log2(pr * 86400 + 1)
+  pr <- log2(pr + 1)
 
 
 
@@ -81,7 +81,7 @@
     easy_center_title()
 
 
-
+p2
 
 
   ## Model 2

@@ -60,7 +60,6 @@ for (k in seq_len(n_frames)) {
 # 2.  Make one frame at a time  -------------------------------
 # ------------------------------------------------------------
 library(ggplot2)
-library(gifski)      # comes with gganimate, but load explicitly
 library(viridisLite)
 
 # your colour palette ---------------------------------------------------
@@ -105,7 +104,7 @@ make_frame <- function(lab_matrix, title_text = NULL) {
           axis.text   = element_blank(),
           axis.ticks  = element_blank(),
           plot.title  = element_text(hjust = .5, size = 12)) +
-    labs(title = title_text %||% "")
+    labs(title = if (is.null(title_text)) "" else title_text)
 }
 
 # # ------------------------------------------------------------
@@ -177,5 +176,3 @@ for (k in seq_along(GC_results)) {
 
 cat("✅", length(GC_results), "PNG frames written to",
     normalizePath(png_dir), "\n")
-
-
