@@ -56,8 +56,8 @@ GraphCutHellinger_nD <- function(
   height <- nrow(pdf_models_future[,,,1])
 
   # Permuting the arrays for C++ indexing
-  h_dist_cpp <- c(aperm(h_dist, c(2, 1, 3)))
-  pdf_models_cpp <- c(aperm(pdf_models_future, c(3, 2, 1, 4)))
+  h_dist_cpp <- c(aperm(h_dist, c(1, 2, 3)))
+  pdf_models_cpp <- c(aperm(pdf_models_future, c(3, 1, 2, 4)))
 
   print(dim(h_dist))
   print(dim(pdf_models_future))
