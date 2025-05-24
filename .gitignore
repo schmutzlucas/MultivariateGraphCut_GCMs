@@ -6,3 +6,10 @@
 /download
 /download_day
 GC_result.rds
+/gcoWrapR/
+.Rhistory
+.vscode/
+*.RData
+*.png
+*.pdf
+figure/
