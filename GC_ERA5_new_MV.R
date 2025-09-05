@@ -15,7 +15,7 @@ file_paths <- list.files(source_code_dir, full.names = T)
 for(path in file_paths){source(path)}
 
 
-range_var_final <- readRDS('ranges/range_var_final_allModelsPar_1950-2023_90deg_3v_PME.rds')
+range_var_final <- readRDS('ranges/range_var_final_ERA5_1950-2023_3v.rds')
 
 # ------------------------------------------------------------------
 # A. build permutation that converts 0…359 → -180…+179 order
@@ -206,7 +206,7 @@ gc()
 
 
   # Initialize a lon x lat matrix for each smooth cost
-  GC_hdist <- matrix(NA, nrow = length(lon), ncol = length(lat))
+  GC_hdist_pres <- matrix(NA, nrow = length(lon), ncol = length(lat))
   GC_hdist_fut <- matrix(NA, nrow = length(lon), ncol = length(lat))
 
   for(l in 1:(length(model_names))){  # Ensure that indexing aligns with model names
@@ -324,6 +324,11 @@ cat("✓ workspace saved to", filename, "\n")
     easy_center_title()
 
   p6
+
+  # 9) Save
+  name <- paste0("figure/Labelling/Labelling_GC_0.1_seed1_2")
+  ggsave(paste0(name, ".pdf"), plot = p6, width = 20, height = 15, units = "cm", dpi = 300)
+  ggsave(paste0(name, ".png"), plot = p6, width = 20, height = 15, units = "cm", dpi = 300)
 }
 
 
@@ -332,11 +337,11 @@ cat("✓ workspace saved to", filename, "\n")
   library(plotly)
 
   # Example grid point indices
-  lon_index <- 180+28 # Example longitude index
-  lat_index <- 90+46  # Example latitude index
+  lon_index <- 180 + 64 # Example longitude index
+  lat_index <- 90 # Example latitude index
 
   # Extract the 512-bin PDF vector for the specific grid point
-  pdf_vector <- pdf3_future[lon_index, lat_index, ,3]
+  pdf_vector <- pdf3_models_fut[lon_index, lat_index, ,2]
 
   # Reshape the PDF vector into a 3D array of dimensions [8, 8, 8]
   nbins <- 8
@@ -475,7 +480,7 @@ for (i in seq_along(model_names)) {
 
 
   # 8) Save
-  name <- paste0("figure/Bias/tas/Bias_tas_", model_name)
+  name <- paste0("figure/Bias2/tas/Bias_tas_", model_name)
   ggsave(paste0(name, ".pdf"), plot = p_bias, width = 20, height = 15, units = "cm", dpi = 300)
   ggsave(paste0(name, ".png"), plot = p_bias, width = 20, height = 15, units = "cm", dpi = 300)
 
@@ -549,7 +554,7 @@ for (i in seq_along(model_names)) {
 
 
   # 8) Save
-  name <- paste0("figure/Bias/psl/Bias_psl_", model_name)
+  name <- paste0("figure/Bias2/psl/Bias_psl_", model_name)
   ggsave(paste0(name, ".pdf"), plot = p_bias, width = 20, height = 15, units = "cm", dpi = 300)
   ggsave(paste0(name, ".png"), plot = p_bias, width = 20, height = 15, units = "cm", dpi = 300)
 
@@ -626,7 +631,7 @@ for (i in seq_along(model_names)) {
 
 
   # 9) Save
-  name <- paste0("figure/Bias/pr/Bias_pr_", model_name)
+  name <- paste0("figure/Bias2/pr/Bias_pr_", model_name)
   ggsave(paste0(name, ".pdf"), plot = p_bias, width = 20, height = 15, units = "cm", dpi = 300)
   ggsave(paste0(name, ".png"), plot = p_bias, width = 20, height = 15, units = "cm", dpi = 300)
 }
@@ -726,7 +731,7 @@ for (i in seq_along(model_names)) {
     print(p_bias)
 
     # 9) Save
-    name <- paste0("figure/Bias/", var, "/Bias_", var, "_MMM")
+    name <- paste0("figure/Bias2/", var, "/Bias_", var, "_MMM")
     ggsave(paste0(name, ".pdf"), plot = p_bias, width = 20, height = 15, units = "cm", dpi = 300)
     ggsave(paste0(name, ".png"), plot = p_bias, width = 20, height = 15, units = "cm", dpi = 300)
   }
@@ -831,7 +836,7 @@ for (i in seq_along(model_names)) {
     print(p_bias)
 
     # 9) Save
-    name <- paste0("figure/Bias/", var, "/Bias_", var, "_GC_MMM")
+    name <- paste0("figure/Bias2/", var, "/Bias_", var, "_GC_MMM")
     ggsave(paste0(name, ".pdf"), plot = p_bias, width = 20, height = 15, units = "cm", dpi = 300)
     ggsave(paste0(name, ".png"), plot = p_bias, width = 20, height = 15, units = "cm", dpi = 300)
 
@@ -908,7 +913,7 @@ for (i in seq_along(model_names)) {
 
 
     # 7) Save
-    name <- paste0("figure/Hellinger3/hdist3_", model_name)
+    name <- paste0("figure/Hellinger3_2/hdist3_", model_name)
     ggsave(paste0(name, ".pdf"), plot = p_hdist, width = 20, height = 15, units = "cm", dpi = 300)
     ggsave(paste0(name, ".png"), plot = p_hdist, width = 20, height = 15, units = "cm", dpi = 300)
   }
@@ -975,7 +980,7 @@ for (i in seq_along(model_names)) {
   print(p_hdist)
 
   # 5) Save
-  name <- "figure/Hellinger3/hdist3_MMM"
+  name <- "figure/Hellinger3_2/hdist3_MMM"
   ggsave(paste0(name, ".pdf"), plot = p_hdist, width = 20, height = 15, units = "cm", dpi = 300)
   ggsave(paste0(name, ".png"), plot = p_hdist, width = 20, height = 15, units = "cm", dpi = 300)
 
@@ -1041,7 +1046,7 @@ for (i in seq_along(model_names)) {
   print(p_hdist)
 
   # 5) Save
-  name <- "figure/Hellinger3/hdist3_GC"
+  name <- "figure/Hellinger3_2/hdist3_GC"
   ggsave(paste0(name, ".pdf"), plot = p_hdist, width = 20, height = 15, units = "cm", dpi = 300)
   ggsave(paste0(name, ".png"), plot = p_hdist, width = 20, height = 15, units = "cm", dpi = 300)
 }
@@ -1144,7 +1149,7 @@ for (i in seq_along(model_names)) {
   print(p_hdist)
 
   # 5) Save
-  name <- "figure/Hellinger/hdist2_MMM_prtas"
+  name <- "figure/Hellinger_2/hdist2_MMM_prtas"
   ggsave(paste0(name, ".pdf"), plot = p_hdist, width = 20, height = 15, units = "cm", dpi = 300)
   ggsave(paste0(name, ".png"), plot = p_hdist, width = 20, height = 15, units = "cm", dpi = 300)
 }
@@ -1251,7 +1256,7 @@ for (i in seq_along(model_names)) {
   print(p_hdist)
 
   # 5) Save
-  name <- "figure/Hellinger/hdist2_GC_prtas"
+  name <- "figure/Hellinger_2/hdist2_GC_prtas"
   ggsave(paste0(name, ".pdf"), plot = p_hdist, width = 20, height = 15, units = "cm", dpi = 300)
   ggsave(paste0(name, ".png"), plot = p_hdist, width = 20, height = 15, units = "cm", dpi = 300)
 }
@@ -1441,7 +1446,7 @@ for (i in seq_along(model_names)) {
                          limits = c(0, 80),
                          oob = scales::squish,
                          na.value = "white") +
-    labs(title = "LDR (Lowest 10%) Full Grid", x = "Temperature [K]", y = "Precipitation [log2(mm/day+1)]") +
+    labs(title = "LDR (Lowest 10%)", x = "Temperature [K]", y = "Precipitation [log2(mm/day+1)]") +
     scale_x_continuous(limits = tas_limit, expand = c(0, 0)) +
     scale_y_continuous(limits = pr_limit, expand = c(0, 0)) +
     theme_bw() +
@@ -1456,6 +1461,206 @@ for (i in seq_along(model_names)) {
   ggsave('figure/PDF2D/full_2Dpdf_gridpoint.png', plot = p_full, width = 15, height = 10, units = "cm", dpi = 300)
   ggsave('figure/PDF2D/HDR_2Dpdf_gridpoint.png', plot = p_hdr, width = 15, height = 10, units = "cm", dpi = 300)
   ggsave('figure/PDF2D/LDR_2Dpdf_gridpoint.png', plot = p_ldr, width = 15, height = 10, units = "cm", dpi = 300)
+
+
+  # Plot HDR with grey for empty bins
+  p_hdr_grey <- ggplot(counts, aes(x = x, y = y, fill = hdr_value)) +
+    geom_tile() +
+    scale_fill_gradientn(colors = viridis(64), name = "Count",
+                         limits = c(0, 80),
+                         oob = scales::squish,
+                         na.value = "grey80") +   # grey for empty bins
+    labs(title = "HDR (Top 90%)", x = "Temperature [K]", y = "Precipitation [log2(mm/day+1)]") +
+    scale_x_continuous(limits = tas_limit, expand = c(0, 0)) +
+    scale_y_continuous(limits = pr_limit, expand = c(0, 0)) +
+    theme_bw() +
+    easy_center_title()
+  print(p_hdr_grey)
+
+  # Plot LDR with grey for empty bins
+  counts$ldr_full_value_grey <- NA
+  counts$ldr_full_value_grey[ldr_indices] <- counts$count[ldr_indices]
+  p_ldr_grey <- ggplot(counts, aes(x = x, y = y, fill = ldr_full_value_grey)) +
+    geom_tile() +
+    scale_fill_gradientn(colors = viridis(64), name = "Count",
+                         limits = c(0, 80),
+                         oob = scales::squish,
+                         na.value = "grey80") +   # grey for empty bins
+    labs(title = "LDR (Lowest 10%)", x = "Temperature [K]", y = "Precipitation [log2(mm/day+1)]") +
+    scale_x_continuous(limits = tas_limit, expand = c(0, 0)) +
+    scale_y_continuous(limits = pr_limit, expand = c(0, 0)) +
+    theme_bw() +
+    easy_center_title()
+  print(p_ldr_grey)
+
+  # Save these grey-empty plots
+  ggsave('figure/PDF2D/HDR_2Dpdf_gridpoint_greyempty.png', plot = p_hdr_grey, width = 15, height = 10, units = "cm", dpi = 300)
+  ggsave('figure/PDF2D/LDR_2Dpdf_gridpoint_greyempty.png', plot = p_ldr_grey, width = 15, height = 10, units = "cm", dpi = 300)
+
 }
+
+
+{
+
+  # Example grid point
+  lon <-  101
+  lat <- 90 + 4
+
+  # Fixed axis limits
+  tas_min <- 292
+  tas_max <- 305
+  tas_limit <- c(tas_min, tas_max)
+  pr_max <- max(log2(180))
+  pr_limit <- c(0, pr_max)
+
+  # Load time series data
+  nc <- nc_open('data/CMIP6_merged_all/EC-Earth3-CC/tas/tas_EC-Earth3-CC_19500101-21001230.nc')
+  var <- 'tas'
+  year_present <- 1970:2014
+  yyyy <- substr(as.character(nc.get.time.series(nc)), 1, 4)
+  iyyyy <- which(yyyy %in% year_present)
+  tas <- ncvar_get(nc, var, start = c(lon, lat, min(iyyyy)), count = c(1, 1, length(iyyyy)))
+
+  var <- 'pr'
+  nc <- nc_open('data/CMIP6_merged_all/EC-Earth3-CC/pr/pr_EC-Earth3-CC_19500101-21001230.nc')
+  pr <- ncvar_get(nc, var, start = c(lon, lat, min(iyyyy)), count = c(1, 1, length(iyyyy)))
+  pr <- log2(pr + 1)
+
+  # Create data frame
+  df <- data.frame(x = tas, y = pr)
+
+  # Bin definitions
+  tas_bins <- seq(tas_min, tas_max, length.out = 65)
+  pr_bins <- seq(0, pr_max, length.out = 65)
+
+  df$x_bin <- cut(df$x, breaks = tas_bins, include.lowest = TRUE)
+  df$y_bin <- cut(df$y, breaks = pr_bins, include.lowest = TRUE)
+
+  counts <- as.data.frame(table(df$x_bin, df$y_bin))
+  names(counts) <- c("x_bin", "y_bin", "count")
+
+  x_centers <- (tas_bins[-1] + tas_bins[-length(tas_bins)]) / 2
+  y_centers <- (pr_bins[-1] + pr_bins[-length(pr_bins)]) / 2
+  counts$x <- x_centers[as.numeric(counts$x_bin)]
+  counts$y <- y_centers[as.numeric(counts$y_bin)]
+
+  # Convert counts to densities
+  total_points <- sum(counts$count)
+  bin_area <- (tas_max - tas_min)/64 * (pr_max - 0)/64
+  counts$density <- counts$count / (total_points * bin_area)
+
+  # Replace zeros with NA for full PDF plot to show as white
+  counts$value <- ifelse(counts$density == 0, NA, counts$density)
+  max_density <- max(counts$density, na.rm = TRUE)
+
+  # Plot full PDF (density)
+  p_full <- ggplot(counts, aes(x = x, y = y, fill = value)) +
+    geom_tile() +
+    scale_fill_gradientn(colors = viridis(64), name = "Density",
+                         limits = c(0, max_density),
+                         oob = scales::squish,
+                         na.value = "white") +
+    labs(title = "Full PDF", x = "Temperature [K]", y = "Precipitation [log2(mm/day+1)]") +
+    scale_x_continuous(limits = tas_limit, expand = c(0, 0)) +
+    scale_y_continuous(limits = pr_limit, expand = c(0, 0)) +
+    theme_bw() +
+    easy_center_title()
+  print(p_full)
+
+  # Compute HDR and LDR
+  pdf_vector <- counts$density / sum(counts$density)
+  hdr_indices <- select_hdr_indices(pdf_vector, tau = 0.10)
+  all_indices <- seq_along(pdf_vector)
+  ldr_indices <- setdiff(all_indices, hdr_indices)
+
+  # Create HDR and LDR density columns
+  counts$hdr_density <- NA
+  counts$ldr_density <- NA
+  counts$hdr_density[hdr_indices] <- counts$density[hdr_indices]
+  counts$ldr_density[ldr_indices] <- counts$density[ldr_indices]
+
+  # Plot HDR
+  p_hdr <- ggplot(counts, aes(x = x, y = y, fill = hdr_density)) +
+    geom_tile() +
+    scale_fill_gradientn(colors = viridis(64), name = "Density",
+                         limits = c(0, max_density),
+                         oob = scales::squish,
+                         na.value = "white") +
+    labs(title = "HDR (Top 90%)", x = "Temperature [K]", y = "Precipitation [log2(mm/day+1)]") +
+    scale_x_continuous(limits = tas_limit, expand = c(0, 0)) +
+    scale_y_continuous(limits = pr_limit, expand = c(0, 0)) +
+    theme_bw() +
+    easy_center_title()
+  print(p_hdr)
+
+  # Filter to LDR bins with density > 0
+  ldr_df <- counts[ldr_indices, ]
+  ldr_df <- ldr_df[ldr_df$density > 0, ]
+
+  p_ldr <- ggplot(ldr_df, aes(x = x, y = y, fill = density)) +
+    geom_tile() +
+    scale_fill_gradientn(colors = viridis(64), name = 'Density', limits = c(0, max_density), oob = scales::squish) +
+    labs(title = 'LDR (Lowest 10%)', x = 'Temperature [K]', y = 'Precipitation [log2(mm/day+1)]') +
+    scale_x_continuous(limits = tas_limit, expand = c(0, 0)) +
+    scale_y_continuous(limits = pr_limit, expand = c(0, 0)) +
+    theme_bw() +
+    easy_center_title()
+  print(p_ldr)
+
+  # Plot LDR with full grid
+  counts$ldr_full_density <- NA
+  counts$ldr_full_density[ldr_indices] <- counts$density[ldr_indices]
+  p_ldr_full <- ggplot(counts, aes(x = x, y = y, fill = ldr_full_density)) +
+    geom_tile() +
+    scale_fill_gradientn(colors = viridis(64), name = "Density",
+                         limits = c(0, max_density),
+                         oob = scales::squish,
+                         na.value = "white") +
+    labs(title = "LDR (Lowest 10%) Full Grid", x = "Temperature [K]", y = "Precipitation [log2(mm/day+1)]") +
+    scale_x_continuous(limits = tas_limit, expand = c(0, 0)) +
+    scale_y_continuous(limits = pr_limit, expand = c(0, 0)) +
+    theme_bw() +
+    easy_center_title()
+  print(p_ldr_full)
+
+  # Plot HDR with grey for empty bins
+  p_hdr_grey <- ggplot(counts, aes(x = x, y = y, fill = hdr_density)) +
+    geom_tile() +
+    scale_fill_gradientn(colors = viridis(64), name = "Density",
+                         limits = c(0, max_density),
+                         oob = scales::squish,
+                         na.value = "grey80") +
+    labs(title = "HDR (Top 90%)", x = "Temperature [K]", y = "Precipitation [log2(mm/day+1)]") +
+    scale_x_continuous(limits = tas_limit, expand = c(0, 0)) +
+    scale_y_continuous(limits = pr_limit, expand = c(0, 0)) +
+    theme_bw() +
+    easy_center_title()
+  print(p_hdr_grey)
+
+  # Plot LDR with grey for empty bins
+  counts$ldr_full_density_grey <- NA
+  counts$ldr_full_density_grey[ldr_indices] <- counts$density[ldr_indices]
+  p_ldr_grey <- ggplot(counts, aes(x = x, y = y, fill = ldr_full_density_grey)) +
+    geom_tile() +
+    scale_fill_gradientn(colors = viridis(64), name = "Density",
+                         limits = c(0, max_density),
+                         oob = scales::squish,
+                         na.value = "grey80") +
+    labs(title = "LDR (Lowest 10%)", x = "Temperature [K]", y = "Precipitation [log2(mm/day+1)]") +
+    scale_x_continuous(limits = tas_limit, expand = c(0, 0)) +
+    scale_y_continuous(limits = pr_limit, expand = c(0, 0)) +
+    theme_bw() +
+    easy_center_title()
+  print(p_ldr_grey)
+
+  # Save plots
+  ggsave('figure/PDF2D2/full_2Dpdf_density.png', plot = p_full, width = 15, height = 10, units = "cm", dpi = 300)
+  ggsave('figure/PDF2D2/HDR_2Dpdf_density.png', plot = p_hdr, width = 15, height = 10, units = "cm", dpi = 300)
+  ggsave('figure/PDF2D2/LDR_2Dpdf_density.png', plot = p_ldr, width = 15, height = 10, units = "cm", dpi = 300)
+  ggsave('figure/PDF2D2/LDR_2Dpdf_density_fullgrid.png', plot = p_ldr_full, width = 15, height = 10, units = "cm", dpi = 300)
+  ggsave('figure/PDF2D2/HDR_2Dpdf_density_greyempty.png', plot = p_hdr_grey, width = 15, height = 10, units = "cm", dpi = 300)
+  ggsave('figure/PDF2D2/LDR_2Dpdf_density_greyempty.png', plot = p_ldr_grey, width = 15, height = 10, units = "cm", dpi = 300)
+}
+
 
 
