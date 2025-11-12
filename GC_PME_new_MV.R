@@ -66,7 +66,7 @@ nbins1d <- 32    # 1-D marginals
 model_names <- scan("model_names_pr_tas_psl_perfect_model_without_duplicate.txt", what = "", quiet = TRUE)
 
 ## 3.  number of parallel workers
-workers <- 1   # adapt to your machine
+workers <- 4   # adapt to your machine
 
 ## 4.  call the multi-resolution histogram builder
 cat("→ building PDFs and means …\n")
@@ -111,7 +111,7 @@ gc()
 #  Save the workspace
 # --------------------------------------------------------------------
 stamp    <- format(Sys.time(), "%Y%m%d%H%M")
-filename <- paste0(stamp, "_workspace_multiRes_3v.RData")
+filename <- file.path("workspaces", paste0(stamp, "_workspace_multiRes_3v.RData"))
 save.image(file = filename, compress = FALSE)
 cat("✓ workspace saved to", filename, "\n")
 
@@ -166,7 +166,7 @@ hist(h_dist_fut,  main="H-dist Future  (all bins)")
 # --------------------------------------------------------------------
 #  5) run GraphCut on the 3-D cost map
 # --------------------------------------------------------------------
-smooth_cost <- 1
+smooth_cost <- 0.6
 
 GC_result <- tryCatch({
   GraphCutHellinger_nD_lat(

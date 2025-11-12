@@ -66,7 +66,7 @@ nbins1d <- 32    # 1-D marginals
 model_names <- scan("model_names_pr_tas_psl.txt", what = "", quiet = TRUE)
 
 ## 3.  number of parallel workers
-workers <- 1   # adapt to your machine
+workers <- 4   # adapt to your machine
 
 ## 4.  call the multi-resolution histogram builder
 cat("→ building PDFs and means …\n")
@@ -111,7 +111,7 @@ gc()
 #  Save the workspace
 # --------------------------------------------------------------------
 stamp    <- format(Sys.time(), "%Y%m%d%H%M")
-filename <- paste0(stamp, "_workspace_multiRes_3v.RData")
+filename <- file.path("workspaces", paste0(stamp, "_workspace_multiRes_3v.RData"))
 save.image(file = filename, compress = FALSE)
 cat("✓ workspace saved to", filename, "\n")
 

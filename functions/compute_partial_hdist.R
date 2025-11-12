@@ -31,7 +31,7 @@ compute_partial_hdist <- function(pdf_ref, pdf_model, selected_indices) {
   n_models <- ifelse(length(dim(pdf_model)) == 4, dim(pdf_model)[4], 1)
 
   # Initialize output
-  h_dist_partial_future <- array(NA, dim = c(lon_size, lat_size, n_models))
+  h_dist_partial <- array(NA, dim = c(lon_size, lat_size, n_models))
 
   for (j in 1:lat_size) {
     for (i in 1:lon_size) {
@@ -41,7 +41,7 @@ compute_partial_hdist <- function(pdf_ref, pdf_model, selected_indices) {
         for (m in 1:n_models) {
           model_pdf <- if (n_models == 1) pdf_model[i, j, selected_indices_grid] else pdf_model[i, j, selected_indices_grid, m]
 
-          h_dist_partial_future[i, j, m] <- sqrt(
+          h_dist_partial[i, j, m] <- sqrt(
             sum((sqrt(model_pdf) - sqrt(pdf_ref[i, j, selected_indices_grid]))^2)
           ) / sqrt(2)
         }
@@ -49,5 +49,5 @@ compute_partial_hdist <- function(pdf_ref, pdf_model, selected_indices) {
     }
   }
 
-  return(h_dist_partial_future)
+  return(h_dist_partial)
 }
