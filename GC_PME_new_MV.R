@@ -15,7 +15,7 @@ file_paths <- list.files(source_code_dir, full.names = T)
 for(path in file_paths){source(path)}
 
 
-range_var_final <- readRDS('ranges/range_var_final_allModelsPar_1950-2023_90deg_3v_PME.rds')
+range_var_final <- readRDS('ranges/range_var_final_allModelsPar_2025-2100_90deg_3v_PME.rds')
 
 # ------------------------------------------------------------------
 # A. build permutation that converts 0…359 → -180…+179 order
@@ -52,7 +52,7 @@ lat_size <- length(lat)
 year_present <<- 1950:1975
 year_future <<- 2075:2100
 # data directory
-data_dir <<- 'data/CMIP6_merged_all/'
+data_dir <<- 'data/CMIP6_summer_Apr15-Oct14'
 
 # List of the variable used
 variables <- c('pr', 'tas', 'psl')
