@@ -50,9 +50,10 @@ lon_size <- length(lon)
 lat_size <- length(lat)
 # Temporal ranges
 year_present <<- 1950:1975
-year_future <<- 1998:2024
+year_future <<- 1999:2024
 # data directory
-data_dir <<- 'data/CMIP6_merged_all/'
+data_dir <<- 'data/CMIP6_summer_Apr15-Oct14'
+
 
 # List of the variable used
 variables <- c('pr', 'tas', 'psl')
@@ -66,7 +67,7 @@ nbins1d <- 32    # 1-D marginals
 model_names <- scan("model_names_pr_tas_psl.txt", what = "", quiet = TRUE)
 
 ## 3.  number of parallel workers
-workers <- 1   # adapt to your machine
+workers <- 4   # adapt to your machine
 
 ## 4.  call the multi-resolution histogram builder
 cat("→ building PDFs and means …\n")
@@ -111,7 +112,7 @@ gc()
 #  Save the workspace
 # --------------------------------------------------------------------
 stamp    <- format(Sys.time(), "%Y%m%d%H%M")
-filename <- paste0(stamp, "_workspace_multiRes_3v.RData")
+filename <- file.path("workspaces", paste0(stamp, "_workspace_multiRes_3v.RData"))
 save.image(file = filename, compress = FALSE)
 cat("✓ workspace saved to", filename, "\n")
 
@@ -253,6 +254,77 @@ gc()
   hist(MMM_hdist_fut)
   hist(GC_hdist_fut)
 
+{### ---- PRESENT ----
+  h1 <- hist(MMM_hdist_pres, plot = FALSE)
+  h2 <- hist(GC_hdist_pres,  plot = FALSE)
+
+  ymax_pres <- max(h1$counts, h2$counts)
+
+  hist(MMM_hdist_pres,
+       col = rgb(1, 0, 0, 0.4),
+       border = "white",
+       ylim = c(0, ymax_pres),
+       main = "Present: MMM vs GC",
+       xlab = "Hellinger distance")
+
+  hist(GC_hdist_pres,
+       col = rgb(0, 0, 1, 0.4),
+       border = "white",
+       add = TRUE)
+
+  legend("topright",
+         legend = c("MMM (present)", "GC (present)"),
+         fill   = c(rgb(1,0,0,0.4), rgb(0,0,1,0.4)),
+         border = NA)
+
+
+  ### ---- FUTURE ----
+  h3 <- hist(MMM_hdist_fut, plot = FALSE)
+  h4 <- hist(GC_hdist_fut,  plot = FALSE)
+
+  ymax_fut <- max(h3$counts, h4$counts)
+
+  hist(MMM_hdist_fut,
+       col = rgb(1, 0, 0, 0.4),
+       border = "white",
+       ylim = c(0, ymax_fut),
+       main = "Future: MMM vs GC",
+       xlab = "Hellinger distance")
+
+  hist(GC_hdist_fut,
+       col = rgb(0, 0, 1, 0.4),
+       border = "white",
+       add = TRUE)
+
+  legend("topright",
+         legend = c("MMM (future)", "GC (future)"),
+         fill   = c(rgb(1,0,0,0.4), rgb(0,0,1,0.4)),
+         border = NA)
+}
+
+{par(mfrow = c(1,2))
+
+  # Present
+  h1 <- hist(MMM_hdist_pres, plot = FALSE)
+  h2 <- hist(GC_hdist_pres, plot = FALSE)
+  ymax_pres <- max(h1$counts, h2$counts)
+
+  hist(MMM_hdist_pres, col = rgb(1,0,0,0.4), border="white",
+       ylim=c(0,ymax_pres), main="Present", xlab="Hellinger distance")
+  hist(GC_hdist_pres,  col = rgb(0,0,1,0.4), border="white", add=TRUE)
+
+  # Future
+  h3 <- hist(MMM_hdist_fut, plot = FALSE)
+  h4 <- hist(GC_hdist_fut, plot = FALSE)
+  ymax_fut <- max(h3$counts, h4$counts)
+
+  hist(MMM_hdist_fut, col = rgb(1,0,0,0.4), border="white",
+       ylim=c(0,ymax_fut), main="Future", xlab="Hellinger distance")
+  hist(GC_hdist_fut,  col = rgb(0,0,1,0.4), border="white", add=TRUE)
+
+  par(mfrow = c(1,1))
+}
+
   mean(MMM_hdist_fut)
   mean(GC_hdist_fut)
   gc()
@@ -262,7 +334,7 @@ gc()
 #  Save the workspace
 # --------------------------------------------------------------------
 stamp    <- format(Sys.time(), "%Y%m%d%H%M")
-filename <- paste0(stamp, "_workspace_multiRes_3v_gc_results.RData")
+filename <- file.path("workspaces", paste0(stamp, "_workspace_multiRes_3v_gc_results.RData"))
 save.image(file = filename, compress = FALSE)
 cat("✓ workspace saved to", filename, "\n")
 

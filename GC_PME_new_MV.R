@@ -15,7 +15,7 @@ file_paths <- list.files(source_code_dir, full.names = T)
 for(path in file_paths){source(path)}
 
 
-range_var_final <- readRDS('ranges/range_var_final_allModelsPar_1950-2023_90deg_3v_PME.rds')
+range_var_final <- readRDS('ranges/range_var_final_allModelsPar_2025-2100_90deg_3v_PME.rds')
 
 # ------------------------------------------------------------------
 # A. build permutation that converts 0…359 → -180…+179 order
@@ -52,7 +52,7 @@ lat_size <- length(lat)
 year_present <<- 1950:1975
 year_future <<- 2075:2100
 # data directory
-data_dir <<- 'data/CMIP6_merged_all/'
+data_dir <<- 'data/CMIP6_summer_Apr15-Oct14'
 
 # List of the variable used
 variables <- c('pr', 'tas', 'psl')
@@ -66,7 +66,7 @@ nbins1d <- 32    # 1-D marginals
 model_names <- scan("model_names_pr_tas_psl_perfect_model_without_duplicate.txt", what = "", quiet = TRUE)
 
 ## 3.  number of parallel workers
-workers <- 1   # adapt to your machine
+workers <- 4   # adapt to your machine
 
 ## 4.  call the multi-resolution histogram builder
 cat("→ building PDFs and means …\n")
@@ -111,7 +111,7 @@ gc()
 #  Save the workspace
 # --------------------------------------------------------------------
 stamp    <- format(Sys.time(), "%Y%m%d%H%M")
-filename <- paste0(stamp, "_workspace_multiRes_3v.RData")
+filename <- file.path("workspaces", paste0(stamp, "_workspace_multiRes_3v.RData"))
 save.image(file = filename, compress = FALSE)
 cat("✓ workspace saved to", filename, "\n")
 
@@ -166,7 +166,7 @@ hist(h_dist_fut,  main="H-dist Future  (all bins)")
 # --------------------------------------------------------------------
 #  5) run GraphCut on the 3-D cost map
 # --------------------------------------------------------------------
-smooth_cost <- 1
+smooth_cost <- 0.6
 
 GC_result <- tryCatch({
   GraphCutHellinger_nD_lat(
