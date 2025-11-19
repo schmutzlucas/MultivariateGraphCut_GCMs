@@ -873,7 +873,7 @@ for (i in seq_along(model_names)) {
     p_bias <- ggplot() +
       geom_tile(data = test_df, aes(x = lon_wrapped, y = lat, fill = Bias)) +
       labs(subtitle = 'Projection period: 1998 - 2023') +
-      ggtitle(paste0('GC MMM: Mean |Bias| = ', round(global_bias, 2), ' ', unit_list[[var]])) +
+      ggtitle(paste0('GC : Mean |Bias| = ', round(global_bias, 2), ' ', unit_list[[var]])) +
       scale_fill_gradientn(
         colours = rev(brewer.pal(11, "RdBu")),
         breaks = v_limits,
@@ -908,7 +908,7 @@ for (i in seq_along(model_names)) {
     print(p_bias)
 
     # 9) Save
-    name <- paste0("figure/Bias2/", var, "/Bias_", var, "_GC_MMM")
+    name <- paste0("figure/Bias2/", var, "/Bias_", var, "_GC")
     ggsave(paste0(name, ".pdf"), plot = p_bias, width = 20, height = 15, units = "cm", dpi = 300)
     ggsave(paste0(name, ".png"), plot = p_bias, width = 20, height = 15, units = "cm", dpi = 300)
 
@@ -1228,7 +1228,6 @@ for (i in seq_along(model_names)) {
 
 }
 
-
 # GC Map hdist pr_tas
 {
   # Initialize matrix for Hellinger distance
@@ -1333,6 +1332,418 @@ for (i in seq_along(model_names)) {
   ggsave(paste0(name, ".png"), plot = p_hdist, width = 20, height = 15, units = "cm", dpi = 300)
 }
 }
+
+
+# MMM & GC hdist 1d
+{
+  ## -------------------------------------------------------------
+  ## 1D Hellinger distance maps for pr, psl, tas (MMM & GraphCut)
+  ## on pdf1_future
+  ## -------------------------------------------------------------
+
+  # Precompute area weights once
+  cos_weights <- cos(lat * pi/180)
+  weight_matrix <- matrix(
+    rep(cos_weights, each = length(lon)),
+    nrow = length(lon),
+    byrow = FALSE
+  )
+
+  vars <- c("pr", "psl", "tas")
+
+  for (v in vars) {
+    message("Processing variable: ", v)
+
+    # Extract 4D array for this variable [lon, lat, bin, model]
+    pdf_var <- pdf1_future[[v]]
+    nmod <- dim(pdf_var)[4]
+
+    ## -----------------------------
+    ## 1) MMM Hellinger (1D)
+    ## -----------------------------
+    mmm_hdist_1d <- matrix(NA_real_, nrow = length(lon), ncol = length(lat))
+
+    for (i in seq_along(lon)) {
+      for (j in seq_along(lat)) {
+        # Reference 1D PDF
+        pdf_ref <- pdf_var[i, j, , 1]
+
+        # MMM over remaining models
+        pdf_models <- pdf_var[i, j, , 2:nmod]
+        mmm_pdf <- rowMeans(pdf_models, na.rm = TRUE)
+
+        # 1D Hellinger distance
+        hd <- sqrt(sum((sqrt(mmm_pdf) - sqrt(pdf_ref))^2)) / sqrt(2)
+        mmm_hdist_1d[i, j] <- hd
+      }
+    }
+
+    # Replace NaN with 0
+    mmm_hdist_1d[is.nan(mmm_hdist_1d)] <- 0
+
+    # Optional: keep result in workspace with a meaningful name
+    assign(paste0("mmm_hdist_", v, "1d_fut"), mmm_hdist_1d)
+
+    # Histogram check
+    hist(mmm_hdist_1d,
+         breaks = 50,
+         main = paste0("Hellinger Distance 1D for MMM (", v, ")"))
+
+    # Global weighted mean
+    global_mean_h_mmm <- sum(mmm_hdist_1d * weight_matrix, na.rm = TRUE) /
+      sum(weight_matrix, na.rm = TRUE)
+    cat("Global weighted mean H (1D) for MMM (", v, "): ",
+        round(global_mean_h_mmm, 3), "\n", sep = "")
+
+    # Map for MMM
+  {
+    limit <- 0.1
+    limits <- c(0.0, limit)
+    v_limits <- seq(limits[1], limits[2], length.out = 3)
+
+    test_df <- melt(mmm_hdist_1d,
+                    varnames = c("lon_idx", "lat_idx"),
+                    value.name = "H_dist")
+    test_df$lon <- lon[test_df$lon_idx]
+    test_df$lat <- lat[test_df$lat_idx]
+    test_df$lon_wrapped <- ifelse(test_df$lon > 180,
+                                  test_df$lon - 360,
+                                  test_df$lon)
+
+    global_h_mmm <- sum(mmm_hdist_1d * weight_matrix, na.rm = TRUE) /
+      sum(weight_matrix, na.rm = TRUE)
+
+    p_hdist_mmm <- ggplot() +
+      geom_tile(data = test_df,
+                aes(x = lon_wrapped, y = lat, fill = H_dist)) +
+      labs(subtitle = "Projection period: 1998 - 2023") +
+      ggtitle(paste0("MMM ", v, " Mean H = ",
+                     round(global_h_mmm, 3))) +
+      scale_fill_gradient(
+        low = "white",
+        high = "#015a8c",
+        limits = limits,
+        breaks = v_limits,
+        oob = scales::squish
+      ) +
+      borders("world", colour = "black", lwd = 0.12) +
+      scale_x_continuous(expand = c(0, 0)) +
+      scale_y_continuous(expand = c(0, 0)) +
+      coord_fixed(ratio = 1.3,
+                  xlim = c(-180, 180),
+                  ylim = c(-84, 90),
+                  expand = FALSE) +
+      theme_bw() +
+      theme(
+        legend.position   = "right",
+        panel.grid.major  = element_blank(),
+        panel.grid.minor  = element_blank(),
+        panel.background  = element_blank(),
+        legend.key.size   = unit(1, "cm"),
+        legend.key.height = unit(1.4, "cm"),
+        legend.key.width  = unit(0.4, "cm"),
+        legend.title      = element_text(size = 16),
+        legend.text       = element_text(size = 12),
+        plot.title        = element_text(size = 24),
+        plot.subtitle     = element_text(size = 20, hjust = 0.5),
+        axis.text         = element_text(size = 14),
+        axis.title        = element_text(size = 16)
+      ) +
+      xlab("Longitude") +
+      ylab("Latitude") +
+      labs(fill = "H (1D)") +
+      easy_center_title()
+
+    print(p_hdist_mmm)
+
+    dir.create("figure/Hellinger_1", showWarnings = FALSE, recursive = TRUE)
+    name_mmm <- paste0("figure/Hellinger_1/hdist1_MMM_", v)
+    ggsave(paste0(name_mmm, ".pdf"), plot = p_hdist_mmm,
+           width = 20, height = 15, units = "cm", dpi = 300)
+    ggsave(paste0(name_mmm, ".png"), plot = p_hdist_mmm,
+           width = 20, height = 15, units = "cm", dpi = 300)
+  }
+
+    ## -----------------------------
+    ## 2) GraphCut Hellinger (1D)
+    ## -----------------------------
+    gc_hdist_1d <- matrix(NA_real_, nrow = length(lon), ncol = length(lat))
+
+    for (i in seq_along(lon)) {
+      for (j in seq_along(lat)) {
+        pdf_ref <- pdf_var[i, j, , 1]
+
+        # GC label (0-based), +1 to match model index in pdf_var
+        label <- GC_result$label_attribution[i, j]
+
+        pdf_gc <- pdf_var[i, j, , label + 1]
+
+        hd <- sqrt(sum((sqrt(pdf_gc) - sqrt(pdf_ref))^2)) / sqrt(2)
+        gc_hdist_1d[i, j] <- hd
+      }
+    }
+
+    gc_hdist_1d[is.nan(gc_hdist_1d)] <- 0
+    assign(paste0("gc_hdist_", v, "1d_fut"), gc_hdist_1d)
+
+    hist(gc_hdist_1d,
+         breaks = 50,
+         main = paste0("Hellinger Distance 1D for GC (", v, ")"))
+
+    global_mean_h_gc <- sum(gc_hdist_1d * weight_matrix, na.rm = TRUE) /
+      sum(weight_matrix, na.rm = TRUE)
+    cat("Global weighted mean H (1D) for GC (", v, "): ",
+        round(global_mean_h_gc, 3), "\n", sep = "")
+
+    # Map for GC
+  {
+    limit <- 0.1
+    limits <- c(0.0, limit)
+    v_limits <- seq(limits[1], limits[2], length.out = 3)
+
+    test_df <- melt(gc_hdist_1d,
+                    varnames = c("lon_idx", "lat_idx"),
+                    value.name = "H_dist")
+    test_df$lon <- lon[test_df$lon_idx]
+    test_df$lat <- lat[test_df$lat_idx]
+    test_df$lon_wrapped <- ifelse(test_df$lon > 180,
+                                  test_df$lon - 360,
+                                  test_df$lon)
+
+    global_h_gc <- sum(gc_hdist_1d * weight_matrix, na.rm = TRUE) /
+      sum(weight_matrix, na.rm = TRUE)
+
+    p_hdist_gc <- ggplot() +
+      geom_tile(data = test_df,
+                aes(x = lon_wrapped, y = lat, fill = H_dist)) +
+      labs(subtitle = "Projection period: 1998 - 2023") +
+      ggtitle(paste0("GraphCut ", v, " (1D): Mean H = ",
+                     round(global_h_gc, 3))) +
+      scale_fill_gradient(
+        low = "white",
+        high = "#015a8c",
+        limits = limits,
+        breaks = v_limits,
+        oob = scales::squish
+      ) +
+      borders("world", colour = "black", lwd = 0.12) +
+      scale_x_continuous(expand = c(0, 0)) +
+      scale_y_continuous(expand = c(0, 0)) +
+      coord_fixed(ratio = 1.3,
+                  xlim = c(-180, 180),
+                  ylim = c(-84, 90),
+                  expand = FALSE) +
+      theme_bw() +
+      theme(
+        legend.position   = "right",
+        panel.grid.major  = element_blank(),
+        panel.grid.minor  = element_blank(),
+        panel.background  = element_blank(),
+        legend.key.size   = unit(1, "cm"),
+        legend.key.height = unit(1.4, "cm"),
+        legend.key.width  = unit(0.4, "cm"),
+        legend.title      = element_text(size = 16),
+        legend.text       = element_text(size = 12),
+        plot.title        = element_text(size = 24),
+        plot.subtitle     = element_text(size = 20, hjust = 0.5),
+        axis.text         = element_text(size = 14),
+        axis.title        = element_text(size = 16)
+      ) +
+      xlab("Longitude") +
+      ylab("Latitude") +
+      labs(fill = "H (1D)") +
+      easy_center_title()
+
+    print(p_hdist_gc)
+
+    name_gc <- paste0("figure/Hellinger_1/hdist1_GC_", v)
+    ggsave(paste0(name_gc, ".pdf"), plot = p_hdist_gc,
+           width = 20, height = 15, units = "cm", dpi = 300)
+    ggsave(paste0(name_gc, ".png"), plot = p_hdist_gc,
+           width = 20, height = 15, units = "cm", dpi = 300)
+  }
+
+    gc()  # memory clean up after each variable
+  }
+
+}
+
+# Models hdist 1d tas
+{
+  ## -------------------------------------------------------------
+  ## 1D Hellinger distance for tas, all models vs reference
+  ## -------------------------------------------------------------
+
+  # Extract tas PDF: [lon, lat, bin, model]
+  tas_arr <- pdf1_future$tas
+
+  dims <- dim(tas_arr)
+  nlon <- dims[1]
+  nlat <- dims[2]
+  nbins <- dims[3]
+  nmod <- dims[4]
+
+  # Sanity check: model_names length should match number of non-reference models
+  if (length(model_names) != (nmod - 1)) {
+    stop("length(model_names) must be nmod - 1 (excluding reference)")
+  }
+
+  # Result: [lon, lat, model] for models 2:nmod vs reference (1)
+  hdist1_tas_fut <- array(
+    NA_real_,
+    dim = c(nlon, nlat, nmod - 1),
+    dimnames = list(
+      lon = NULL,
+      lat = NULL,
+      model = model_names
+    )
+  )
+
+  # Main loop
+  for (i in seq_len(nlon)) {
+    for (j in seq_len(nlat)) {
+
+      # Reference 1D PDF at this grid point
+      pdf_ref <- tas_arr[i, j, , 1]
+
+      # If the reference is entirely NA, skip
+      if (all(is.na(pdf_ref))) next
+
+      sqrt_ref <- sqrt(pdf_ref)
+
+      # Loop over models 2:nmod, store in index (m-1)
+      for (m in 2:nmod) {
+
+        pdf_mod <- tas_arr[i, j, , m]
+        if (all(is.na(pdf_mod))) next
+
+        sqrt_mod <- sqrt(pdf_mod)
+
+        # Hellinger distance (1D)
+        hd <- sqrt(sum((sqrt_mod - sqrt_ref)^2, na.rm = TRUE)) / sqrt(2)
+
+        hdist1_tas_fut[i, j, m - 1] <- hd
+      }
+    }
+  }
+
+  # Optional diagnostics: keep NA (do not force them to 0)
+  summary(as.numeric(hdist1_tas_fut))
+  hist(hdist1_tas_fut,
+       breaks = 50,
+       main = "Hellinger 1D (tas) - all models vs ref")
+
+
+  # -------------------------------------------------------------
+  # Map of H_dist1 (tas) for all models
+  # -------------------------------------------------------------
+{
+  # Create output directory
+  dir.create("figure/Hellinger1_tas", showWarnings = FALSE, recursive = TRUE)
+
+  # Define limits for Hellinger distances (you can adjust these after seeing summary)
+  limit <- 0.1
+  limits <- c(0.0, limit)
+  v_limits <- seq(limits[1], limits[2], length.out = 4)
+
+  # Precompute area weights once
+  cos_weights <- cos(lat * pi/180)
+  weight_matrix <- matrix(
+    rep(cos_weights, each = length(lon)),
+    nrow = length(lon),
+    byrow = FALSE
+  )
+
+  # Loop over each model (matching order of model_names)
+  for (i in seq_along(model_names)) {
+
+    # 1) Extract Hellinger distance map for the current model
+    hdist_model <- hdist1_tas_fut[, , i]
+
+    # 2) Melt to dataframe
+    test_df <- melt(
+      hdist_model,
+      varnames = c("lon_idx", "lat_idx"),
+      value.name = "H_dist"
+    )
+    test_df$lon <- lon[test_df$lon_idx]
+    test_df$lat <- lat[test_df$lat_idx]
+
+    # 3) Wrap longitude to [-180, 180]
+    test_df$lon_wrapped <- ifelse(
+      test_df$lon > 180,
+      test_df$lon - 360,
+      test_df$lon
+    )
+
+    # 4) Compute global weighted mean Hellinger distance
+    global_h <- sum(hdist_model * weight_matrix, na.rm = TRUE) /
+      sum(weight_matrix, na.rm = TRUE)
+
+    # 5) Model name for title
+    model_name <- model_names[i]
+
+    # 6) Plot
+    p_hdist <- ggplot() +
+      geom_tile(
+        data = test_df,
+        aes(x = lon_wrapped, y = lat, fill = H_dist)
+      ) +
+      labs(subtitle = "Projection period: 1998 - 2023") +
+      ggtitle(paste0(model_name, " (tas 1D): Mean H = ",
+                     round(global_h, 3))) +
+      scale_fill_gradient(
+        low   = "white",
+        high  = "#015a8c",
+        limits = limits,
+        breaks = v_limits,
+        oob   = scales::squish
+      ) +
+      borders("world", colour = "black", lwd = 0.12) +
+      scale_x_continuous(expand = c(0, 0)) +
+      scale_y_continuous(expand = c(0, 0)) +
+      coord_fixed(
+        ratio = 1.3,
+        xlim  = c(-180, 180),
+        ylim  = c(-84, 90),
+        expand = FALSE
+      ) +
+      theme_bw() +
+      theme(
+        legend.position   = "right",
+        panel.grid.major  = element_blank(),
+        panel.grid.minor  = element_blank(),
+        panel.background  = element_blank(),
+        legend.key.size   = unit(1, "cm"),
+        legend.key.height = unit(1.4, "cm"),
+        legend.key.width  = unit(0.4, "cm"),
+        legend.title      = element_text(size = 16),
+        legend.text       = element_text(size = 12),
+        plot.title        = element_text(size = 24),
+        plot.subtitle     = element_text(size = 20, hjust = 0.5),
+        axis.text         = element_text(size = 14),
+        axis.title        = element_text(size = 16)
+      ) +
+      xlab("Longitude") +
+      ylab("Latitude") +
+      labs(fill = "H (tas 1D)") +
+      easy_center_title()
+
+    print(p_hdist)
+
+    # 7) Save
+    name <- paste0("figure/Hellinger1_tas/hdist1_tas_", model_name)
+    ggsave(paste0(name, ".pdf"), plot = p_hdist,
+           width = 20, height = 15, units = "cm", dpi = 300)
+    ggsave(paste0(name, ".png"), plot = p_hdist,
+           width = 20, height = 15, units = "cm", dpi = 300)
+  }
+}
+
+
+}
+
+
 
 
 # Single point PDF 2d
@@ -1733,6 +2144,159 @@ for (i in seq_along(model_names)) {
   ggsave('figure/PDF2D2/HDR_2Dpdf_density_greyempty.png', plot = p_hdr_grey, width = 15, height = 10, units = "cm", dpi = 300)
   ggsave('figure/PDF2D2/LDR_2Dpdf_density_greyempty.png', plot = p_ldr_grey, width = 15, height = 10, units = "cm", dpi = 300)
 }
+
+
+{
+  # Hellinger distance for discrete distributions
+  hellinger <- function(p, q) {
+    # ensure numeric and handle all-NA safely
+    if (all(is.na(p)) || all(is.na(q))) return(NA_real_)
+
+    # renormalise to sum 1 (robust to tiny numerical drift)
+    p <- p / sum(p, na.rm = TRUE)
+    q <- q / sum(q, na.rm = TRUE)
+
+    # if one of them is now NA or sum 0, return NA
+    if (any(!is.finite(p)) || any(!is.finite(q))) return(NA_real_)
+
+    sqrt(sum((sqrt(p) - sqrt(q))^2)) / sqrt(2)
+  }
+
+  compute_H_all_dims <- function(i, j, m,
+                                 pdf3_models_fut,
+                                 pdf3_ref_fut,
+                                 n_per_dim = 8) {
+    # Extract 3D pdfs (flattened length n_per_dim^3)
+    p3_flat <- pdf3_models_fut[i, j, , m]
+    q3_flat <- pdf3_ref_fut[i, j, ]
+
+    # Reshape to 3D arrays [t1, t2, t3]
+    # Assumes the 512 bins are ordered consistently with this reshape.
+    p3 <- array(p3_flat, dim = c(n_per_dim, n_per_dim, n_per_dim))
+    q3 <- array(q3_flat, dim = c(n_per_dim, n_per_dim, n_per_dim))
+
+    ## 3D Hellinger
+    H_3d <- hellinger(as.vector(p3), as.vector(q3))
+
+    ## 2D marginals
+    # t1-t2 (sum over t3)
+    p_t1_t2 <- apply(p3, c(1, 2), sum)
+    q_t1_t2 <- apply(q3, c(1, 2), sum)
+    H_t1_t2 <- hellinger(as.vector(p_t1_t2), as.vector(q_t1_t2))
+
+    # t1-t3 (sum over t2)
+    p_t1_t3 <- apply(p3, c(1, 3), sum)
+    q_t1_t3 <- apply(q3, c(1, 3), sum)
+    H_t1_t3 <- hellinger(as.vector(p_t1_t3), as.vector(q_t1_t3))
+
+    # t2-t3 (sum over t1)
+    p_t2_t3 <- apply(p3, c(2, 3), sum)
+    q_t2_t3 <- apply(q3, c(2, 3), sum)
+    H_t2_t3 <- hellinger(as.vector(p_t2_t3), as.vector(q_t2_t3))
+
+    ## 1D marginals
+    # t1 (sum over t2,t3)
+    p_t1 <- apply(p3, 1, sum)
+    q_t1 <- apply(q3, 1, sum)
+    H_t1 <- hellinger(p_t1, q_t1)
+
+    # t2 (sum over t1,t3)
+    p_t2 <- apply(p3, 2, sum)
+    q_t2 <- apply(q3, 2, sum)
+    H_t2 <- hellinger(p_t2, q_t2)
+
+    # t3 (sum over t1,t2)
+    p_t3 <- apply(p3, 3, sum)
+    q_t3 <- apply(q3, 3, sum)
+    H_t3 <- hellinger(p_t3, q_t3)
+
+    list(
+      H_3d = H_3d,
+      H_2d = c(t1_t2 = H_t1_t2,
+               t1_t3 = H_t1_t3,
+               t2_t3 = H_t2_t3),
+      H_1d = c(t1 = H_t1,
+               t2 = H_t2,
+               t3 = H_t3)
+    )
+  }
+  # Example indices (you can change them)
+  i0 <- 160   # longitude index
+  j0 <- 120    # latitude index
+  m0 <- 5    # model index in 1..22
+
+  res <- compute_H_all_dims(i = i0, j = j0, m = m0,
+                            pdf3_models_fut = pdf3_models_fut,
+                            pdf3_ref_fut    = pdf3_ref_fut,
+                            n_per_dim       = 8)
+
+  print(res)
+
+
+  print(hdist1_tas_fut[i0,j0, m0])
+
+}
+
+{
+  ## --- helper, if not already defined ---
+  hellinger <- function(p, q) {
+    if (all(is.na(p)) || all(is.na(q))) return(NA_real_)
+    p <- p / sum(p, na.rm = TRUE)
+    q <- q / sum(q, na.rm = TRUE)
+    if (!all(is.finite(p)) || !all(is.finite(q))) return(NA_real_)
+    sqrt(sum((sqrt(p) - sqrt(q))^2)) / sqrt(2)
+  }
+
+  ## --- choose grid point & model (same as before) ---
+  i0 <- 120   # your longitude index
+  j0 <- 90    # your latitude index
+  m0 <- 5     # model index in pdf3_models_fut (example)
+
+  ## (optional) ensure we use the same model name in pdf1_future
+  model_name <- model_names[m0]  # or however you map models
+  m0_pdf1 <- which(dimnames(pdf1_future$tas)[[4]] == model_name)
+
+  ## --- 1) 32-bin tas pdfs from pdf1_future ---
+  p_tas_32 <- pdf1_future$tas[i0, j0, , m0_pdf1]
+  q_tas_32 <- pdf1_future$tas[i0, j0, , 1]   # ref in pdf1 (check this matches your convention)
+
+  H_tas_32 <- hellinger(p_tas_32, q_tas_32)
+
+  ## Aggregate 32 -> 8 bins: groups of 4 consecutive bins
+  ## (1–4, 5–8, ..., 29–32)
+  p_tas_8 <- colSums(matrix(p_tas_32, nrow = 4))
+  q_tas_8 <- colSums(matrix(q_tas_32, nrow = 4))
+
+  H_tas_8_from32 <- hellinger(p_tas_8, q_tas_8)
+
+  ## --- 2) tas marginal from 3D pdf (t2 axis) ---
+  p3_flat <- pdf3_models_fut[i0, j0, , m0]
+  q3_flat <- pdf3_ref_fut[i0, j0, ]
+
+  p3 <- array(p3_flat, dim = c(8, 8, 8))
+  q3 <- array(q3_flat, dim = c(8, 8, 8))
+
+  # t2 is tas (2nd dimension)
+  p_tas_from3d <- apply(p3, 2, sum)  # length 8
+  q_tas_from3d <- apply(q3, 2, sum)  # length 8
+
+  H_tas_from3d <- hellinger(p_tas_from3d, q_tas_from3d)
+
+  ## --- 3) Inspect & compare ---
+  cat("H_tas_32 (pdf1, 32 bins)       =", H_tas_32, "\n")
+  cat("H_tas_8_from32 (pdf1->8 bins)  =", H_tas_8_from32, "\n")
+  cat("H_tas_from3d (tas marginal 3D) =", H_tas_from3d, "\n")
+
+  ## Optionally also check sums to confirm normalization
+  cat("sum p_tas_32 =", sum(p_tas_32, na.rm = TRUE),
+      " | sum p_tas_8 =", sum(p_tas_8, na.rm = TRUE),
+      " | sum p_tas_from3d =", sum(p_tas_from3d, na.rm = TRUE), "\n")
+  cat("sum q_tas_32 =", sum(q_tas_32, na.rm = TRUE),
+      " | sum q_tas_8 =", sum(q_tas_8, na.rm = TRUE),
+      " | sum q_tas_from3d =", sum(q_tas_from3d, na.rm = TRUE), "\n")
+
+}
+
 
 
 

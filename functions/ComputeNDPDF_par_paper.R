@@ -224,11 +224,14 @@ if (.Platform$OS.type == "unix") {
       p2_f[[k]]<-norm2d(p2_f[[k]])
     }
 
-    norm1d <- function(a) sweep(a,1:2,rowSums(a),"/")
-    for(k in variables){
-      p1_p[[k]]<-norm1d(p1_p[[k]])
-      p1_f[[k]]<-norm1d(p1_f[[k]])
+    norm1d <- function(a) {
+      # a: [lon, lat, nbins1d]
+      tot <- rowSums(a, dims = 2)          # sum over bins → [lon, lat]
+      a_norm <- sweep(a, 1:2, tot, "/")    # divide each (lon,lat,bin) by tot[lon,lat]
+      a_norm[!is.finite(a_norm)] <- 0      # protect against 0/0
+      a_norm
     }
+
 
     list(
       pdf3_pres = p3_p, pdf3_fut = p3_f,
