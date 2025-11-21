@@ -1,18 +1,170 @@
-# ======================================================================
-#  compute_nd_pdf_multi()
-#
-#  Computes:
-#   • 3-D joint PDFs (nbins3d^3)
-#   • 2-D pairwise flat PDFs (nbins2d^2)
-#   • 1-D marginal PDFs (nbins1d)
-#   • per-cell means
-#
-#  Returns a list with:
-#    pdf3$present, pdf3$future
-#    pdf2$present, pdf2$future
-#    pdf1$present, pdf1$future
-#    mean$present, mean$future
-# ======================================================================
+#' Compute Multivariate PDFs and Means for CMIP6 Models
+#'
+#' This function computes multivariate probability density functions (PDFs) and
+#' per-cell means for a fixed set of three climate variables (`pr`, `tas`, `psl`)
+#' over a grid of longitude–latitude points and a set of CMIP6 models.
+#' For each model and each grid cell, it builds:
+#'
+#' * a 3-D joint PDF over (`pr`, `tas`, `psl`)
+#' * 2-D pairwise joint PDFs for (`pr`, `tas`), (`pr`, `psl`), (`tas`, `psl`)
+#' * 1-D marginal PDFs for each variable (`pr`, `tas`, `psl`)
+#' * per-cell means for each variable
+#'
+#' All PDFs are normalised to sum to 1 at each grid cell and model, and internal
+#' sanity checks are performed to ensure this property (the function stops with
+#' an error if normalisation fails beyond numerical tolerance).
+#'
+#' @param variables Character vector of length 3 with the variable names.
+#'   Must be exactly `c("pr", "tas", "psl")` and in that order.
+#' @param model_names Character vector with the names of the climate models
+#'   (one entry per model). This defines the model dimension of the outputs.
+#' @param data_dir Root directory containing the CMIP6 data, organised as
+#'   `file.path(data_dir, model, var)` for each `model` in `model_names` and
+#'   each `var` in `variables`. Within each `model/var` folder, the function
+#'   expects at least one NetCDF file whose name matches the pattern
+#'   `paste0(var, "_", model, "*.nc")`.
+#' @param year_present Integer vector of years defining the time span for the
+#'   "present" period (e.g., `1950:1975`). Only time steps whose calendar year
+#'   is in this vector are used for the present PDFs.
+#' @param year_future Integer vector of years defining the time span for the
+#'   "future" period (e.g., `1998:2023`). Only time steps whose calendar year
+#'   is in this vector are used for the future PDFs.
+#' @param lon Numeric vector of target longitudes. These must correspond to
+#'   longitudes available in the NetCDF files (after conversion to the
+#'   \[-180, 180\] convention used internally). The length of this vector
+#'   defines the longitude dimension of the outputs.
+#' @param lat Numeric vector of target latitudes. These must correspond to
+#'   latitudes available in the NetCDF files. The length of this vector
+#'   defines the latitude dimension of the outputs.
+#' @param range_var Numeric array of dimension `[nlon, nlat, 3, 2]` giving
+#'   the minimum and maximum values for each variable at each grid cell.
+#'   The dimensions are:
+#'   \itemize{
+#'     \item `[, , 1, ]` for `pr`
+#'     \item `[, , 2, ]` for `tas`
+#'     \item `[, , 3, ]` for `psl`
+#'   }
+#'   and the last dimension is of length 2, with
+#'   `range_var[,,,1]` the minimum and `range_var[,,,2]` the maximum.
+#'   These ranges are used consistently for all models to build comparable PDFs.
+#' @param nbins3d Integer. Number of bins per variable for the 3-D joint PDFs.
+#'   The resulting 3-D histogram at each cell has `nbins3d^3` bins.
+#' @param nbins2d Integer. Number of bins per variable for the 2-D joint PDFs.
+#'   Each 2-D histogram at each cell has `nbins2d^2` bins.
+#' @param nbins1d Integer. Number of bins for each 1-D marginal PDF.
+#' @param workers Integer. Number of parallel workers to use for processing
+#'   models. On Unix-like systems, `multicore` is used; on Windows,
+#'   `multisession` is used via the \pkg{future} framework.
+#'
+#' @details
+#' For each model and variable, the function reads daily data from the first
+#' matching NetCDF file in `file.path(data_dir, model, var)`. Longitudes in the
+#' NetCDF files are converted to a common \[-180, 180\] system and matched to
+#' the user-provided `lon` vector; latitudes are matched directly to `lat`.
+#' Only the minimal contiguous blocks in longitude, latitude, and time needed
+#' to cover the requested grid and year ranges are read, to reduce I/O.
+#'
+#' For precipitation (`pr`), a logarithmic transform `log(x + 1)` is applied
+#' before histogramming. The N-dimensional histograms are computed via the
+#' helper function `compute_histND()`, using the per-cell ranges given by
+#' `range_var` and the specified numbers of bins.
+#'
+#' After counting, all PDFs are explicitly normalised so that, for every grid
+#' cell and model, the sum over bins is 1 (within a numerical tolerance).
+#' Internal sanity checks verify this property for 3-D, 2-D, and 1-D PDFs and
+#' raise an error if any violation is detected.
+#'
+#' @return A list with four components:
+#' \describe{
+#'   \item{\code{pdf3}}{
+#'     A list with elements:
+#'     \describe{
+#'       \item{\code{present}}{Numeric array of dimension
+#'         `[nlon, nlat, nbins3d^3, nmods]` with the 3-D joint PDFs for the
+#'         present period.}
+#'       \item{\code{future}}{Numeric array of the same dimension with the
+#'         3-D joint PDFs for the future period.}
+#'     }
+#'   }
+#'   \item{\code{pdf2}}{
+#'     A list with elements:
+#'     \describe{
+#'       \item{\code{present}}{Named list of 2-D joint PDFs for the present
+#'         period. It contains three entries:
+#'         \code{"pr_tas"}, \code{"pr_psl"}, \code{"tas_psl"}. Each entry is a
+#'         numeric array of dimension `[nlon, nlat, nbins2d^2, nmods]`.}
+#'       \item{\code{future}}{Named list with the same structure for the
+#'         future period.}
+#'     }
+#'   }
+#'   \item{\code{pdf1}}{
+#'     A list with elements:
+#'     \describe{
+#'       \item{\code{present}}{Named list of 1-D marginal PDFs for the present
+#'         period. It contains three entries: \code{"pr"}, \code{"tas"},
+#'         \code{"psl"}. Each entry is a numeric array of dimension
+#'         `[nlon, nlat, nbins1d, nmods]`.}
+#'       \item{\code{future}}{Named list with the same structure for the
+#'         future period.}
+#'     }
+#'   }
+#'   \item{\code{mean}}{
+#'     A list with elements:
+#'     \describe{
+#'       \item{\code{present}}{Named list of per-cell means for the present
+#'         period. Each entry (\code{"pr"}, \code{"tas"}, \code{"psl"}) is a
+#'         numeric array of dimension `[nlon, nlat, nmods]`.}
+#'       \item{\code{future}}{Named list with the same structure for the
+#'         future period.}
+#'     }
+#'   }
+#' }
+#'
+#' @seealso
+#' \code{\link{compute_histND}} for the underlying N-dimensional histogram
+#' construction used at each grid cell.
+#'
+#' @examples
+#' \dontrun{
+#' variables   <- c("pr", "tas", "psl")
+#' model_names <- c("CanESM5", "MPI-ESM1-2-HR")
+#' data_dir    <- "data/CMIP6_summer_Apr15-Oct14"
+#'
+#' # toy grid (subset of the full CMIP6 grid)
+#' lon <- seq(-10, 10, by = 2.5)
+#' lat <- seq( 40, 50, by = 2.5)
+#'
+#' # range_var: [lon, lat, var, min/max]
+#' range_var <- array(NA_real_, dim = c(length(lon), length(lat), 3, 2))
+#' # ... fill range_var with suitable per-cell min/max for pr, tas, psl ...
+#'
+#' year_present <- 1950:1975
+#' year_future  <- 1998:2023
+#'
+#' out <- compute_nd_pdf_multi(
+#'   variables    = variables,
+#'   model_names  = model_names,
+#'   data_dir     = data_dir,
+#'   year_present = year_present,
+#'   year_future  = year_future,
+#'   lon          = lon,
+#'   lat          = lat,
+#'   range_var    = range_var,
+#'   nbins3d      = 8,
+#'   nbins2d      = 16,
+#'   nbins1d      = 32,
+#'   workers      = 4
+#' )
+#'
+#' # Example: sum of a 1-D PDF at a random cell and model (should be 1)
+#' i0 <- sample(seq_along(lon), 1)
+#' j0 <- sample(seq_along(lat), 1)
+#' m0 <- sample(seq_along(model_names), 1)
+#'
+#' sum(out$pdf1$present$tas[i0, j0, , m0])
+#' }
+#'
+#' @export
 compute_nd_pdf_multi <- function(
   variables,     # c("pr","tas","psl")
   model_names,   # list of model names
@@ -57,7 +209,7 @@ compute_nd_pdf_multi <- function(
   # ── parallel over models ─────────────────────────────────────────────
   library(future); library(future.apply); library(ncdf4)
 if (.Platform$OS.type == "unix") {
-  plan(multicore, workers = workers)
+  plan(sequential)
 } else {
   plan(multisession, workers = workers)
 }

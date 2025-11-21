@@ -8,6 +8,23 @@ library(devtools)
 lapply(list_of_packages, library, character.only = TRUE)
 install_github("schmutzlucas/gcoWrapR")
 
+# At the very top of your script / before doing any heavy work
+Sys.setenv(
+  OMP_NUM_THREADS      = "1",   # or "1" if you want strictly single-threaded
+  OPENBLAS_NUM_THREADS = "1",   # adjust consistently
+  MKL_NUM_THREADS      = "1"
+)
+
+Sys.getenv(c("OMP_NUM_THREADS",
+             "OPENBLAS_NUM_THREADS",
+             "MKL_NUM_THREADS",
+             "NUMEXPR_NUM_THREADS"))
+
+
+library(future)
+plan(sequential)  # no R process parallelism, just native threads
+
+
 
 # Loading local functions
 source_code_dir <- 'functions/' #The directory where all functions are saved.
