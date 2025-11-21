@@ -53,8 +53,6 @@ compute_nd_pdf_multi <- function(
     array(NA, c(nlon,nlat,nbins1d, nmods)))
   names(pdf1_fut) <- variables
 
-  mean_pres <- array(NA, c(nlon,nlat,nmods))
-  mean_fut  <- array(NA, c(nlon,nlat,nmods))
 
   # ── parallel over models ─────────────────────────────────────────────
   library(future); library(future.apply); library(ncdf4)
@@ -214,14 +212,31 @@ if (.Platform$OS.type == "unix") {
       m_p$psl[i,j]<-mean(ps_p); m_f$psl[i,j]<-mean(ps_f)
     }
 
-    # normalize
-    tot_p3 <- rowSums(p3_p, dims=2); p3_p<-sweep(p3_p,1:2,tot_p3,"/")
-    tot_f3 <- rowSums(p3_f, dims=2); p3_f<-sweep(p3_f,1:2,tot_f3,"/")
 
-    norm2d <- function(a) sweep(a,1:2,rowSums(a,dims=2),"/")
-    for(k in pdf2_names){
-      p2_p[[k]]<-norm2d(p2_p[[k]])
-      p2_f[[k]]<-norm2d(p2_f[[k]])
+    norm3d <- function(a) {
+      # a: [lon, lat, nbins3d^3]
+      tot <- rowSums(a, dims = 2)       # [lon, lat]
+      a_norm <- sweep(a, 1:2, tot, "/")
+      a_norm[!is.finite(a_norm)] <- 0
+      a_norm
+    }
+
+    # normalize 3-D
+    p3_p <- norm3d(p3_p)
+    p3_f <- norm3d(p3_f)
+
+    norm2d <- function(a) {
+      # a: [lon, lat, nbins2d^2]
+      tot <- rowSums(a, dims = 2)
+      a_norm <- sweep(a, 1:2, tot, "/")
+      a_norm[!is.finite(a_norm)] <- 0
+      a_norm
+    }
+
+    # normalize 2-D
+    for (k in pdf2_names) {
+      p2_p[[k]] <- norm2d(p2_p[[k]])
+      p2_f[[k]] <- norm2d(p2_f[[k]])
     }
 
     norm1d <- function(a) {
@@ -230,6 +245,11 @@ if (.Platform$OS.type == "unix") {
       a_norm <- sweep(a, 1:2, tot, "/")    # divide each (lon,lat,bin) by tot[lon,lat]
       a_norm[!is.finite(a_norm)] <- 0      # protect against 0/0
       a_norm
+    }
+
+    for (k in variables) {
+      p1_p[[k]] <- norm1d(p1_p[[k]])
+      p1_f[[k]] <- norm1d(p1_f[[k]])
     }
 
 
@@ -269,6 +289,57 @@ if (.Platform$OS.type == "unix") {
       mean_pres[[k]][,,m]  <- model_list[[m]]$mean_pres[[k]]
       mean_fut [[k]][,,m]  <- model_list[[m]]$mean_fut [[k]]
     }
+  }
+
+
+  # ---- internal sanity checks: PDFs must sum to 1 per cell -----------
+
+  tol <- 1e-6  # tolerance for floating-point noise
+
+  check_pdf3 <- function(a, name) {
+    # a: [lon, lat, nbins3d^3, nmods]
+    sums <- apply(a, c(1, 2, 4), sum)  # -> [lon, lat, model]
+    bad  <- (sums < -tol) | (sums > tol & abs(sums - 1) > tol)
+
+    if (any(bad, na.rm = TRUE)) {
+      idx <- which(bad, arr.ind = TRUE)[1, ]
+      s   <- sums[idx[1], idx[2], idx[3]]
+      stop(sprintf(
+        "PDF normalisation error in %s at [lon=%d, lat=%d, model=%d]: sum = %.8f",
+        name, idx[1], idx[2], idx[3], s
+      ))
+    }
+  }
+
+  check_pdfN <- function(a, name) {
+    # for 2-D and 1-D PDFs shaped [lon, lat, nbins, nmods]
+    sums <- apply(a, c(1, 2, 4), sum)  # -> [lon, lat, model]
+    bad  <- (sums < -tol) | (sums > tol & abs(sums - 1) > tol)
+
+    if (any(bad, na.rm = TRUE)) {
+      idx <- which(bad, arr.ind = TRUE)[1, ]
+      s   <- sums[idx[1], idx[2], idx[3]]
+      stop(sprintf(
+        "PDF normalisation error in %s at [lon=%d, lat=%d, model=%d]: sum = %.8f",
+        name, idx[1], idx[2], idx[3], s
+      ))
+    }
+  }
+
+  # 3-D checks
+  check_pdf3(pdf3_pres, "pdf3$present")
+  check_pdf3(pdf3_fut,  "pdf3$future")
+
+  # 2-D checks
+  for (k in pdf2_names) {
+    check_pdfN(pdf2_pres[[k]], paste0("pdf2$present$", k))
+    check_pdfN(pdf2_fut [[k]], paste0("pdf2$future$",  k))
+  }
+
+  # 1-D checks
+  for (k in variables) {
+    check_pdfN(pdf1_pres[[k]], paste0("pdf1$present$", k))
+    check_pdfN(pdf1_fut [[k]], paste0("pdf1$future$",  k))
   }
 
 

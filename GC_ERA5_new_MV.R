@@ -1397,8 +1397,8 @@ for (i in seq_along(model_names)) {
 
     # Map for MMM
   {
-    limit <- 0.1
-    limits <- c(0.0, limit)
+    limit <- 0.5
+    limits <- c(0.1, limit)
     v_limits <- seq(limits[1], limits[2], length.out = 3)
 
     test_df <- melt(mmm_hdist_1d,
@@ -1497,8 +1497,8 @@ for (i in seq_along(model_names)) {
 
     # Map for GC
   {
-    limit <- 0.1
-    limits <- c(0.0, limit)
+    limit <- 0.5
+    limits <- c(0.1, limit)
     v_limits <- seq(limits[1], limits[2], length.out = 3)
 
     test_df <- melt(gc_hdist_1d,
@@ -1642,8 +1642,8 @@ for (i in seq_along(model_names)) {
   dir.create("figure/Hellinger1_tas", showWarnings = FALSE, recursive = TRUE)
 
   # Define limits for Hellinger distances (you can adjust these after seeing summary)
-  limit <- 0.1
-  limits <- c(0.0, limit)
+  limit <- 0.5
+  limits <- c(0.1, limit)
   v_limits <- seq(limits[1], limits[2], length.out = 4)
 
   # Precompute area weights once
@@ -1742,8 +1742,6 @@ for (i in seq_along(model_names)) {
 
 
 }
-
-
 
 
 # Single point PDF 2d
