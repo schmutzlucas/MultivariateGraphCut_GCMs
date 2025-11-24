@@ -183,11 +183,22 @@ GraphCutHellinger_nD_lat <- function(
 
 
   # Initialize labels randomly
+  # set.seed(seed)
+  # for (z in 0:((width * height) - 1)) {
+  #   random_label <- sample(0:(n_labs - 1), 1)
+  #   gco$setLabel(z, random_label)
+  # }
+
+  # Initialize labels pseudo-randomly
+
+  RNGkind(kind = "L'Ecuyer-CMRG", normal.kind = "Inversion") # For reproducibility across OS
   set.seed(seed)
+
+  init_labels <- sample.int(n_labs, width * height, replace = TRUE) - 1
   for (z in 0:((width * height) - 1)) {
-    random_label <- sample(0:(n_labs - 1), 1)
-    gco$setLabel(z, random_label)
+    gco$setLabel(z, init_labels[z + 1])
   }
+
 
   # Perform graph cut optimization
   cat("Starting GraphCut optimization...  ")

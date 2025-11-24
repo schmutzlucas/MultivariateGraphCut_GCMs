@@ -45,7 +45,24 @@ nbins1d <- 32    # 1-D marginals
 # 3) Parameters -----------------------------------------------
 smooth_cost <- 0.1
 seeds       <- 1:50           # vector of seeds to explore
-n_workers   <- 6              # adjust to your machine
+n_workers   <- 10              # adjust to your machine
+
+
+# One warm-up run to force compilation of the C++ code
+GC_warmup <- GraphCutHellinger_nD_lat(
+  pdf_models_future = pdf3_models_fut,
+  h_dist            = h_dist_pres,
+  weight_data       = 1,
+  weight_smooth     = 0.1,
+  nBins             = nbins_total3d,
+  lat               = lat,
+  seed              = 0,
+  verbose           = FALSE,
+  rebuild           = TRUE   # compile C++ once here
+)
+
+rm(GC_warmup)
+gc()
 
 # 4) Parallel plan (Linux: multicore) -------------------------
 plan(multicore, workers = n_workers)
@@ -65,7 +82,7 @@ run_one_seed <- function(this_seed) {
       lat               = lat,
       seed              = this_seed,
       verbose           = FALSE,
-      rebuild           = TRUE
+      rebuild           = FALSE
     )
   }, error = function(e) {
     cat("  ⚠ GraphCut failed for seed", this_seed, ":", e$message, "\n")
@@ -129,5 +146,11 @@ best_idx  <- which.min(GC_seed_stats$mean_hdist_fut)
 best_seed <- GC_seed_stats$seed[best_idx]
 cat("\nBest seed:", best_seed,
     "with mean H-dist future =", GC_seed_stats$mean_hdist_fut[best_idx], "\n")
+
+
+# Histogram of mean H-dist over seeds
+hist(GC_seed_stats_unix$mean_hdist_fut,
+     main = "Distribution of mean future H-dist across seeds",
+     xlab = "mean H-dist future")
 
 
