@@ -8,18 +8,6 @@ library(devtools)
 lapply(list_of_packages, library, character.only = TRUE)
 install_github("schmutzlucas/gcoWrapR")
 
-# At the very top of your script / before doing any heavy work
-Sys.setenv(
-  OMP_NUM_THREADS      = "1",   # or "1" if you want strictly single-threaded
-  OPENBLAS_NUM_THREADS = "1",   # adjust consistently
-  MKL_NUM_THREADS      = "1"
-)
-
-Sys.getenv(c("OMP_NUM_THREADS",
-             "OPENBLAS_NUM_THREADS",
-             "MKL_NUM_THREADS",
-             "NUMEXPR_NUM_THREADS"))
-
 
 library(future)
 plan(sequential)  # no R process parallelism, just native threads
@@ -32,7 +20,7 @@ file_paths <- list.files(source_code_dir, full.names = T)
 for(path in file_paths){source(path)}
 
 
-range_var_final <- readRDS('ranges/range_var_final_ERA5_1950-2023_3v.rds')
+range_var_final <- readRDS('ranges/range_var_summer_ERA5_1950-2023_3v.rds')
 
 # ------------------------------------------------------------------
 # A. build permutation that converts 0…359 → -180…+179 order
@@ -84,7 +72,7 @@ nbins1d <- 32    # 1-D marginals
 model_names <- scan("model_names_pr_tas_psl.txt", what = "", quiet = TRUE)
 
 ## 3.  number of parallel workers
-workers <- 4   # adapt to your machine
+workers <- 2   # adapt to your machine
 
 ## 4.  call the multi-resolution histogram builder
 cat("→ building PDFs and means …\n")
@@ -203,6 +191,106 @@ GC_result <- tryCatch({
   NULL
 })
 gc()
+
+
+# --------------------------------------------------------------------
+# Compute n gc with different seeds to understand the distrib of results
+# --------------------------------------------------------------------
+{
+  # --------------------------------------------------------------------
+  # 5) Run GraphCut multiple times with different seeds
+  #     and sample the distribution of mean H-dist (future)
+  # --------------------------------------------------------------------
+
+  smooth_cost <- 0.1
+  n_seeds     <- 10  # adjust as you wish
+
+  # Table to store seed and mean H-dist future
+  GC_seed_stats <- data.frame(
+    seed           = integer(n_seeds),
+    mean_hdist_fut = numeric(n_seeds)
+  )
+
+  # Optional: keep full GC_result for each seed
+  GC_results <- vector("list", n_seeds)
+
+  for (k in seq_len(n_seeds)) {
+    this_seed <- k
+    cat("\n----------------------------------------------------\n")
+    cat("Running GraphCut for seed =", this_seed, "\n")
+
+    GC_result <- tryCatch({
+      GraphCutHellinger_nD_lat(
+        pdf_models_future = pdf3_models_fut,   # future PDFs for labeling
+        h_dist            = h_dist_pres,       # datacost = Hellinger(pres)
+        weight_data       = 1,
+        weight_smooth     = smooth_cost,
+        nBins             = nbins_total3d,
+        lat               = lat,
+        seed              = this_seed,
+        verbose           = FALSE,
+        rebuild           = FALSE
+      )
+    }, error = function(e) {
+      cat("⚠️  GraphCut failed at smooth_cost =", smooth_cost,
+          "with seed =", this_seed, ":\n", e$message, "\n")
+      NULL
+    })
+
+    # store the seed in any case
+    GC_seed_stats$seed[k] <- this_seed
+
+    if (is.null(GC_result)) {
+      GC_seed_stats$mean_hdist_fut[k] <- NA_real_
+      next
+    }
+
+    GC_results[[k]] <- GC_result
+
+    # ------------------------------------------------------------------
+    # Compute GC_hdist_pres / GC_hdist_fut for THIS seed
+    # ------------------------------------------------------------------
+    GC_hdist_pres <- matrix(NA_real_, nrow = length(lon), ncol = length(lat))
+    GC_hdist_fut  <- matrix(NA_real_, nrow = length(lon), ncol = length(lat))
+
+    for (l in seq_along(model_names)) {  # ensure alignment with model_names
+      islabel <- which(GC_result$label_attribution == l)
+      if (length(islabel) == 0) next
+
+      GC_hdist_pres[islabel] <- h_dist_pres[ , , l][islabel]
+      GC_hdist_fut [islabel] <- h_dist_fut [ , , l][islabel]
+    }
+
+    # ------------------------------------------------------------------
+    # Store mean H-dist future for this seed
+    # ------------------------------------------------------------------
+    mean_hdist_fut_k <- mean(GC_hdist_fut, na.rm = TRUE)
+    GC_seed_stats$mean_hdist_fut[k] <- mean_hdist_fut_k
+
+    cat("Seed:", this_seed,
+        " -> mean H-dist (future) =", mean_hdist_fut_k, "\n")
+
+    gc()
+  }
+
+  # --------------------------------------------------------------------
+  # Inspect the distribution of results
+  # --------------------------------------------------------------------
+
+  # Histogram of mean H-dist over seeds
+  hist(GC_seed_stats$mean_hdist_fut,
+       main = "Distribution of mean future H-dist across seeds",
+       xlab = "mean H-dist future")
+
+  # Optionally pick "best" seed (lower = better)
+  best_idx  <- which.min(GC_seed_stats$mean_hdist_fut)
+  best_seed <- GC_seed_stats$seed[best_idx]
+  cat("\nBest seed:", best_seed,
+      "with mean H-dist future =", GC_seed_stats$mean_hdist_fut[best_idx], "\n")
+
+  best_GC_result <- GC_results[[best_idx]]
+
+}
 
 # Compute the pdf3 for MMM and GC | Compute the hdist_3
 {
@@ -2267,12 +2355,8 @@ for (i in seq_along(model_names)) {
   j0 <- 90    # your latitude index
   m0 <- 5     # model index in pdf3_models_fut (example)
 
-  ## (optional) ensure we use the same model name in pdf1_future
-  model_name <- model_names[m0]  # or however you map models
-  m0_pdf1 <- which(dimnames(pdf1_future$tas)[[4]] == model_name)
-
   ## --- 1) 32-bin tas pdfs from pdf1_future ---
-  p_tas_32 <- pdf1_future$tas[i0, j0, , m0_pdf1]
+  p_tas_32 <- pdf1_future$tas[i0, j0, , m0 + 1]
   q_tas_32 <- pdf1_future$tas[i0, j0, , 1]   # ref in pdf1 (check this matches your convention)
 
   H_tas_32 <- hellinger(p_tas_32, q_tas_32)

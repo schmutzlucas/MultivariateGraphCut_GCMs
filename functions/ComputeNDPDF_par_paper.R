@@ -209,7 +209,7 @@ compute_nd_pdf_multi <- function(
   # ── parallel over models ─────────────────────────────────────────────
   library(future); library(future.apply); library(ncdf4)
 if (.Platform$OS.type == "unix") {
-  plan(sequential)
+  plan(multicore, workers = workers)
 } else {
   plan(multisession, workers = workers)
 }
