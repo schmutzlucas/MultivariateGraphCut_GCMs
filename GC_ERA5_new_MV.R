@@ -261,7 +261,7 @@ gc()
   hist(MMM_hdist_fut)
   hist(GC_hdist_fut)
 
-{### ---- PRESENT ----
+  ### ---- PRESENT ----
   h1 <- hist(MMM_hdist_pres, plot = FALSE)
   h2 <- hist(GC_hdist_pres,  plot = FALSE)
 
@@ -307,9 +307,9 @@ gc()
          legend = c("MMM (future)", "GC (future)"),
          fill   = c(rgb(1,0,0,0.4), rgb(0,0,1,0.4)),
          border = NA)
-}
 
-{par(mfrow = c(1,2))
+
+  par(mfrow = c(1,2))
 
   # Present
   h1 <- hist(MMM_hdist_pres, plot = FALSE)
@@ -330,7 +330,7 @@ gc()
   hist(GC_hdist_fut,  col = rgb(0,0,1,0.4), border="white", add=TRUE)
 
   par(mfrow = c(1,1))
-}
+
 
   mean(MMM_hdist_fut)
   mean(GC_hdist_fut)
