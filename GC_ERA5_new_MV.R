@@ -260,7 +260,9 @@ gc()
   hist(GC_hdist_pres)
   hist(MMM_hdist_fut)
   hist(GC_hdist_fut)
+}
 
+{
   ### ---- PRESENT ----
   h1 <- hist(MMM_hdist_pres, plot = FALSE)
   h2 <- hist(GC_hdist_pres,  plot = FALSE)
