@@ -43,8 +43,9 @@ nbins1d <- 32    # 1-D marginals
 
 # Vector of lambda values (smooth costs)
 smooth_vals <- c(
-  0.025, 0.05, 0.075, 0.10, 0.125,
-  0.15,  0.20, 0.25, 0.30, 0.40, 0.50
+  seq(0.0, 0.150, by = 0.025),   # 0.025, 0.05, 0.075, 0.10, 0.125, 0.15
+  seq(0.20,  0.50,  by = 0.05),    # 0.20, 0.25, 0.30, 0.35, 0.40, 0.45, 0.50
+  seq(0.60,  2.00,  by = 0.10)     # 0.60 → 2.00 in steps of 0.10
 )
 
 # List to store GC_result for each lambda
@@ -298,7 +299,7 @@ for (i in seq_along(GC_maps)) {
   lam <- entry$lambda
   GC_hdist_fut <- entry$GC_hdist_fut
 
-  message("Producing H-dist3 map for λ = ", lam)
+  message("Producing H-dist3 map for lambda = ", lam)
 
   # --------------------------------------------------------------------
   # 1) Melt to dataframe
@@ -337,8 +338,8 @@ for (i in seq_along(GC_maps)) {
       data = test_df,
       aes(x = lon_wrapped, y = lat, fill = H_dist)
     ) +
-    labs(subtitle = "Projection period: 1998–2023") +
-    ggtitle(sprintf("GraphCut (λ = %.3f) — Mean H = %.3f", lam, global_h)) +
+    labs(subtitle = "Projection period: 1998-2023") +
+    ggtitle(sprintf("GraphCut (lambda = %.3f) - Mean H = %.3f", lam, global_h)) +
     scale_fill_gradient(
       low = "white",
       high = "#015a8c",
@@ -372,7 +373,8 @@ for (i in seq_along(GC_maps)) {
     labs(fill = "H") +
     easy_center_title()
 
-  print(p_hdist)
+  print(p_hdist$labels$title)
+  charToRaw(p_hdist$labels$title)
 
   # --------------------------------------------------------------------
   # 4) Save for this λ
@@ -389,23 +391,22 @@ for (i in seq_along(GC_maps)) {
 
 
 # ======================================================================
-# Mean H_dist (future) vs lambda — two curves:
-#   1) mean H_dist
-#   2) latitude-weighted mean H_dist
+# Hellinger metrics vs lambda (GC curves) + MMM reference lines
+#   Metrics:
+#     1) simple global mean H
+#     2) area-weighted mean H
+#     3) simple global mean gradient H
+#     4) area-weighted mean gradient H
 # ======================================================================
 
-# Select only valid entries
+# gradient_hdist() must be defined
+# GC_maps must be filled
+# MMM_hdist_fut must be [lon x lat] matrix of MMM H-dist (future)
+{
+
+# ---------------- GC part: compute metrics per lambda ------------------
+
 valid_idx <- which(!sapply(GC_maps, is.null))
-
-# Extract lambda, mean_fut
-lambda_vec <- vapply(GC_maps[valid_idx], function(x) x$lambda, numeric(1))
-mean_fut   <- vapply(GC_maps[valid_idx], function(x) x$mean_fut, numeric(1))
-
-# ----------------------------------------------------------------------
-# Compute latitude-weighted H for each lambda (as in your hdist3 plots)
-# ----------------------------------------------------------------------
-
-weighted_fut <- numeric(length(valid_idx))
 
 cos_weights <- cos(lat * pi/180)
 weight_matrix <- matrix(
@@ -414,65 +415,307 @@ weight_matrix <- matrix(
   byrow = FALSE
 )
 
-for (i in seq_along(valid_idx)) {
+lambda_vec             <- numeric(length(valid_idx))
+mean_plain             <- numeric(length(valid_idx))
+mean_weighted          <- numeric(length(valid_idx))
+mean_gradient_plain    <- numeric(length(valid_idx))
+mean_gradient_weighted <- numeric(length(valid_idx))
 
-  GC_hdist_fut <- GC_maps[[ valid_idx[i] ]]$GC_hdist_fut
+for (k in seq_along(valid_idx)) {
 
-  weighted_fut[i] <-
-    sum(GC_hdist_fut * weight_matrix, na.rm = TRUE) /
-      sum(weight_matrix, na.rm = TRUE)
+  idx   <- valid_idx[k]
+  entry <- GC_maps[[idx]]
+  H     <- entry$GC_hdist_fut
+
+  lambda_vec[k] <- entry$lambda
+
+  # mask NA for H
+  mask_H <- !is.na(H)
+  Hv     <- H[mask_H]
+  w      <- weight_matrix
+  wv     <- w[mask_H]
+
+  # 1) simple global mean H
+  mean_plain[k] <- mean(Hv)
+
+  # 2) area-weighted mean H
+  mean_weighted[k] <- sum(Hv * wv) / sum(wv)
+
+  # 3) gradient map and simple global mean gradient
+  grad_map <- gradient_hdist(H)
+  mean_gradient_plain[k] <- mean(grad_map, na.rm = TRUE)
+
+  # 4) area-weighted mean gradient
+  mask_G  <- !is.na(grad_map)
+  Gv      <- grad_map[mask_G]
+  wG      <- weight_matrix[mask_G]
+
+  mean_gradient_weighted[k] <- sum(Gv * wG) / sum(wG)
 }
 
-# ----------------------------------------------------------------------
-# Combine into a single dataframe for ggplot
-# ----------------------------------------------------------------------
-
 df_lambda <- data.frame(
-  lambda          = lambda_vec,
-  mean_hdist_fut  = mean_fut,
-  weighed_hdist_f = weighted_fut
+  lambda                 = lambda_vec,
+  mean_plain_fut         = mean_plain,
+  mean_weighted_fut      = mean_weighted,
+  mean_grad_plain_fut    = mean_gradient_plain,
+  mean_grad_weighted_fut = mean_gradient_weighted
 )
 
-# Sort by lambda
 df_lambda <- df_lambda[order(df_lambda$lambda), ]
 
-# ----------------------------------------------------------------------
-# Plot
-# ----------------------------------------------------------------------
+df_long <- data.frame(
+  lambda        = df_lambda$lambda,
+  mean_H_plain  = df_lambda$mean_plain_fut,
+  mean_H_weighted  = df_lambda$mean_weighted_fut,
+  grad_plain       = df_lambda$mean_grad_plain_fut,
+  grad_weighted    = df_lambda$mean_grad_weighted_fut
+)
 
-out_dir <- "figure/Labelling/lambda_sweep_seed1"
+# scaling factor to map gradient metrics onto H scale
+scale_factor <- diff(range(df_long$mean_H_plain)) / diff(range(df_long$grad_plain))
+
+# ---------------- MMM reference metrics (constants) --------------------
+
+# 1) H metrics
+mask_H_MMM <- !is.na(MMM_hdist_fut)
+Hv_MMM     <- MMM_hdist_fut[mask_H_MMM]
+wv_MMM     <- weight_matrix[mask_H_MMM]
+
+MMM_mean_H_plain    <- mean(Hv_MMM)
+MMM_mean_H_weighted <- sum(Hv_MMM * wv_MMM) / sum(wv_MMM)
+
+# 2) gradient metrics
+grad_MMM <- gradient_hdist(MMM_hdist_fut)
+
+mask_G_MMM  <- !is.na(grad_MMM)
+Gv_MMM      <- grad_MMM[mask_G_MMM]
+wG_MMM      <- weight_matrix[mask_G_MMM]
+
+MMM_mean_grad_plain    <- mean(grad_MMM, na.rm = TRUE)
+MMM_mean_grad_weighted <- sum(Gv_MMM * wG_MMM) / sum(wG_MMM)
+
+# values for right axis (scaled)
+MMM_mean_grad_plain_scaled    <- MMM_mean_grad_plain * scale_factor
+MMM_mean_grad_weighted_scaled <- MMM_mean_grad_weighted * scale_factor
+
+# ---------------------------- Plot -------------------------------------
+
+out_dir <- "figure/Labelling/lambda_sweep_seed1/comprarison/"
 dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
 
-p_lambda <- ggplot(df_lambda, aes(x = lambda)) +
-  geom_line(aes(y = mean_hdist_fut, colour = "Mean H_dist")) +
-  geom_point(aes(y = mean_hdist_fut, colour = "Mean H_dist"), size = 2) +
-  geom_line(aes(y = weighed_hdist_f, colour = "Weighted mean H_dist")) +
-  geom_point(aes(y = weighed_hdist_f, colour = "Weighted mean H_dist"), size = 2) +
+p_lambda <- ggplot(df_long, aes(x = lambda)) +
+  # GC: left axis (H)
+  geom_line(aes(y = mean_H_plain,     colour = "Mean H"), size = 1) +
+  geom_point(aes(y = mean_H_plain,    colour = "Mean H"), size = 2) +
+  geom_line(aes(y = mean_H_weighted,  colour = "Area-weighted mean H"), size = 1) +
+  geom_point(aes(y = mean_H_weighted, colour = "Area-weighted mean H"), size = 2) +
+
+  # GC: right axis (gradients, scaled)
+  geom_line(aes(y = grad_plain    * scale_factor, colour = "Mean gradient H"), size = 1) +
+  geom_point(aes(y = grad_plain   * scale_factor, colour = "Mean gradient H"), size = 2) +
+  geom_line(aes(y = grad_weighted * scale_factor, colour = "Area-weighted mean gradient H"), size = 1) +
+  geom_point(aes(y = grad_weighted* scale_factor, colour = "Area-weighted mean gradient H"), size = 2) +
+
+  # MMM: reference horizontal lines (thinner, dashed, same colours)
+  geom_hline(yintercept = MMM_mean_H_plain,
+             colour = "black", linetype = "dashed", linewidth = 0.4, show.legend = FALSE) +
+  geom_hline(yintercept = MMM_mean_H_weighted,
+             colour = "red",   linetype = "dashed", linewidth = 0.4, show.legend = FALSE) +
+  geom_hline(yintercept = MMM_mean_grad_plain_scaled,
+             colour = "blue",  linetype = "dashed", linewidth = 0.4, show.legend = FALSE) +
+  geom_hline(yintercept = MMM_mean_grad_weighted_scaled,
+             colour = "darkgreen", linetype = "dashed", linewidth = 0.4, show.legend = FALSE) +
+
+  # axes
+  scale_y_continuous(
+    name = "Hellinger distance (future)",
+    sec.axis = sec_axis(~./scale_factor,
+                        name = "Gradient Hellinger (future)")
+  ) +
   scale_colour_manual(
-    values = c("Mean H_dist" = "black", "Weighted mean H_dist" = "red"),
-    name   = NULL
+    values = c(
+      "Mean H"                          = "black",
+      "Area-weighted mean H"            = "red",
+      "Mean gradient H"                 = "blue",
+      "Area-weighted mean gradient H"   = "darkgreen"
+    ),
+    name = NULL
   ) +
   scale_x_continuous(
-    breaks = df_lambda$lambda,
-    labels = format(df_lambda$lambda, digits = 3)
+    breaks = df_long$lambda,
+    labels = format(df_long$lambda, digits = 3)
   ) +
   xlab("Lambda (smoothness weight)") +
-  ylab("Hellinger distance (future)") +
-  ggtitle("Mean and Latitude-weighted Hellinger distance vs lambda\n(seed = 1)") +
+  ggtitle("Hellinger metrics vs lambda (seed = 1)\nGC curves and MMM reference") +
   theme_bw() +
   theme(
-    panel.grid.minor = element_blank(),
-    axis.text.x      = element_text(angle = 45, hjust = 1),
-    plot.title       = element_text(size = 14),
-    legend.position  = "right"
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    plot.title  = element_text(size = 14),
+    legend.position = "right"
   )
 
 print(p_lambda)
 
-# Save
-base_name <- file.path(out_dir, "Mean_and_Weighted_Hdist_vs_lambda_seed1")
-ggsave(paste0(base_name, ".pdf"), plot = p_lambda,
-       width = 18, height = 10, units = "cm", dpi = 300)
-ggsave(paste0(base_name, ".png"), plot = p_lambda,
-       width = 18, height = 10, units = "cm", dpi = 300)
+base_name <- file.path(out_dir, "Hdist_grad_metrics_vs_lambda_with_MMM_seed1")
+ggsave(paste0(base_name, ".pdf"),
+       plot = p_lambda, width = 18, height = 10, units = "cm", dpi = 300)
+ggsave(paste0(base_name, ".png"),
+       plot = p_lambda, width = 18, height = 10, units = "cm", dpi = 300)
+
+
+
+
+  # ======================================================================
+  # Assumes df_lambda already exists as:
+  # df_lambda <- data.frame(
+  #   lambda                 = lambda_vec,
+  #   mean_plain_fut         = mean_plain,
+  #   mean_weighted_fut      = mean_weighted,
+  #   mean_grad_plain_fut    = mean_gradient_plain,
+  #   mean_grad_weighted_fut = mean_gradient_weighted
+  # )
+  # and GC_maps, MMM_hdist_fut, gradient_hdist(), lon, lat exist.
+  # ======================================================================
+
+  # Sort by lambda (just to be safe)
+  df_lambda <- df_lambda[order(df_lambda$lambda), ]
+
+  # Precompute weights for MMM
+  cos_weights <- cos(lat * pi/180)
+  weight_matrix <- matrix(
+    rep(cos_weights, each = length(lon)),
+    nrow = length(lon),
+    byrow = FALSE
+  )
+
+  # ---------------- MMM metrics (constants) --------------------
+
+  # 1) H metrics
+  mask_H_MMM <- !is.na(MMM_hdist_fut)
+  Hv_MMM     <- MMM_hdist_fut[mask_H_MMM]
+  wv_MMM     <- weight_matrix[mask_H_MMM]
+
+  MMM_mean_H_plain    <- mean(Hv_MMM)
+  MMM_mean_H_weighted <- sum(Hv_MMM * wv_MMM) / sum(wv_MMM)
+
+  # 2) gradient metrics
+  grad_MMM <- gradient_hdist(MMM_hdist_fut)
+
+  mask_G_MMM  <- !is.na(grad_MMM)
+  Gv_MMM      <- grad_MMM[mask_G_MMM]
+  wG_MMM      <- weight_matrix[mask_G_MMM]
+
+  MMM_mean_grad_plain    <- mean(grad_MMM, na.rm = TRUE)
+  MMM_mean_grad_weighted <- sum(Gv_MMM * wG_MMM) / sum(wG_MMM)
+
+  # ---------------- Data frames for plotting ------------------
+
+  df_H <- data.frame(
+    lambda            = df_lambda$lambda,
+    mean_H_plain      = df_lambda$mean_plain_fut,
+    mean_H_weighted   = df_lambda$mean_weighted_fut
+  )
+
+  df_grad <- data.frame(
+    lambda              = df_lambda$lambda,
+    mean_grad_plain     = df_lambda$mean_grad_plain_fut,
+    mean_grad_weighted  = df_lambda$mean_grad_weighted_fut
+  )
+
+  out_dir <- "figure/Labelling/lambda_sweep_seed1/comprarison/"
+  dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
+
+  # ======================================================================
+  # 1) Plot for H (no gradient here)
+  # ======================================================================
+
+  p_H <- ggplot(df_H, aes(x = lambda)) +
+    geom_line(aes(y = mean_H_plain,    colour = "Mean H"), size = 1) +
+    geom_point(aes(y = mean_H_plain,   colour = "Mean H"), size = 2) +
+    geom_line(aes(y = mean_H_weighted, colour = "Area-weighted mean H"), size = 1) +
+    geom_point(aes(y = mean_H_weighted, colour = "Area-weighted mean H"), size = 2) +
+
+    # MMM reference lines (same colours, thinner, dashed)
+    geom_hline(yintercept = MMM_mean_H_plain,
+               colour = "black", linetype = "dashed", linewidth = 0.4, show.legend = FALSE) +
+    geom_hline(yintercept = MMM_mean_H_weighted,
+               colour = "red",   linetype = "dashed", linewidth = 0.4, show.legend = FALSE) +
+
+    scale_colour_manual(
+      values = c(
+        "Mean H"               = "black",
+        "Area-weighted mean H" = "red"
+      ),
+      name = NULL
+    ) +
+    scale_x_continuous(
+      breaks = df_H$lambda,
+      labels = format(df_H$lambda, digits = 3)
+    ) +
+    xlab("Lambda (smoothness weight)") +
+    ylab("Hellinger distance (future)") +
+    ggtitle("Mean Hellinger distance vs lambda (GC) with MMM reference\n(seed = 1)") +
+    theme_bw() +
+    theme(
+      axis.text.x = element_text(angle = 45, hjust = 1),
+      plot.title  = element_text(size = 14),
+      legend.position = "right"
+    )
+
+  print(p_H)
+
+  base_name_H <- file.path(out_dir, "H_metrics_vs_lambda_with_MMM_seed1")
+  ggsave(paste0(base_name_H, ".pdf"),
+         plot = p_H, width = 18, height = 10, units = "cm", dpi = 300)
+  ggsave(paste0(base_name_H, ".png"),
+         plot = p_H, width = 18, height = 10, units = "cm", dpi = 300)
+
+  # ======================================================================
+  # 2) Plot for gradient(H) only
+  # ======================================================================
+
+  p_grad <- ggplot(df_grad, aes(x = lambda)) +
+    geom_line(aes(y = mean_grad_plain,    colour = "Mean gradient H"), size = 1) +
+    geom_point(aes(y = mean_grad_plain,   colour = "Mean gradient H"), size = 2) +
+    geom_line(aes(y = mean_grad_weighted, colour = "Area-weighted mean gradient H"), size = 1) +
+    geom_point(aes(y = mean_grad_weighted, colour = "Area-weighted mean gradient H"), size = 2) +
+
+    # MMM reference lines for gradients
+    geom_hline(yintercept = MMM_mean_grad_plain,
+               colour = "blue",      linetype = "dashed", linewidth = 0.4, show.legend = FALSE) +
+    geom_hline(yintercept = MMM_mean_grad_weighted,
+               colour = "darkgreen", linetype = "dashed", linewidth = 0.4, show.legend = FALSE) +
+
+    scale_colour_manual(
+      values = c(
+        "Mean gradient H"               = "blue",
+        "Area-weighted mean gradient H" = "darkgreen"
+      ),
+      name = NULL
+    ) +
+    scale_x_continuous(
+      breaks = df_grad$lambda,
+      labels = format(df_grad$lambda, digits = 3)
+    ) +
+    xlab("Lambda (smoothness weight)") +
+    ylab("Gradient of Hellinger distance (future)") +
+    ggtitle("Gradient Hellinger metrics vs lambda (GC) with MMM reference\n(seed = 1)") +
+    theme_bw() +
+    theme(
+      axis.text.x = element_text(angle = 45, hjust = 1),
+      plot.title  = element_text(size = 14),
+      legend.position = "right"
+    )
+
+  print(p_grad)
+
+  base_name_G <- file.path(out_dir, "Grad_H_metrics_vs_lambda_with_MMM_seed1")
+  ggsave(paste0(base_name_G, ".pdf"),
+         plot = p_grad, width = 18, height = 10, units = "cm", dpi = 300)
+  ggsave(paste0(base_name_G, ".png"),
+         plot = p_grad, width = 18, height = 10, units = "cm", dpi = 300)
+
+}
+
+
 
