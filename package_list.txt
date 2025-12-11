@@ -27,3 +27,4 @@ PCICt
 ggeasy
 matrixStats
 RColorBrewer
+terra
