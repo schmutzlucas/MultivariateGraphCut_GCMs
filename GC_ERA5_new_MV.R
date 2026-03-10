@@ -23,13 +23,13 @@ for(path in file_paths){source(path)}
 range_var_final <- readRDS('ranges/range_var_summer_ERA5_1950-2023_3v.rds')
 
 # ------------------------------------------------------------------
-# A. build permutation that converts 0…359 → -180…+179 order
+# A. build permutation that converts 0?359 ? -180?+179 order
 lon_file        <- 0:359
 lon_adj         <- ifelse(lon_file >= 180, lon_file - 360, lon_file)
 lon_order_adj   <- order(lon_adj)                # length 360
 
 # ------------------------------------------------------------------
-# B. re-order every variable’s range matrix
+# B. re-order every variable?s range matrix
 rng_list <- lapply(range_var_final$ranges, \(mat) {
   mat[ lon_order_adj, , , drop = FALSE ]         # keep 3-dim structure
 })
@@ -56,6 +56,12 @@ lat_size <- length(lat)
 # Temporal ranges
 year_present <<- 1950:1975
 year_future <<- 1999:2024
+
+# Seasonal window (user-settable): month/day
+# Example summer: April 15 to October 14
+season_start_md <- c(4, 15)
+season_end_md   <- c(10, 14)
+
 # data directory
 data_dir <<- 'data/CMIP6_summer_Apr15-Oct14'
 
@@ -75,14 +81,16 @@ model_names <- scan("model_names_pr_tas_psl.txt", what = "", quiet = TRUE)
 workers <- 2   # adapt to your machine
 
 ## 4.  call the multi-resolution histogram builder
-cat("→ building PDFs and means …\n")
+cat("-> building PDFs and means ...\n")
 t0 <- Sys.time()
-tmp <- compute_nd_pdf_multi(
+tmp <- compute_nd_pdf_multi_seasonal(
   variables, model_names,
   data_dir,
   year_present, year_future,
   lon, lat,
   range_var_gc,
+  season_start_md = season_start_md,
+  season_end_md   = season_end_md,
   nbins3d = nbins3d,
   nbins2d = nbins2d,
   nbins1d = nbins1d,
@@ -119,7 +127,7 @@ gc()
 stamp    <- format(Sys.time(), "%Y%m%d%H%M")
 filename <- file.path("workspaces", paste0(stamp, "_workspace_multiRes_3v.RData"))
 save.image(file = filename, compress = FALSE)
-cat("✓ workspace saved to", filename, "\n")
+cat("? workspace saved to", filename, "\n")
 
 
 # --------------------------------------------------------------------
@@ -135,7 +143,7 @@ pdf3_models_fut <- pdf3_future[,,,-ref_index]
 rm(pdf3_future, pdf3_present)
 
 # --------------------------------------------------------------------
-#  2) build “all‐bins” index list for full Hellinger
+#  2) build ?all?bins? index list for full Hellinger
 # --------------------------------------------------------------------
 nbins_total3d <- nbins3d^3
 selected_indices_all <- lapply(seq_len(lon_size), function(i) {
@@ -176,7 +184,7 @@ smooth_cost <- 0.1
 
 GC_result <- tryCatch({
   GraphCutHellinger_nD_lat(
-    pdf_models_future = pdf3_models_fut,   # using “present” PDFs for labeling
+    pdf_models_future = pdf3_models_fut,   # using ?present? PDFs for labeling
     h_dist            = h_dist_pres,        # datacost = Hellinger(pres)
     weight_data       = 1,
     weight_smooth     = smooth_cost,
@@ -187,7 +195,7 @@ GC_result <- tryCatch({
     rebuild           = TRUE
   )
 }, error = function(e) {
-  cat("⚠️  GraphCut failed at smooth_cost =", smooth_cost, ":\n", e$message, "\n")
+  cat("??  GraphCut failed at smooth_cost =", smooth_cost, ":\n", e$message, "\n")
   NULL
 })
 gc()
@@ -345,7 +353,7 @@ gc()
 stamp    <- format(Sys.time(), "%Y%m%d%H%M")
 filename <- file.path("workspaces", paste0(stamp, "_workspace_multiRes_3v_gc_results.RData"))
 save.image(file = filename, compress = FALSE)
-cat("✓ workspace saved to", filename, "\n")
+cat("? workspace saved to", filename, "\n")
 
 # Labelling Map
 {
@@ -580,7 +588,7 @@ for (i in seq_along(model_names)) {
   test_df$lat <- lat[test_df$lat_idx]
 
   # 3) Apply limits
-  limit <- 1500  # Based on your max (2230) → rounded up to 2500 Pa
+  limit <- 1500  # Based on your max (2230) ? rounded up to 2500 Pa
   limits <- c(-limit, limit)
   v_limits <- as.numeric(format(seq(-limit, limit, len=6), digits = 3))
   test_df$Bias[test_df$Bias < -limit] <- -limit
@@ -2266,7 +2274,7 @@ for (i in seq_along(model_names)) {
   H_tas_32 <- hellinger(p_tas_32, q_tas_32)
 
   ## Aggregate 32 -> 8 bins: groups of 4 consecutive bins
-  ## (1–4, 5–8, ..., 29–32)
+  ## (1?4, 5?8, ..., 29?32)
   p_tas_8 <- colSums(matrix(p_tas_32, nrow = 4))
   q_tas_8 <- colSums(matrix(q_tas_32, nrow = 4))
 
@@ -2299,6 +2307,10 @@ for (i in seq_along(model_names)) {
       " | sum q_tas_from3d =", sum(q_tas_from3d, na.rm = TRUE), "\n")
 
 }
+
+
+
+
 
 
 
