@@ -79,18 +79,6 @@ compute_nd_pdf_multi_seasonal <- function(
     )
   }
 
-  pdf3_pres <- array(NA_real_, c(nlon, nlat, nbins3d^3, nmods))
-  pdf3_fut <- array(NA_real_, c(nlon, nlat, nbins3d^3, nmods))
-
-  pdf2_pres <- lapply(pdf2_names, function(.) array(NA_real_, c(nlon, nlat, nbins2d^2, nmods)))
-  names(pdf2_pres) <- pdf2_names
-  pdf2_fut <- lapply(pdf2_names, function(.) array(NA_real_, c(nlon, nlat, nbins2d^2, nmods)))
-  names(pdf2_fut) <- pdf2_names
-
-  pdf1_pres <- lapply(variables, function(.) array(NA_real_, c(nlon, nlat, nbins1d, nmods)))
-  names(pdf1_pres) <- variables
-  pdf1_fut <- lapply(variables, function(.) array(NA_real_, c(nlon, nlat, nbins1d, nmods)))
-  names(pdf1_fut) <- variables
 
   library(future)
   library(future.apply)
@@ -102,7 +90,7 @@ compute_nd_pdf_multi_seasonal <- function(
     plan(multisession, workers = workers)
   }
 
-  model_list <- future_lapply(seq_len(nmods), function(m) {
+  model_list <- future_lapply(seq_len(nmods), function(m, variables, model_names, data_dir, year_present, year_future, lon, lat, range_var, season_start_md, season_end_md, pdf2_names, nbins3d, nbins2d, nbins1d, in_annual_window, extract_time_ymd, compute_histND) {
     model <- model_names[m]
     cat(format(Sys.time(), "%H:%M:%S"), "- reading", model, "\n")
 
@@ -283,9 +271,42 @@ compute_nd_pdf_multi_seasonal <- function(
       pdf1_pres = p1_p, pdf1_fut = p1_f,
       mean_pres = m_p, mean_fut = m_f
     )
-  })
+  },
+    variables = variables,
+    model_names = model_names,
+    data_dir = data_dir,
+    year_present = year_present,
+    year_future = year_future,
+    lon = lon,
+    lat = lat,
+    range_var = range_var,
+    season_start_md = season_start_md,
+    season_end_md = season_end_md,
+    pdf2_names = pdf2_names,
+    nbins3d = nbins3d,
+    nbins2d = nbins2d,
+    nbins1d = nbins1d,
+    in_annual_window = in_annual_window,
+    extract_time_ymd = extract_time_ymd,
+    compute_histND = compute_histND,
+    future.globals = FALSE,
+    future.packages = c("ncdf4")
+  )
 
   plan(sequential)
+
+  pdf3_pres <- array(NA_real_, c(nlon, nlat, nbins3d^3, nmods))
+  pdf3_fut <- array(NA_real_, c(nlon, nlat, nbins3d^3, nmods))
+
+  pdf2_pres <- lapply(pdf2_names, function(.) array(NA_real_, c(nlon, nlat, nbins2d^2, nmods)))
+  names(pdf2_pres) <- pdf2_names
+  pdf2_fut <- lapply(pdf2_names, function(.) array(NA_real_, c(nlon, nlat, nbins2d^2, nmods)))
+  names(pdf2_fut) <- pdf2_names
+
+  pdf1_pres <- lapply(variables, function(.) array(NA_real_, c(nlon, nlat, nbins1d, nmods)))
+  names(pdf1_pres) <- variables
+  pdf1_fut <- lapply(variables, function(.) array(NA_real_, c(nlon, nlat, nbins1d, nmods)))
+  names(pdf1_fut) <- variables
 
   mean_pres <- lapply(variables, function(.) array(NA_real_, c(nlon, nlat, nmods)))
   mean_fut <- lapply(variables, function(.) array(NA_real_, c(nlon, nlat, nmods)))
@@ -315,3 +336,6 @@ compute_nd_pdf_multi_seasonal <- function(
     mean = list(present = mean_pres, future = mean_fut)
   )
 }
+
+
+
