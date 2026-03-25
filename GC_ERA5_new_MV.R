@@ -63,7 +63,7 @@ season_start_md <- c(4, 15)
 season_end_md   <- c(10, 14)
 
 # data directory
-data_dir <<- 'data/CMIP6_summer_Apr15-Oct14'
+data_dir <<- 'data/CMIP6_merged_all'
 
 
 # List of the variable used
@@ -78,7 +78,7 @@ nbins1d <- 32    # 1-D marginals
 model_names <- scan("model_names_pr_tas_psl.txt", what = "", quiet = TRUE)
 
 ## 3.  number of parallel workers
-workers <- 2   # adapt to your machine
+workers <- 4   # adapt to your machine
 
 ## 4.  call the multi-resolution histogram builder
 cat("-> building PDFs and means ...\n")
@@ -180,7 +180,7 @@ hist(h_dist_fut,  main="H-dist Future  (all bins)")
 # --------------------------------------------------------------------
 #  5) run GraphCut on the 3-D cost map
 # --------------------------------------------------------------------
-smooth_cost <- 0.1
+smooth_cost <- 0.01
 
 GC_result <- tryCatch({
   GraphCutHellinger_nD_lat(
