@@ -19,7 +19,6 @@ source_code_dir <- 'functions/' #The directory where all functions are saved.
 file_paths <- list.files(source_code_dir, full.names = T)
 for(path in file_paths){source(path)}
 
-
 range_var_final <- readRDS('ranges/range_var_summer_ERA5_1950-2023_3v.rds')
 
 # ------------------------------------------------------------------

@@ -820,7 +820,7 @@ for (i in seq_along(model_names)) {
     print(p_bias)
 
     # 9) Save
-    name <- paste0("figure/Bias2/", var, "/Bias_", var, "_MMM")
+    name <- paste0("figure/Bias2/", var, "/Bias_", var, "_MMM1_summer")
     ggsave(paste0(name, ".pdf"), plot = p_bias, width = 20, height = 15, units = "cm", dpi = 300)
     ggsave(paste0(name, ".png"), plot = p_bias, width = 20, height = 15, units = "cm", dpi = 300)
   }
@@ -925,7 +925,7 @@ for (i in seq_along(model_names)) {
     print(p_bias)
 
     # 9) Save
-    name <- paste0("figure/Bias2/", var, "/Bias_", var, "_GC")
+    name <- paste0("figure/Bias2/", var, "/Bias_", var, "_GC_summer")
     ggsave(paste0(name, ".pdf"), plot = p_bias, width = 20, height = 15, units = "cm", dpi = 300)
     ggsave(paste0(name, ".png"), plot = p_bias, width = 20, height = 15, units = "cm", dpi = 300)
 
@@ -1069,7 +1069,7 @@ for (i in seq_along(model_names)) {
   print(p_hdist)
 
   # 5) Save
-  name <- "figure/Hellinger3_2/hdist3_MMM"
+  name <- "figure/Hellinger3_2/hdist3_MMM_summer"
   ggsave(paste0(name, ".pdf"), plot = p_hdist, width = 20, height = 15, units = "cm", dpi = 300)
   ggsave(paste0(name, ".png"), plot = p_hdist, width = 20, height = 15, units = "cm", dpi = 300)
 
@@ -1135,7 +1135,7 @@ for (i in seq_along(model_names)) {
   print(p_hdist)
 
   # 5) Save
-  name <- "figure/Hellinger3_2/hdist3_GC"
+  name <- "figure/Hellinger3_2/hdist3_GC_summer"
   ggsave(paste0(name, ".pdf"), plot = p_hdist, width = 20, height = 15, units = "cm", dpi = 300)
   ggsave(paste0(name, ".png"), plot = p_hdist, width = 20, height = 15, units = "cm", dpi = 300)
 }
